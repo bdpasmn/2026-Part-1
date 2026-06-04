@@ -1,25 +1,24 @@
 <html>
-    <head>
-        <title>Signin</title>
-         <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-         <style>
-            input {
-                border: 2px solid black;
-                padding: 4px;
-                border-radius: 6px;
-            }
-        </style>
-    </head>
-    <body class="place-items-center min-h-screen m-0">
-        <b><h1>Welcome to BDPA Airlines!</h1></b>
-        <h3>Please Create Account.</h3>
-        <?php
+<head>
+    <title>Signin</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+
+<body class="flex items-center justify-center min-h-screen m-0 font-sans bg-blue-900">
+
+<div class="bg-black shadow-xl rounded-xl p-4 w-full max-w-2xl">
+<?php
             $first = $_POST['first'] ?? '';
             $middle = $_POST['middle'] ?? '';
             $last = $_POST['last'] ?? '';
             $email = $_POST['email'] ?? '';
-            $password = $_POST['password'] ?? '';
             $phone = $_POST['phone'] ?? '';
+            $street = $_POST['street'] ?? '';
+            $city = $_POST['city'] ?? '';
+            $state = $_POST['state'] ?? '';
+            $zip = $_POST['zip'] ?? '';
+            $country = $_POST['country'] ?? '';
+            $password = $_POST['password'] ?? '';
             $food = $_POST['favorite_food'] ?? '';
             $color = $_POST['favorite_color'] ?? '';
             $sport = $_POST['favorite_sport'] ?? '';
@@ -30,65 +29,115 @@
 
             if(isset($_POST['button'])){
                 if(strlen($password) <= 10){
-                    echo"Password is too short. Minimum 10 characters needed.";
+                    echo "<p class='text-red-500 font-semibold text-center mb-4'>Password is too short. Minimum 10 characters needed.</p>";
                 }
-                if ($captcha != ($num1 + $num2)) {
-                    echo "Wrong answer for captcha!";
+                elseif ($captcha != ($num1 + $num2)) {
+                    echo "<p class='text-red-500 font-semibold text-center mb-4'>Wrong answer for captcha!</p>";
                 }
                 else{
-                    echo "complete";
+                    echo "<p class='text-green-600 font-semibold text-center mb-4'>Account Created Successfully! Welcome aboard.</p>";
                 }
             }
         ?>
-        <form method="POST">
-            <table>
-            <tr>
-                <td><span>First Name:</span></td>
-                <td><input type="text" name="first" id="first" required/></td>
-            </tr>
-            <tr>
-                <td><span>Middle Name:</span></td>
-                <td><input type="text" name="middle" id="middle" required/></td>
-            </tr>
-            <tr>
-                <td><span>Last Name:</span></td>
-                <td><input type="text" name="last" id="last" required/></td>
-            </tr>
-            <tr>
-                <td><span>Email:</span></td>
-                <td><input type="email" name="email" id="email" required/></td>
-            </tr>
-            <tr>
-                <td><span>Password:</span></td>
-                <td><input type="password" name="password" id="password" required/></td>
-            </tr>
-            <tr>
-                <td><span>Phone number:</span></td>
-                <td><input type="tel" name="phone" id="phone"></td>
-            </tr>
-            <tr>
-                <td><span>Favorite food:</span></td>
-                <td><input type="text" name="favorite_food" id="favorite_food" required></td>
-            </tr>
-            <tr>
-                <td><span>Favorite Color:</span></td>
-                <td><input type="text" name="favorite_color" id="favorite_color" required></td>
-            </tr>
-            <tr>
-                <td><span>Favorite Sport:</span></td>
-                <td><input type="text" name="favorite_sport" id="favorite_sport" required></td>
-            </tr>
-            <tr>
-                <td><input name="button" type="submit"></td>
-            </tr>
-            </table>
-            <br/>
-            <?php
-                echo "What is $num1 + $num2?";
-            ?>
-            <tr>
-                <td><input name="captcha" type="text" required></td>
-            </tr>
-        </form>
-    </body>
+    <h1 class="text-4xl font-bold text-emerald-400 text-center mb-2">✈️ BDPA Airlines</h1>
+    <h3 class="text-center text-blue-600 mb-6">Please Create Account.</h3>
+<form method="POST">
+
+<table class="mx-auto">
+
+<tr>
+    <td class="text-white">First Name:</td>
+    <td class="text-white"><input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="first" required></td>
+</tr>
+
+<tr>
+    <td class="text-white">Last Name:</td>
+    <td class="text-white"><input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="last" required></td>
+</tr>
+
+<tr>
+    <td class="text-white">Date of Birth:</td>
+    <td class="text-white"><input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="date" name="birth" required></td>
+</tr>
+
+<tr>
+    <td class="text-white">Gender:</td>
+    <td class="text-white"><input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="gender" required></td>
+</tr>
+
+<tr>
+    <td class="text-white">Street Address:</td>
+    <td class="text-white"><input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="street" required></td>
+</tr>
+
+<tr>
+    <td class="text-white">City:</td>
+    <td class="text-white"><input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="city" required></td>
+</tr>
+
+<tr>
+    <td class="text-white">State:</td>
+    <td class="text-white"><input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="state" required></td>
+</tr>
+
+<tr>
+    <td class="text-white">Zip Code:</td>
+    <td class="text-white"><input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="zip" required></td>
+</tr>
+
+<tr>
+    <td class="text-white">Country:</td>
+    <td class="text-white"><input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="country" required></td>
+</tr>
+
+<tr>
+    <td class="text-white">Email:</td>
+    <td class="text-white"><input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="email" name="email" required></td>
+</tr>
+
+<tr>
+    <td class="text-white">Password:</td>
+    <td class="text-white"><input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="password" name="password" required></td>
+</tr>
+
+<tr>
+    <td class="text-white">Phone Number:</td>
+    <td class="text-white"><input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="tel" name="phone"></td>
+</tr>
+
+<tr>
+    <td class="text-white">Favorite Food:</td>
+    <td class="text-white"><input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="favorite_food" required></td>
+</tr>
+
+<tr>
+    <td class="text-white">Favorite Color:</td>
+    <td class="text-white"><input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="favorite_color" required></td>
+</tr>
+
+<tr>
+    <td class="text-white">Favorite Sport:</td>
+    <td class="text-white"><input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="favorite_sport" required></td>
+</tr>
+
+</table>
+
+<br>
+
+<div class="text-center">
+    <p class="font-semibold text-emerald-400"><b>What is <?php echo "$num1 + $num2"; ?>?</b></p>
+    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="captcha" required>
+</div>
+
+<br>
+
+<div class="text-center">
+    <input class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2 rounded cursor-pointer" type="submit" name="button" value="Create Account">
+</div>
+
+</form>
+
+</div>
+
+</body>
 </html>
