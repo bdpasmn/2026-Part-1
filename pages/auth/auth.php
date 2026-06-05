@@ -101,14 +101,13 @@
     $captcha = $_POST['captcha'] ?? '';
     $num1 = rand(1,10);
     $num2 = rand(1,10);
-    if(isset($_POST['button'])){
-        if (strlen($password) <= 10){
+    if (isset($_POST['button'])) {
+        if (strlen($password) <= 10) {
             echo "<p class='text-red-500 font-semibold text-center mb-4'> Password is too short. Minimum 10 characters needed. </p>";
         }
         else if ($captcha != ($num1 + $num2)) {
             echo "<p class='text-red-500 font-semibold text-center mb-4'> Wrong answer for captcha! </p>";
-        }
-        else{
+        } else {
             echo "<p class='text-green-600 font-semibold text-center mb-4'> Account Created Successfully! Welcome aboard. </p>";
         }
     }
