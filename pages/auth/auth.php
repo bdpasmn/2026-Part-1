@@ -76,7 +76,7 @@
                         </td>
                     </tr>
                     <tr>
-                        <td class="text-white"> Phone Number: </td>
+                        <td class="text-white"> Phone #: </td>
                         <td class="text-white"> 
                             <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="tel" name="phone"> 
                         </td>
