@@ -44,25 +44,37 @@ $statusClass = match ($status) {
         <h1 class="text-white font-bold text-xl">BDPA Airports - TO BE REPLACED WITH NAV</h1>
     </header>
 
-    <main class="max-w-7xl mx-auto p-6">
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-6">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h2 class="text-lg font-bold text-white">Flight Ticket</h2>
-                    <p class="text-gray-400"><?= htmlspecialchars($ticket['passenger_name']) ?></p>
-                </div>
+    <main class="w-full p-6">
+        <section class="p-6">
+            <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-xl p-10 shadow-lg mb-6">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="tracking-[0.25em] text-sm text-blue-300 mb-4">BDPA AIRPORTS</p>
+                        <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">Flight Ticket</h1>
+                        <h2 class="text-2xl font-bold text-white mb-2">
+                            <?= htmlspecialchars($ticket['passenger_name']) ?>
+                        </h2>
+                    </div>
 
-                <div>
-                    <span
-                        id="flight-status"
-                        class="px-4 py-2 rounded-full text-sm font-semibold <?= $statusClass ?>">
-                        <?= htmlspecialchars($ticket['status']) ?>
-                    </span>
-                </div>
+                    <div class="text-right flex flex-col items-end gap-3">
+                        <h2 class="text-2xl font-bold text-white mb-2">
+                            <?= htmlspecialchars($ticket['airline']) ?>
+                            <?= htmlspecialchars($ticket['flight_number']) ?>
+                        </h2>
+
+                        <span class="inline-block px-4 py-2 rounded-full text-lg font-semibold <?= $statusClass ?>">
+                            <?= htmlspecialchars($ticket['status']) ?>
+                        </span>
+
+                        <span class="text-2xl font-bold text-blue-400">
+                            Gate <?= htmlspecialchars($ticket['gate']) ?>
+                        </span>
+                    </div>
+
             </div>
-        </div>
+        </section>
 
-        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+        <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-lg p-6">
             <h3 class="text-xl font-bold mb-6 text-white">Ticket Details</h3>
             
             <div class="space-y-4">
@@ -123,13 +135,24 @@ $statusClass = match ($status) {
                     </span>
                 </div>
 
-                <div class="flex justify-between items-center">
-                    <span class="font-medium text-gray-300">Flight Type</span>
-                    <span class="text-white">
-                        <?= htmlspecialchars($ticket['flight_type']) ?>
+                <div class="flex justify-between items-center border-b border-gray-700 pb-4">
+                    <span class="font-medium text-gray-300">Flight Status</span>
+                    <span class="text-right text-white">
+                        <?= htmlspecialchars($ticket['destination_city']) ?>,
+                        <?= htmlspecialchars($ticket['destination_state']) ?>
+                        (<?= htmlspecialchars($ticket['destination_airport']) ?>)
                     </span>
                 </div>
+
+                <div class="flex justify-between items-center">
+                    <span class="font-medium text-gray-300">Flight Type</span>
+                        <span class="inline-block px-2 py-2 rounded-full text-sm font-semibold <?= $statusClass ?>">
+                            <?= htmlspecialchars($ticket['status']) ?>
+                        </span>
+                </div>
             </div>
+
+            
 
             <div class="flex justify-between mt-8 pt-6 border-t border-gray-700">
                 <button class="px-6 py-3 bg-gray-800 border border-gray-700 text-white rounded-lg transition duration-200 hover:bg-gray-700">Back</button>
@@ -137,6 +160,5 @@ $statusClass = match ($status) {
             </div>
         </div>
     </main>
-</body>
 </body>
 </html>
