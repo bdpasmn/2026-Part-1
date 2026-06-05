@@ -11,68 +11,100 @@
                 <table class="mx-auto">
                     <tr>
                         <td class="text-white"> First Name: </td>
-                        <td class="text-white"> <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="first" required> </td>
+                        <td class="text-white"> 
+                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="first" required> 
+                        </td>
                     </tr>
                     <tr>
                         <td class="text-white"> Last Name: </td>
-                        <td class="text-white"> <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="last" required> </td>
+                        <td class="text-white"> 
+                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="last" required> 
+                        </td>
                     </tr>
                     <tr>
                         <td class="text-white"> Date of Birth: </td>
-                        <td class="text-white"> <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="date" name="birth" required> </td>
+                        <td class="text-white"> 
+                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="date" name="birth" required> 
+                        </td>
                     </tr>
                     <tr>
                         <td class="text-white"> Gender: </td>
-                        <td class="text-white"> <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="gender" required> </td>
+                        <td class="text-white"> 
+                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="gender" required> 
+                        </td>
                     </tr>
                     <tr>
                         <td class="text-white"> Street Address: </td>
-                        <td class="text-white"> <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="street" required> </td>
+                        <td class="text-white"> 
+                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="street" required> 
+                        </td>
                     </tr>
                     <tr>
                         <td class="text-white"> City: </td>
-                        <td class="text-white"> <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="city" required> </td>
+                        <td class="text-white"> 
+                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="city" required> 
+                        </td>
                     </tr>
                     <tr>
                         <td class="text-white"> State: </td>
-                        <td class="text-white"> <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="state" required> </td>
+                        <td class="text-white"> 
+                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="state" required> 
+                        </td>
                     </tr>
                     <tr>
                         <td class="text-white"> Zip Code: </td>
-                        <td class="text-white"> <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="zip" required> </td>
+                        <td class="text-white"> 
+                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="zip" required> 
+                        </td>
                     </tr>
                     <tr>
                         <td class="text-white"> Country: </td>
-                        <td class="text-white"> <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="country" required> </td>
+                        <td class="text-white"> 
+                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="country" required> 
+                        </td>
                     </tr>
                     <tr>
                         <td class="text-white"> Email: </td>
-                        <td class="text-white"> <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="email" name="email" required> </td>
+                        <td class="text-white"> 
+                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="email" name="email" required> 
+                        </td>
                     </tr>
                     <tr>
                         <td class="text-white"> Password: </td>
-                        <td class="text-white"> <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="password" name="password" required> </td>
+                        <td class="text-white"> 
+                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="password" name="password" required> 
+                        </td>
                     </tr>
                     <tr>
                         <td class="text-white"> Phone Number: </td>
-                        <td class="text-white"> <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="tel" name="phone"> </td>
+                        <td class="text-white"> 
+                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="tel" name="phone"> 
+                        </td>
                     </tr>
                     <tr>
                         <td class="text-white"> Favorite Food: </td>
-                        <td class="text-white"> <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="favorite_food" required> </td>
+                        <td class="text-white"> 
+                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="favorite_food" required> 
+                        </td>
                     </tr>
                     <tr>
                         <td class="text-white"> Favorite Color: </td>
-                        <td class="text-white"> <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="favorite_color" required> </td>
+                        <td class="text-white"> 
+                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="favorite_color" required> 
+                        </td>
                     </tr>
                     <tr>
                         <td class="text-white"> Favorite Sport: </td>
-                        <td class="text-white"> <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="favorite_sport" required> </td>
+                        <td class="text-white"> 
+                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="favorite_sport" required> 
+                        </td>
                     </tr>
                 </table>
                 <br>
                 <div class="text-center">
-                    <p class="font-semibold text-emerald-400"> <b> What is <?php echo "$num1 + $num2"; ?> ? </b> </p>
+                    <p class="font-semibold text-emerald-400"> 
+                        <b> What is <?php echo "$num1 + $num2"; ?> ? </b> 
+                    </p>
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="captcha" required>
                 </div>
                 <br>
