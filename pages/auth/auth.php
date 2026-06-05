@@ -6,100 +6,68 @@
     <body class="flex items-center justify-center min-h-screen m-0 font-sans bg-blue-900">
         <div class="bg-black shadow-xl rounded-xl p-4 w-full max-w-2xl">
             <h1 class="text-4xl font-bold text-emerald-400 text-center mb-2"> ✈️ BDPA Airlines </h1>
-            <h3 class="text-center text-blue-600 mb-6"> Please Create Account. </h3>
-            <form method="POST">
-                <table class="mx-auto">
-                    <tr>
-                        <td class="text-white"> First Name: </td>
-                        <td class="text-white"> 
-                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="first" required> 
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="text-white"> Last Name: </td>
-                        <td class="text-white"> 
-                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="last" required> 
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="text-white"> Date of Birth: </td>
-                        <td class="text-white"> 
-                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="date" name="birth" required> 
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="text-white"> Gender: </td>
-                        <td class="text-white"> 
-                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="gender" required> 
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="text-white"> Street Address: </td>
-                        <td class="text-white"> 
-                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="street" required> 
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="text-white"> City: </td>
-                        <td class="text-white"> 
-                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="city" required> 
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="text-white"> State: </td>
-                        <td class="text-white"> 
-                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="state" required> 
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="text-white"> Zip Code: </td>
-                        <td class="text-white"> 
-                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="zip" required> 
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="text-white"> Country: </td>
-                        <td class="text-white"> 
-                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="country" required> 
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="text-white"> Email: </td>
-                        <td class="text-white"> 
-                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="email" name="email" required> 
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="text-white"> Password: </td>
-                        <td class="text-white"> 
-                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="password" name="password" required> 
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="text-white"> Phone #: </td>
-                        <td class="text-white"> 
-                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="tel" name="phone"> 
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="text-white"> Favorite Food: </td>
-                        <td class="text-white"> 
-                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="favorite_food" required> 
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="text-white"> Favorite Color: </td>
-                        <td class="text-white"> 
-                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="favorite_color" required> 
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="text-white"> Favorite Sport: </td>
-                        <td class="text-white"> 
-                            <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="favorite_sport" required> 
-                        </td>
-                    </tr>
-                </table>
+            <h3 class="text-center text-blue-600 mb-6"> Please Create An Account </h3>
+            <form method="POST" class="flex-col">
+                <div class="flex-row">
+                    <p class="text-white"> First Name: </p>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="first" required>
+                </div> 
+                <div class="flex-row">
+                    <p class="text-white"> Last Name: </p>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="last" required>
+                </div> 
+                <div class="flex-row">
+                    <p class="text-white"> Date of Birth: </p>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="date" name="birth" required>
+                </div>
+                <div class="flex-row">
+                    <p class="text-white"> Gender: </p>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="gender" required>
+                </div> 
+                <div class="flex-row">
+                    <p class="text-white"> Street Address: </p>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="street" required>
+                </div> 
+                <div class="flex-row">
+                    <p class="text-white"> City: </p>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="city" required> 
+                </div>
+                <div class="flex-row">
+                    <p class="text-white"> State: </p>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="state" required>
+                </div> 
+                <div class="flex-row">
+                    <p class="text-white"> Zip Code: </p>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="zip" required> 
+                </div>
+                <div class="flex-row">
+                    <p class="text-white"> Country: </p>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="country" required>
+                </div> 
+                <div>
+                    <p class="text-white"> Email: </p>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="email" name="email" required> 
+                </div>
+                <div class="flex-row">
+                    <p class="text-white"> Password: </p>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="password" name="password" required> 
+                </div>
+                <div class="flex-row">
+                    <p class="text-white"> Phone #: </p>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="tel" name="phone"> 
+                </div>
+                <div class="flex-row">
+                    <p class="text-white"> Favorite Food: </p>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="favorite_food" required> 
+                </div>
+                <div class="flex-row">
+                    <p class="text-white"> Favorite Color: </p>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="favorite_color" required> 
+                </div>
+                <div class="flex-row">
+                    <p class="text-white"> Favorite Sport: </p>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="favorite_sport" required>
+                </div> 
                 <br>
                 <div class="text-center">
                     <p class="font-semibold text-emerald-400"> 
