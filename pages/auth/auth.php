@@ -3,73 +3,76 @@
         <title> Login </title>
         <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"> </script>
     </head>
-    <body class="flex items-center justify-center min-h-screen m-0 bg-gray-300">
-        <div class="bg-black shadow-xl rounded-xl p-4 w-xs md:w-full max-w-2xl">
-            <h1 class="text-center mb-2 text-white font-bold text-xl"> BDPA Airlines </h1>
-            <h3 class="text-center text-blue-600 mb-6"> Please Create An Account </h3>
+    <body class="flex flex-col items-center justify-center min-h-screen m-0 bg-gray-900">
+        <h1 class="text-white font-bold text-xl"> BDPA Airports - TO BE REPLACED WITH NAV </h1>
+        <div class="bg-gray-800 shadow-xl rounded-xl p-4 w-xs md:w-full max-w-2xl">
+            <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-xl p-10 shadow-lg">
+                <h1 class="text-center mb-2 text-white font-bold text-xl"> BDPA Airlines </h1>
+                <h3 class="text-center mb-6 text-blue-300 text-lg"> Please Create An Account </h3>
+            </div>
             <form method="POST" class="flex items-center justify-center flex-col">
-                <div class="md:flex md:flex-row md:gap-5 md:m-5">
+                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <p class="font-medium text-white"> First Name: </p>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="first" required>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="first" required>
                 </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-5">
+                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <p class="font-medium text-white"> Last Name: </p>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="last" required>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="last" required>
                 </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-5">
+                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <p class="font-medium text-white"> Date of Birth: </p>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="date" name="birth" required>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="date" name="birth" required>
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5">
+                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <p class="font-medium text-white"> Gender: </p>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="gender" required>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="gender" required>
                 </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-5">
+                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <p class="font-medium text-white"> Street Address: </p>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="street" required>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="street" required>
                 </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-5">
+                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <p class="font-medium text-white"> City: </p>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="city" required> 
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="city" required> 
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5">
+                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <p class="font-medium text-white"> State: </p>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="state" required>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95t" type="text" name="state" required>
                 </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-5">
+                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <p class="font-medium text-white"> Zip Code: </p>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="zip" required> 
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="zip" required> 
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5">
+                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <p class="font-medium text-white"> Country: </p>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="country" required>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="country" required>
                 </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-5">
+                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <p class="font-medium text-white"> Email: </p>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="email" name="email" required> 
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="email" name="email" required> 
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5">
+                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <p class="font-medium text-white"> Password: </p>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="password" name="password" required> 
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="password" name="password" required> 
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5">
+                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <p class=" font-medium text-white"> Phone #: </p>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="tel" name="phone"> 
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="tel" name="phone"> 
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5">
+                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <p class="font-medium text-white"> Favorite Food: </p>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="favorite_food" required> 
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="favorite_food" required> 
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5">
+                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <p class="font-medium text-white"> Favorite Color: </p>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="favorite_color" required> 
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="favorite_color" required> 
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5">
+                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <p class="font-medium text-white"> Favorite Sport: </p>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="favorite_sport" required>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="favorite_sport" required>
                 </div> 
                 <br>
-                <div class="text-center"> <!--Look into if this is needed -->
+                <div class="text-center bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md"> <!--Look into if this is needed -->
                     <p class="font-medium text-white"> 
                         <b> What is <?php echo "$num1 + $num2"; ?> ? </b> 
                     </p>
@@ -112,3 +115,5 @@
         }
     }
 ?>
+
+
