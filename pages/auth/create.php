@@ -13,46 +13,46 @@
             <br>
             <h3 class="text-center mb-3 text-red-100"> An Asterisk Denotes Required Fields </h3>
             <form method="POST" class="flex items-center justify-center flex-col">
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="first" class="font-medium text-white"> Account Title: </label>
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="title">
                 </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="first" class="font-medium text-white"> *First Name: </label>
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="first" required>
                 </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="middle" class="font-medium text-white"> Middle Name: </label>
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="middle">
                 </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="last" class="font-medium text-white"> *Last Name: </label>
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="last" required>
                 </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="suffix" class="font-medium text-white"> Suffix: </label>
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="suffix">
                 </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="birth" class="font-medium text-white"> *Date of Birth: </label>
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="date" name="birth" required>
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="sex" class="font-medium text-white"> *Sex: </label>
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="radio" name="sex" id="male" value="male" required>
                     <label for="male" class="font-medium text-white"> Male </label>
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="radio" name="sex" id="female" value="female" required>
                     <label for="female" class="font-medium text-white"> Female </label>
                 </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="street" class="font-medium text-white"> *Street Address: </label> <!-- Have this open a seperate menu -->
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="street" required>
                 </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="city" class="font-medium text-white"> *City: </label> 
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="city" required> 
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="country" class="font-medium text-white"> *Country: </label>
                     <select class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="country" id="country" required>
                         <option value="afghanistan"> Afghanistan </option>
@@ -248,7 +248,7 @@
                         <option value="zimbabwe"> Zimbabwe </option>
                     </select>
                 </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="state" class="font-medium text-white"> State: </label> <!-- Make it only appear if US has been selected -->
                     <select class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95t" type="text" name="state" id="state">
                         <option value="alabama"> Alabama </option>
@@ -304,94 +304,126 @@
                         <option value="wyoming"> Wyoming </option>
                     </select>
                 </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="zip" class="font-medium text-white"> Zip Code: </label> <!--Should only appear if US has been selected-->
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="number" name="zip" maxlength="10"> 
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label class=" font-medium text-white"> Phone: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="tel" name="phone" maxlength="15"> 
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="tel" name="phone" maxlength="15"> <!-- Maxlength is not working for some reason -->
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="email" class="font-medium text-white"> *Email: </label>
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="email" name="email" required> 
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="password" class="font-medium text-white"> *Password: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="password" name="password" minlength="10" required> 
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="password" name="password" id="password" required> 
+                    <p class="font-medium text-white"> Strength: 
+                        <b id="strength"> </b>
+                    </p>
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="question1" class="font-medium text-white"> *Custom Security Question: </label>
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="question1" required> 
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="answer1" class="font-medium text-white"> *Answer: </label>
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="answer1" required> 
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="question2" class="font-medium text-white"> *Custom Security Question: </label>
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="question2" required> 
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="answer2" class="font-medium text-white"> *Answer: </label>
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="answer2" required> 
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="question3" class="font-medium text-white"> *Custom Security Question: </label>
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="question3" required>
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="answer3" class="font-medium text-white"> *Answer: </label>
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="answer3" required> 
                 </div>
                 <br>
                 <div class="text-center bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="captcha" class="font-medium text-white"> 
-                        <b> What is <?php echo "$num1 + $num2"; ?> ? </b> 
+                        <b> *What is </b>
+                        <b id="1"> </b>
+                        <b> + </b>
+                        <b id="2"> </b>
+                        <b> ? </b> <!-- Fix the hanging question mark -->
                     </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="number" name="captcha" required>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="number" name="captcha" id="captcha" required>
                 </div>
                 <br>
-                <input class="bg-blue-600 text-white px-6 py-2 rounded transition duration-200 hover:bg-blue-700 hover:shadow-md active:scale-95" type="submit" name="button" value="Create Account">
+                <input class="bg-blue-600 text-white px-6 py-2 rounded transition duration-200 hover:bg-blue-700 hover:shadow-md active:scale-95"  type="submit" name="button" id="submit" value="Create Account" disabled>
             </form>
         </div>
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                //Limit the input of spaces for the password field
+                var passwordinput=document.getElementById("password"); //Test logic
+                passwordinput.addEventListener("input", (event) => {
+                    var inputvalue=passwordinput.value;
+                    var length=inputvalue.length;
+                    if (length <= 10) {
+                        document.getElementById("submit").setAttribute("disabled", "");
+                        document.getElementById("strength").textContent="Weak";
+                    } else {
+                        document.getElementById("strength").textContent="Acceptable";
+                        ocument.getElementById("submit").removeAttribute("disabled");
+                    }
+                    if (length >= 17) {
+                        document.getElementById("strength").textContent="Strong";
+                    }
+                });
+                var max=10;
+                var number1=Math.floor(Math.random()*max);
+                var number2=Math.floor(Math.random()*max);
+                document.getElementById("1").textContent=number1;
+                document.getElementById("2").textContent=number2;
+                var captchainput=document.getElementById("captcha");
+                captchainput.addEventListener("input", (event) => {
+                    var inputvalue=captchainput.value;
+                    var sum=number1+number2;
+                    if (inputvalue != sum) {
+                        document.getElementById("submit").setAttribute("disabled", "");
+                    } else {
+                        document.getElementById("submit").removeAttribute("disabled");
+                    }
+                });
+            });
+        </script>
     </body>
 </html>
 <?php
-    $num1=rand(1,10);
-    $num2=rand(1,10);
-    //Fix captcha
-    if (strlen($password) <= 10) {
-        //finish
-    } else if (strlen($password) >= 17) {
-        //finish
-    }
-    if ($captcha != ($num1 + $num2)) { //Rework alert thing
-        //finish
-    } else {
-        $title=$_POST["title"];
-        $first=$_POST["first"];
-        $middle=$_POST["middle"];
-        $last=$_POST["last"];
-        $suffix=$_POST["suffix"];
-        $birth=$_POST["birth"];
-        $sex=$_POST["sex"];
-        $street=$_POST["street"];
-        $city=$_POST["city"];
-        $country=$_POST["country"];
-        $state=$_POST["state"];
-        $zip=$_POST["zip"];
-        $phone=$_POST["phone"];
-        $email=$_POST["email"];
-        $password=$_POST["password"];
-        $question1=$_POST["question1"];
-        $answer1=$_POST["answer1"];
-        $question2=$_POST["question2"];
-        $answer2=$_POST["answer2"];
-        $question3=$_POST["question3"];
-        $answer3=$_POST["answer3"];
-        $captcha=$_POST["captcha"];
-        //Do API and database stuff here, don't froget to give message, redirect, and start a session.
-    }
+    //Have this run after the form has been sent
+    $title=$_POST["title"];
+    $first=$_POST["first"];
+    $middle=$_POST["middle"];
+    $last=$_POST["last"];
+    $suffix=$_POST["suffix"];
+    $birth=$_POST["birth"];
+    $sex=$_POST["sex"];
+    $street=$_POST["street"];
+    $city=$_POST["city"];
+    $country=$_POST["country"];
+    $state=$_POST["state"];
+    $zip=$_POST["zip"];
+    $phone=$_POST["phone"];
+    $email=$_POST["email"];
+    $password=$_POST["password"];
+    $question1=$_POST["question1"];
+    $answer1=$_POST["answer1"];
+    $question2=$_POST["question2"];
+    $answer2=$_POST["answer2"];
+    $question3=$_POST["question3"];
+    $answer3=$_POST["answer3"];
+    $captcha=$_POST["captcha"];
+    //Do API and database stuff here, don't froget to give message, redirect, and start a session.
+?>
 
 
