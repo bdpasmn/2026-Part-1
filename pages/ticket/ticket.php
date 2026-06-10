@@ -5,10 +5,10 @@ require_once __DIR__ . '/../../database/db.php';
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
-$ticketId = '3';
+$confirmation = $_GET['confirmation'] ?? null;
 
-$stmt = $pdo->prepare('SELECT * FROM "Tickets" WHERE ticket_id = ? LIMIT 1');
-$stmt->execute([$ticketId]);
+$stmt = $pdo->prepare('SELECT * FROM "Tickets" WHERE confirmation_code = ? LIMIT 1');
+$stmt->execute([$confirmation]);
 $ticketRow = $stmt->fetch();
 
 
@@ -56,7 +56,7 @@ if ($flight) {
         'status' => isset($flight['status']) ? ucwords(strtolower($flight['status'])) : 'Unknown'
     ];
 } else {
-    die('Flight not found for flight_id: ' . htmlspecialchars($flightId));
+    die('Flight not found for confirmation code: ' . htmlspecialchars($confirmationCode));
 }
 
 $status = strtolower($ticket['status']);
