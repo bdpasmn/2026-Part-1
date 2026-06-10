@@ -35,6 +35,43 @@ if ($passengerName === '') {
 date_default_timezone_set('America/New_York');
 
 if ($flight) {
+
+    $landingAirport = $flight['landingAirport'] ?? null;
+
+    $dest_airport_name = '';
+    $dest_airport_code = '';
+    $dest_city = '';
+    $dest_state = '';
+    $dest_country = '';
+
+    if (is_array($landingAirport)) {
+        $dest_airport_name = $landingAirport['name'] ?? '';
+        $dest_airport_code = $landingAirport['shortName'] ?? ($landingAirport['short_name'] ?? '');
+        $dest_city = $landingAirport['city'] ?? '';
+        $dest_state = $landingAirport['state'] ?? '';
+        $dest_country = $landingAirport['country'] ?? '';
+    } else {
+        //if api doesnt have landing airport details, try to match the code with airports list
+        $dest_airport_code = $flight['landingAt'] ?? ($flight['landing_at'] ?? '');
+
+        if (!empty($dest_airport_code)) {
+            $airportsResp = $api->getAirports();
+            if (isset($airportsResp['airports']) && is_array($airportsResp['airports'])) {
+                foreach ($airportsResp['airports'] as $ap) {
+                    $shortA = $ap['shortName'] ?? ($ap['short_name'] ?? '');
+                    if ($shortA !== '' && strcasecmp($shortA, $dest_airport_code) === 0) {
+                        $dest_airport_name = $ap['name'] ?? '';
+                        $dest_airport_code = $shortA;
+                        $dest_city = $ap['city'] ?? '';
+                        $dest_state = $ap['state'] ?? '';
+                        $dest_country = $ap['country'] ?? '';
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     $ticket = [
         'flight_id' => $flight['flight_id'],
         'departure_airport' => $flight['comingFrom'],
@@ -44,7 +81,12 @@ if ($flight) {
         'airline' => $flight['airline'],
         'seat' => $ticketRow['seat'] ?? 'TBD',
         'flight_number' => $flight['flightNumber'],
-        'destination_airport' => $flight['landingAt'],
+        'destination_airport' => $flight['landingAt'] ?? $dest_airport_code,
+        'destination_airport_name' => $dest_airport_name,
+        'destination_airport_code' => $dest_airport_code,
+        'destination_city' => $dest_city,
+        'destination_state' => $dest_state,
+        'destination_country' => $dest_country,
         'departure_time' => $flight['departFromSender']
             ? date('h:i A', $flight['departFromSender'] / 1000)
             : 'TBD',
@@ -55,6 +97,13 @@ if ($flight) {
         'gate' => strtoupper($flight['gate'] ?? 'TBD'),
         'status' => isset($flight['status']) ? ucwords(strtolower($flight['status'])) : 'Unknown'
     ];
+    // aggregate destination info for easy reading
+    $destinationParts = array_filter([
+        $ticket['destination_city'] ?? '',
+        $ticket['destination_state'] ?? '',
+        $ticket['destination_country'] ?? ''
+    ]);
+    $ticket['destination_display'] = $destinationParts ? implode(', ', $destinationParts) : '';
 } else {
     die('Flight not found for confirmation code: ' . htmlspecialchars($confirmationCode));
 }
@@ -96,7 +145,7 @@ $statusClass = match ($status) {
     <main class="w-full p-6">
         <section class="p-6">
             <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-xl p-10 shadow-lg mb-6">
-                <div class="flex flex-col lg:flex-row justify-between items-start gap-6">
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
                     <div>
                         <p class="tracking-[0.25em] text-sm text-blue-300 mb-4">BDPA AIRPORTS</p>
                         <h1 class="text-4xl md:text-5xl font-bold text-white mb-8">Flight Ticket</h1>
@@ -105,7 +154,8 @@ $statusClass = match ($status) {
                         </h2>
                     </div>
 
-                    <div class="flex-1 flex flex-col sm:flex-row items-center justify-center gap-8 px-4 py-2">
+
+                    <div class="flex flex-1 flex-col sm:flex-row items-center justify-center gap-8 px-4 py-2">
                         <div class="min-w-[180px] max-w-[220px] text-center">
                             <div class="text-sm uppercase tracking-[0.3em] text-slate-400 mb-2">Seat</div>
                             <div class="text-5xl font-bold text-blue-400 mb-3">
@@ -131,14 +181,14 @@ $statusClass = match ($status) {
                                 <div class="text-right">
                                     <div class="text-[0.65rem] uppercase text-slate-400">To</div>
                                     <div class="text-base font-semibold">
-                                        <?= htmlspecialchars($ticket['destination_airport']) ?>
+                                            <?= htmlspecialchars($ticket['destination_airport_code']) ?>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="min-w-[240px] text-right flex flex-col items-end gap-10 px-4 py-4">
+                    <div class="w-full sm:w-auto ml-auto text-right flex flex-col items-end gap-10 px-4 py-4 lg:self-center">
                         <h2 class="text-3xl font-bold text-white mb-2">
                             <?= htmlspecialchars($ticket['airline']) ?>
                             <?= htmlspecialchars($ticket['flight_number']) ?>
@@ -197,7 +247,8 @@ $statusClass = match ($status) {
                 <div class="flex justify-between items-center border-b border-gray-700 pb-4">
                     <span class="font-medium text-gray-300">Destination</span>
                     <span class="text-right text-white">
-                        <?= htmlspecialchars($ticket['destination_airport']) ?>
+                        <div class="font-semibold"><?= htmlspecialchars($ticket['destination_display'] ?: ($ticket['destination_airport_name'] ?: $ticket['destination_airport'])) ?></div>
+                        <div class="text-sm text-slate-400">Airport: <?= htmlspecialchars($ticket['destination_airport_name'] ?: $ticket['destination_airport']) ?><?php if (!empty($ticket['destination_airport_code'])): ?> (<?= htmlspecialchars($ticket['destination_airport_code']) ?>)<?php endif; ?></div>
                     </span>
                 </div>
 
