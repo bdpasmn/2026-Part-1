@@ -3,7 +3,7 @@
         <title> Login </title>
         <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"> </script>
     </head>
-    <body class="flex flex-col items-center justify-center min-h-screen m-0 bg-gray-900">
+    <body class="flex flex-col items-center justify-center min-h-screen m-0 bg-gray-900"> <!-- Double up the boxes -->
         <h1 class="text-white font-bold text-xl"> BDPA Airports - TO BE REPLACED WITH NAV </h1>
         <div class="bg-gray-800 shadow-xl rounded-xl p-4 w-xs md:w-full max-w-2xl">
             <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-xl p-10 shadow-lg">
@@ -309,7 +309,7 @@
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="number" name="zip" maxlength="10"> 
                 </div>
                 <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label class=" font-medium text-white"> Phone: </label>
+                    <label class="font-medium text-white"> Phone: </label>
                     <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="tel" name="phone" maxlength="15"> <!-- Maxlength is not working for some reason -->
                 </div>
                 <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
@@ -364,7 +364,7 @@
         </div>
         <script>
             document.addEventListener("DOMContentLoaded", function() {
-                //Limit the input of spaces for the password field
+                //Limit the input of spaces for the password field?
                 var passwordinput=document.getElementById("password"); //Test logic
                 passwordinput.addEventListener("input", (event) => {
                     var inputvalue=passwordinput.value;
@@ -400,30 +400,51 @@
     </body>
 </html>
 <?php
-    //Have this run after the form has been sent
-    $title=$_POST["title"];
-    $first=$_POST["first"];
-    $middle=$_POST["middle"];
-    $last=$_POST["last"];
-    $suffix=$_POST["suffix"];
-    $birth=$_POST["birth"];
-    $sex=$_POST["sex"];
-    $street=$_POST["street"];
-    $city=$_POST["city"];
-    $country=$_POST["country"];
-    $state=$_POST["state"];
-    $zip=$_POST["zip"];
-    $phone=$_POST["phone"];
-    $email=$_POST["email"];
-    $password=$_POST["password"];
-    $question1=$_POST["question1"];
-    $answer1=$_POST["answer1"];
-    $question2=$_POST["question2"];
-    $answer2=$_POST["answer2"];
-    $question3=$_POST["question3"];
-    $answer3=$_POST["answer3"];
-    $captcha=$_POST["captcha"];
-    //Do API and database stuff here, don't froget to give message, redirect, and start a session.
+    if (isset($_POST["title"])) {
+        $title=$_POST["title"];
+        $first=$_POST["first"];
+        $middle=$_POST["middle"];
+        $last=$_POST["last"];
+        $suffix=$_POST["suffix"];
+        $birth=$_POST["birth"];
+        $sex=$_POST["sex"];
+        $street=$_POST["street"];
+        $city=$_POST["city"];
+        $country=$_POST["country"];
+        $state=$_POST["state"];  
+        $zip=$_POST["zip"];
+        $phone=$_POST["phone"];
+        $email=$_POST["email"];
+        $password=$_POST["password"];
+        $question1=$_POST["question1"];
+        $answer1=$_POST["answer1"];
+        $question2=$_POST["question2"];
+        $answer2=$_POST["answer2"];
+        $question3=$_POST["question3"];
+        $answer3=$_POST["answer3"];
+        $captcha=$_POST["captcha"];
+        #role="customer";
+        $host='db.uekcvegjgdnqcvdfwcjc.supabase.co';
+        $port='5432';
+        $dbname='postgres';
+        $user='postgres';
+        $passworddb='bdp@Smn2025!?'; //Look into why this can't just be pasted
+        try {
+            $pdo = new PDO(
+                "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require",
+                $user,
+                $passworddb,
+                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+            );
+            echo "Connected to Supabase successfully!";
+        } catch (PDOException $e) {
+            die("Connection failed: " . $e->getMessage());
+        }
+        $query="INSERT INTO Users(user_id, first_name, middle_name, last_name, suffix, date_birth, sex, street_address, city, country, state, zip_code, phone, email, password, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $statement=$pdo->prepare($query);
+        $statement->execute(["$title, $first, $middle, $last, $suffix, $birth, $sex, $street, $city, $country, $state, $zip, $phone, $email, $passowrd, $role"]);
+        //Do API and database stuff here, don't froget to give message, redirect, and start a session.
+    }
 ?>
 
 
