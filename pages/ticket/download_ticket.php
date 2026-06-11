@@ -41,13 +41,15 @@ $passengerName = trim(
 
 if ($passengerName === '') $passengerName = 'Passenger';
 
+date_default_timezone_set('America/New_York');
+
 function fmtTime($ms) {
     if (!$ms) return 'TBD';
     return date('h:i A', $ms / 1000);
 }
 
 $dest = $flight['landingAt'];
-$generated = date('Y-m-d H:i');
+$generated = date('d-m-Y h:i A');
 
 $ticket = [
     'departure_time' => $flight['departFromSender']
@@ -62,7 +64,7 @@ $html = <<<HTML
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Ticket {$confirmation}</title>
+    <title>Ticket {$passengerName}</title>
     <style>
         body{font-family: Inter, Arial, Helvetica, sans-serif;background:#0f1724;color:#e6eef8;padding:20px}
         .card{max-width:760px;margin:0 auto;background:linear-gradient(90deg,#0b1220,#0f1724);border:1px solid #374151;border-radius:12px;padding:28px}
@@ -119,7 +121,12 @@ $html = <<<HTML
 </body>
 </html>
 HTML;
-
+//html debug statement
+if (isset($_GET['format']) && $_GET['format'] === 'html') {
+    header('Content-Type: text/html; charset=utf-8');
+    echo $html;
+    exit;
+}
 
 //GD is cool
 if (!function_exists('imagecreatetruecolor')) {
@@ -226,7 +233,7 @@ draw_scaled_text($img, 'Generated: ' . $generated, $leftCol, $h-60, 1.0, $muted)
 
 
 header('Content-Type: image/png');
-header('Content-Disposition: attachment; filename="ticket-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $confirmation) . '.png"');
+header('Content-Disposition: attachment; filename="ticket-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $passengerName) . '.png"');
 imagepng($img);
 imagedestroy($img);
 exit;

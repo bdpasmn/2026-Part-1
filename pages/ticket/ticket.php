@@ -335,6 +335,7 @@ $statusClass = match ($status) {
 
             <div class="flex justify-between mt-8 pt-6 border-t border-gray-700">
                 <button class="px-6 py-3 bg-gray-800 border border-gray-700 text-white rounded-lg transition duration-200 hover:bg-gray-700">Back</button>
+                <!--&format=html for html output-->
                 <a id="download-ticket" href="/bdpa/pages/ticket/download_ticket.php?confirmation=<?php echo urlencode($ticket['confirmation_number']); ?>" class="px-8 py-3 bg-blue-600 text-white rounded-lg transition duration-200 hover:bg-blue-700 active:scale-95 inline-block">Download Ticket</a>
             </div>
         </div>
