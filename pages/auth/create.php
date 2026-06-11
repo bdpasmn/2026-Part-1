@@ -423,26 +423,12 @@
         $question3=$_POST["question3"];
         $answer3=$_POST["answer3"];
         $captcha=$_POST["captcha"];
-        #role="customer";
+        $role="customer";
         $host='db.uekcvegjgdnqcvdfwcjc.supabase.co';
         $port='5432';
         $dbname='postgres';
         $user='postgres';
         $passworddb='bdp@Smn2025!?'; //Look into why this can't just be pasted
-        try {
-            $pdo = new PDO(
-                "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require",
-                $user,
-                $passworddb,
-                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-            );
-            echo "Connected to Supabase successfully!";
-        } catch (PDOException $e) {
-            die("Connection failed: " . $e->getMessage());
-        }
-        $query="INSERT INTO Users(user_id, first_name, middle_name, last_name, suffix, date_birth, sex, street_address, city, country, state, zip_code, phone, email, password, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        $statement=$pdo->prepare($query);
-        $statement->execute(["$title, $first, $middle, $last, $suffix, $birth, $sex, $street, $city, $country, $state, $zip, $phone, $email, $passowrd, $role"]);
         //Do API and database stuff here, don't froget to give message, redirect, and start a session.
     }
 ?>
