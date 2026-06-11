@@ -14,6 +14,39 @@ $ticketRow = $stmt->fetch();
 
 $flightId = $ticketRow['flight_id'] ?? null;
 
+//  implemented AJAX request for flight status updates
+if (isset($_GET['xhr']) && $_GET['xhr'] === 'flight-status') {
+    header('Content-Type: application/json');
+
+    if (!$flightId) {
+        http_response_code(400);
+        echo json_encode(['error' => 'missing flight_id']);
+        exit;
+    }
+
+    $flightsResponse = $api->searchFlights(
+        ['flight_id' => $flightId],
+        null,
+        'desc'
+    );
+
+    $flight = $flightsResponse['flights'][0] ?? null;
+
+    if (!$flight) {
+        http_response_code(404);
+        echo json_encode(['error' => 'flight not found']);
+        exit;
+    }
+
+    echo json_encode([
+        'departure' => $flight['departFromSender'] ?? null,
+        'arrival' => $flight['arriveAtReceiver'] ?? null,
+        'gate' => strtoupper($flight['gate'] ?? 'TBD'),
+        'status' => isset($flight['status']) ? ucwords(strtolower($flight['status'])) : 'Unknown'
+    ]);
+    exit;
+}
+
 
 $flightsResponse = $api->searchFlights(
     ['flight_id' => $flightId],
@@ -133,6 +166,7 @@ $statusClass = match ($status) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Flight Ticket</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<link rel="icon" href="/img/favicon.ico" type="image/x-icon">
 <style>
 
 </style>
@@ -194,7 +228,7 @@ $statusClass = match ($status) {
                             <?= htmlspecialchars($ticket['flight_number']) ?>
                         </h2>
 
-                        <span class="inline-block px-5 py-3 rounded-full text-lg font-semibold <?= $statusClass ?>">
+                        <span id="flight-status" class="inline-block px-5 py-3 rounded-full text-lg font-semibold <?= $statusClass ?>">
                             <?= htmlspecialchars($ticket['status']) ?>
                         </span>
                     </div>
@@ -268,7 +302,7 @@ $statusClass = match ($status) {
 
                 <div class="flex justify-between items-center border-b border-gray-700 pb-4">
                     <span class="font-medium text-gray-300">Gate</span>
-                    <span class="font-bold text-blue-400 text-lg">
+                    <span id="gate" class="font-bold text-blue-400 text-lg">
                         <?= htmlspecialchars($ticket['gate']) ?>
                     </span>
                 </div>
@@ -301,9 +335,41 @@ $statusClass = match ($status) {
 
             <div class="flex justify-between mt-8 pt-6 border-t border-gray-700">
                 <button class="px-6 py-3 bg-gray-800 border border-gray-700 text-white rounded-lg transition duration-200 hover:bg-gray-700">Back</button>
-                <button class="px-8 py-3 bg-blue-600 text-white rounded-lg transition duration-200 hover:bg-blue-700 active:scale-95">Download Ticket</button>
+                <a id="download-ticket" href="/bdpa/pages/ticket/download_ticket.php?confirmation=<?php echo urlencode($ticket['confirmation_number']); ?>" class="px-8 py-3 bg-blue-600 text-white rounded-lg transition duration-200 hover:bg-blue-700 active:scale-95 inline-block">Download Ticket</a>
             </div>
         </div>
     </main>
+    <script>
+        function formatFlightTime(ms) {
+            if (!ms) return 'TBD';
+            const date = new Date(ms);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        async function refreshTicketFlightStatus() {
+            try {
+                const url = new URL(window.location.href);
+                url.searchParams.set('xhr', 'flight-status');
+                const res = await fetch(url.toString(), { credentials: 'same-origin' });
+                if (!res.ok) return;
+                const data = await res.json();
+
+                const departureEl = document.getElementById('departure-time');
+                const arrivalEl = document.getElementById('arrival-time');
+                const gateEl = document.getElementById('gate');
+                const statusEl = document.getElementById('flight-status');
+
+                if (departureEl) departureEl.textContent = formatFlightTime(data.departure);
+                if (arrivalEl) arrivalEl.textContent = formatFlightTime(data.arrival);
+                if (gateEl) gateEl.textContent = data.gate || 'TBD';
+                if (statusEl && data.status) statusEl.textContent = data.status;
+            } catch (error) {
+                console.error('Could not refresh flight status:', error);
+            }
+        }
+
+        refreshTicketFlightStatus();
+        setInterval(refreshTicketFlightStatus, 15000);
+    </script>
 </body>
 </html>
