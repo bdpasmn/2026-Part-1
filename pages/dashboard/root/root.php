@@ -23,6 +23,7 @@ $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
 $admins    = array_values(array_filter($allUsers, fn($u) => in_array(strtolower($u['role'] ?? ''), ['admin', 'root'])));
 $customers = array_values(array_filter($allUsers, fn($u) => strtolower($u['role'] ?? '') === 'customer'));
 
+// ── Stats ────────────────────────────────────────────────────────────────────
 $now      = time();
 $daySec   = 86400;
 $weekSec  = 7  * $daySec;
@@ -51,6 +52,7 @@ foreach ($allTickets as $t) {
     if ($age <= $yearSec)  { $ticketStats['year']++;  $profitStats['year']  += $price; }
 }
 
+// ── POST handling ─────────────────────────────────────────────────────────────
 $activeTab = $_GET['tab'] ?? 'overview';
 $updateMsg = null;
 $errorMsg  = null;
@@ -125,6 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtTs($ts): string {
     if (!$ts) return '—';
     return is_numeric($ts) ? date('Y-m-d H:i', (int)$ts) : date('Y-m-d H:i', strtotime((string)$ts));
@@ -139,7 +142,7 @@ function roleBadge(string $role): string {
     return "<span class=\"px-3 py-1 rounded-full text-xs font-semibold {$cls}\">" . htmlspecialchars($role) . "</span>";
 }
 
-// ahhhhhhhhhhhhhhhhhh im going to fleeping crash out 
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -203,6 +206,7 @@ tbody tr:hover { background: rgba(55,65,81,.45); }
   </div>
   <?php endif; ?>
 
+  <!-- Tabs -->
   <div class="flex gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1 flex-wrap">
     <?php
     $tabs = [
@@ -220,6 +224,7 @@ tbody tr:hover { background: rgba(55,65,81,.45); }
 
   <?php if ($activeTab === 'overview'): ?>
 
+  <!-- Period buttons -->
   <div class="flex gap-2 flex-wrap">
     <?php foreach (['day' => 'Today', 'week' => 'This Week', 'month' => 'This Month', 'year' => 'This Year', 'all' => 'All Time'] as $k => $label): ?>
     <button onclick="setPeriod('<?= $k ?>')" id="period-<?= $k ?>"
@@ -231,6 +236,7 @@ tbody tr:hover { background: rgba(55,65,81,.45); }
     <?php endforeach; ?>
   </div>
 
+  <!-- Stat cards -->
   <div class="grid xl:grid-cols-5 md:grid-cols-3 gap-4">
     <div class="stat-card">
       <p class="text-gray-500 text-xs uppercase tracking-wider font-semibold">Tickets Sold</p>
@@ -259,6 +265,7 @@ tbody tr:hover { background: rgba(55,65,81,.45); }
     </div>
   </div>
 
+  <!-- Quick links -->
   <div class="grid lg:grid-cols-4 gap-4">
     <a href="?tab=admins" class="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-pink-600 hover:bg-gray-800/60 transition block group">
       <div class="text-2xl mb-3">👨‍💼</div>
@@ -282,6 +289,7 @@ tbody tr:hover { background: rgba(55,65,81,.45); }
     </a>
   </div>
 
+  <!-- Admin summary table -->
   <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
     <div class="p-4 border-b border-gray-800 flex items-center justify-between">
       <h2 class="font-bold">Administrator Accounts</h2>
@@ -326,6 +334,7 @@ tbody tr:hover { background: rgba(55,65,81,.45); }
   ?>
 
   <div class="grid lg:grid-cols-2 gap-5">
+    <!-- Create admin -->
     <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
       <h2 class="font-bold text-base mb-4">Create New Administrator</h2>
       <form method="POST" class="space-y-3">
@@ -358,6 +367,7 @@ tbody tr:hover { background: rgba(55,65,81,.45); }
       </form>
     </div>
 
+    <!-- Edit admin -->
     <?php if ($editAdmin): ?>
     <div class="bg-gray-900 border border-pink-700 rounded-xl p-6">
       <div class="flex items-center justify-between mb-4">
@@ -404,6 +414,7 @@ tbody tr:hover { background: rgba(55,65,81,.45); }
     <?php endif; ?>
   </div>
 
+  <!-- Admins table -->
   <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
     <div class="p-4 border-b border-gray-800">
       <h2 class="font-bold">All Administrators
@@ -558,6 +569,7 @@ tbody tr:hover { background: rgba(55,65,81,.45); }
   }
   ?>
 
+  <!-- Lookup panel -->
   <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
     <h2 class="font-bold text-base mb-4">Ticket Search &amp; Lookup</h2>
     <form method="GET" class="flex flex-wrap gap-3">
@@ -606,6 +618,7 @@ tbody tr:hover { background: rgba(55,65,81,.45); }
   </div>
   <?php endif; ?>
 
+  <!-- Tickets table -->
   <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
     <div class="p-4 border-b border-gray-800">
       <h2 class="font-bold">All Tickets
