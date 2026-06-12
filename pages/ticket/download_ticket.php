@@ -1,0 +1,241 @@
+<?php
+require_once __DIR__ . '/../../api/key.php';
+require_once __DIR__ . '/../../api/api.php';
+require_once __DIR__ . '/../../database/db.php';
+
+$confirmation = $_GET['confirmation'] ?? null;
+
+if (!$confirmation) {
+    http_response_code(400);
+    echo 'Invalid request: confirmation code is required';
+    exit;
+}
+
+$stmt = $pdo->prepare('SELECT * FROM "Tickets" WHERE confirmation_code = ? LIMIT 1');
+$stmt->execute([$confirmation]);
+$ticketRow = $stmt->fetch();
+
+if (!$ticketRow) {
+    http_response_code(404);
+    echo 'Ticket not found';
+    exit;
+}
+
+$flightId = $ticketRow['flight_id'] ?? null;
+
+$api = new AirportsAPI(AIRPORTS_API_KEY);
+$flight = null;
+if (!empty($flightId)) {
+    try {
+        $flight = $api->getFlightById($flightId);
+    } catch (Throwable $e) {
+        $flight = null;
+    }
+}
+
+$passengerName = trim(
+    ($ticketRow['name_first'] ?? '') . ' ' .
+    ($ticketRow['name_middle'] ?? '') . ' ' .
+    ($ticketRow['name_last'] ?? '')
+);
+
+if ($passengerName === '') $passengerName = 'Passenger';
+
+date_default_timezone_set('America/New_York');
+
+function fmtTime($ms) {
+    if (!$ms) return 'TBD';
+    return date('h:i A', $ms / 1000);
+}
+
+$dest = $flight['landingAt'];
+$generated = date('d-m-Y h:i A');
+
+$ticket = [
+    'departure_time' => $flight['departFromSender']
+        ? date('h:i A', $flight['departFromSender'] / 1000)
+        : 'TBD',
+    'arrival_time' => $flight['arriveAtReceiver']
+        ? date('h:i A', $flight['arriveAtReceiver'] / 1000)
+        : 'TBD',
+      ];
+$html = <<<HTML
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Ticket {$passengerName}</title>
+    <style>
+        body{font-family: Inter, Arial, Helvetica, sans-serif;background:#0f1724;color:#e6eef8;padding:20px}
+        .card{max-width:760px;margin:0 auto;background:linear-gradient(90deg,#0b1220,#0f1724);border:1px solid #374151;border-radius:12px;padding:28px}
+        .brand{letter-spacing:0.2em;color:#93c5fd;font-size:12px;margin-bottom:8px}
+        .title{font-size:28px;font-weight:700;margin:0 0 6px}
+        .passenger{font-size:20px;font-weight:700;margin-bottom:12px}
+        .row{display:flex;justify-content:space-between;align-items:center}
+        .seat-area{min-width:200px;text-align:center}
+        .seat{font-size:48px;color:#60a5fa;font-weight:800}
+        .gate{display:inline-block;padding:6px 10px;border-radius:9999px;border:1px solid #334155;color:#60a5fa;margin-top:8px}
+        .info{margin-top:18px;background:transparent;padding:12px;border-radius:8px}
+        .label{color:#94a3b8;font-size:12px}
+        .value{color:#e6eef8;font-weight:600}
+        .small{color:#94a3b8;font-size:11px}
+        .footer{margin-top:18px;color:#9ca3af;font-size:12px}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="brand">BDPA AIRPORTS</div>
+        <div class="title">Flight Ticket</div>
+        <div class="passenger">{$passengerName}</div>
+
+        <div class="row">
+            <div class="seat-area">
+                <div class="label">Seat</div>
+                <div class="seat">{$ticketRow['seat']}</div>
+                <div class="gate">Gate {$flight['gate']}</div>
+                <div style="margin-top:8px;color:#cbd5e1">From <strong style="color:#e6eef8">{$flight['comingFrom']}</strong> &rarr; To <strong style="color:#e6eef8">{$dest}</strong></div>
+            </div>
+
+            <div style="text-align:right">
+                <div style="font-size:20px;font-weight:700">{$flight['airline']} </div>
+                <div class="label" style="margin-top:8px">Status</div>
+                <div class="value">{$flight['status']}</div>
+            </div>
+        </div>
+
+        <div class="info">
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #0b1220">
+                <div><div class="label">Confirmation</div><div class="value">{$confirmation}</div></div>
+                <div><div class="label">Ticket ID</div><div class="value">{$ticketRow['ticket_id']}</div></div>
+                <div><div class="label">Flight ID</div><div class="value">{$flightId}</div></div>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;padding:6px 0">
+                <div><div class="label">Departure</div><div class="value">{$ticket['departure_time']}</div></div>
+                <div><div class="label">Arrival</div><div class="value">{$ticket['arrival_time']}</div></div>
+            </div>
+        </div>
+
+        <div class="footer">Generated: {$generated}</div>
+    </div>
+</body>
+</html>
+HTML;
+//html debug statement
+if (isset($_GET['format']) && $_GET['format'] === 'html') {
+    header('Content-Type: text/html; charset=utf-8');
+    echo $html;
+    exit;
+}
+
+//GD is cool
+if (!function_exists('imagecreatetruecolor')) {
+    //HTML fallback if GD doest exist
+    header('Content-Type: text/html; charset=utf-8');
+    header('Content-Disposition: attachment; filename="ticket-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $confirmation) . '.html"');
+    echo $html;
+    exit;
+}
+
+// bitmap font for compatability
+
+$w = 1400; $h = 520;
+$img = imagecreatetruecolor($w, $h);
+
+// hex 2 rgb yaaaaayyyy
+function hex2rgb($hex) {
+    $hex = ltrim($hex, '#');
+    if (strlen($hex) === 3) {
+        $r = hexdec(str_repeat($hex[0],2));
+        $g = hexdec(str_repeat($hex[1],2));
+        $b = hexdec(str_repeat($hex[2],2));
+    } else {
+        $r = hexdec(substr($hex,0,2));
+        $g = hexdec(substr($hex,2,2));
+        $b = hexdec(substr($hex,4,2));
+    }
+    return [$r,$g,$b];
+}
+
+// gradient background
+$top = hex2rgb('#cfeffd');
+$bottom = hex2rgb('#f6fbff');
+for ($y=0;$y<$h;$y++) {
+    $t = $y / ($h-1);
+    $r = (int)($top[0]*(1-$t) + $bottom[0]*$t);
+    $g = (int)($top[1]*(1-$t) + $bottom[1]*$t);
+    $b = (int)($top[2]*(1-$t) + $bottom[2]*$t);
+    $col = imagecolorallocate($img, $r, $g, $b);
+    imageline($img, 0, $y, $w, $y, $col);
+}
+
+// main card rectangle
+$cardCol = imagecolorallocate($img, 15, 23, 36);
+imagefilledrectangle($img, 30, 40, $w-30, $h-60, $cardCol);
+
+// thin divider to separate sections to make it look more like a ticket
+$black = imagecolorallocate($img,0,0,0);
+$dividerX = 180;
+$dividerColor = imagecolorallocate($img,60,70,80);
+imageline($img, $dividerX, 80, $dividerX, $h-100, $dividerColor);
+
+// colors 
+$blue = imagecolorallocate($img, 38, 131, 255);
+$orange = imagecolorallocate($img, 255, 140, 40);
+
+// Draw main text areas
+$textWhite = imagecolorallocate($img, 240,245,250);
+$muted = imagecolorallocate($img, 150,165,180);
+
+$leftCol = 200; $center = 700; $rightCol = 980;
+
+// draw bitmap font
+function draw_scaled_text($dst, $text, $x, $y, $scale, $color) {
+    $font = 5;
+    $fw = imagefontwidth($font);
+    $fh = imagefontheight($font);
+    $tw = max(1, $fw * strlen($text));
+    $th = $fh;
+    $tmp = imagecreatetruecolor($tw, $th);
+    // match background to card color
+    $bg = imagecolorallocate($tmp, 15, 23, 36);
+    imagefilledrectangle($tmp, 0, 0, $tw, $th, $bg);
+    $fg = imagecolorallocate($tmp, 255, 255, 255);
+    imagestring($tmp, $font, 0, 0, $text, $fg);
+    $sw = max(1, (int)($tw * $scale));
+    $sh = max(1, (int)($th * $scale));
+    $scaled = imagecreatetruecolor($sw, $sh);
+    // preserve background
+    imagecopyresampled($scaled, $tmp, 0,0,0,0, $sw, $sh, $tw, $th);
+    imagecopy($dst, $scaled, $x, $y, 0, 0, $sw, $sh);
+    imagedestroy($tmp);
+    imagedestroy($scaled);
+}
+
+// left column big title and info
+$y = 100;
+draw_scaled_text($img, 'BOARDING PASS', $leftCol, $y, 3.2, $textWhite); $y += 90;
+draw_scaled_text($img, ($flight['airline'] ?? ''), $leftCol, $y, 2.2, $muted); $y += 70;
+draw_scaled_text($img, 'Passenger: ' . $passengerName, $leftCol, $y, 1.6, $textWhite); $y += 60;
+draw_scaled_text($img, 'From: ' . ($flight['comingFrom'] ?? ''), $leftCol, $y, 1.4, $textWhite); $y += 48;
+draw_scaled_text($img, 'To: ' . $dest, $leftCol, $y, 1.4, $textWhite); $y += 48;
+
+// right column large fields
+$ry = 160;
+draw_scaled_text($img, 'Confirmation #: ' . ($confirmation ?? 'TBD'), $center, $ry, 1.8, $textWhite);
+draw_scaled_text($img, 'Gate: ' . ($flight['gate'] ?? 'TBD'), $center, $ry+80, 2.6, $textWhite);
+draw_scaled_text($img, 'Seat: ' . ($ticketRow['seat'] ?? 'TBD'), $rightCol, $ry+80, 2.6, $textWhite);
+
+// footer
+draw_scaled_text($img, 'Generated: ' . $generated, $leftCol, $h-60, 1.0, $muted);
+
+
+
+
+header('Content-Type: image/png');
+header('Content-Disposition: attachment; filename="ticket-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $passengerName) . '.png"');
+imagepng($img);
+imagedestroy($img);
+exit;
+
+?>

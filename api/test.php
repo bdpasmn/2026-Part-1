@@ -5,12 +5,13 @@ require_once 'api.php';
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
-$result = $api->getNoFlyList();
+$airports = $api->getAirports();
 
-echo "<pre>";
+$airlines = $api->getAirlines();
 
-
-        print_r($result);
-
-
-echo "</pre>";
+$flights = $api->searchFlights(
+    ['status' => 'boarding'],
+    null,
+    'desc'
+);
+?>
