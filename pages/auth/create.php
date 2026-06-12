@@ -1,56 +1,153 @@
-<html> <!-- Fix responsivity -->
-    <head>
-        <title> Login </title>
-        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"> </script>
-    </head>
-    <body class="flex flex-col items-center justify-center min-h-screen m-0 bg-gray-900"> <!-- Double up the boxes -->
-        <h1 class="text-white font-bold text-xl"> BDPA Airports - TO BE REPLACED WITH NAV </h1>
+<?php
+
+require_once __DIR__ . '/../../database/db.php';
+
+$first = trim($_POST['first'] ?? '');
+$title = trim($_POST['title'] ?? '');
+$middle = trim($_POST['middle'] ?? '');
+$last = trim($_POST['last'] ?? '');
+$suffix = trim($_POST['suffix'] ?? '');
+$birth = trim($_POST['birth'] ?? '');
+$email = trim($_POST['email'] ?? '');
+$gender = trim($_POST['gender'] ?? '');
+$phone = trim($_POST['phone'] ?? '');
+$street = trim($_POST['street'] ?? '');
+$city = trim($_POST['city'] ?? '');
+$state = trim($_POST['state'] ?? '');
+$zip = trim($_POST['zip'] ?? '');
+$country = trim($_POST['country'] ?? '');
+$password = $_POST['password'] ?? '';
+$question1 = trim($_POST['question1'] ?? '');
+$question2 = trim($_POST['question2'] ?? '');
+$question3 = trim($_POST['question3'] ?? '');
+$question1_answer = trim($_POST['answer1'] ?? '');
+$question2_answer = trim($_POST['answer2'] ?? '');
+$question3_answer = trim($_POST['answer3'] ?? '');
+$captcha = trim($_POST['captcha'] ?? '');
+$num1 = isset($_POST['num1']) ? (int) $_POST['num1'] : rand(1, 10);
+$num2 = isset($_POST['num2']) ? (int) $_POST['num2'] : rand(1, 10);
+$message = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
+    if (strlen($password) <= 10) {
+        $message = "<p class='text-red-500 font-semibold text-center mb-4'> Weak password. Password must be longer than 10 characters. </p>";
+    } elseif ($captcha === '' || (int) $captcha !== $num1 + $num2) {
+        $message = "<p class='text-red-500 font-semibold text-center mb-4'> Wrong answer for captcha! </p>";
+    } elseif ($email === '') {
+        $message = "<p class='text-red-500 font-semibold text-center mb-4'> Email is required. </p>";
+    } else {
+        try {
+            $pdo->beginTransaction();
+
+            $stmt = $pdo->prepare('INSERT INTO public."Users" (first_name, middle_name, last_name, suffix, date_birth, title, sex, street_address, city, country, state, zip_code, phone, email, password, role) VALUES (:first_name, :middle_name, :last_name, :suffix, :date_birth, :title, :sex, :street_address, :city, :country, :state, :zip_code, :phone, :email, :password, :role)');
+            $stmt->execute([
+                ':first_name' => $first,
+                ':middle_name' => $middle,
+                ':last_name' => $last,
+                ':suffix' => $suffix,
+                ':date_birth' => $birth,
+                ':title' => $title,
+                ':sex' => $gender,
+                ':street_address' => $street,
+                ':city' => $city,
+                ':country' => $country,
+                ':state' => $state,
+                ':zip_code' => $zip,
+                ':phone' => $phone,
+                ':email' => $email,
+                ':password' => password_hash($password, PASSWORD_DEFAULT),
+                ':role' => 'Customer',
+            ]);
+
+            $stmt = $pdo->prepare('INSERT INTO public."User Security Questions" (email, question1, question1_answer, question2, question2_answer, question3, question3_answer) VALUES (:email, :question1, :question1_answer, :question2, :question2_answer, :question3, :question3_answer)');
+            $stmt->execute([
+                ':email' => $email,
+                ':question1' => $question1,
+                ':question1_answer' => $question1_answer,
+                ':question2' => $question2,
+                ':question2_answer' => $question2_answer,
+                ':question3' => $question3,
+                ':question3_answer' => $question3_answer,
+            ]);
+
+            $pdo->commit();
+            $message = "<p class='text-green-600 font-semibold text-center mb-4'> Account Created Successfully! Welcome aboard. </p>";
+        } catch (PDOException $e) {
+
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    if ($e->getCode() === '23505') {
+        $message = "<p class='text-red-500 font-semibold text-center mb-4'>An account with that email already exists.</p>";
+    } else {
+    $message = "<p class='text-red-500 font-semibold text-center mb-4'>
+        Sorry, we couldn't create your account right now. Please try again later.
+    </p>";
+    }
+
+        }
+    }
+}
+?>
+<html>
+<head>
+    <title>Create Account</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+
+<body class="bg-gray-900 min-h-screen text-white flex flex-col">
+    <header class="h-16 bg-gray-800 flex items-center px-8 border-b border-gray-700">
+        <h1 class="font-bold text-xl">
+            BDPA Airports - TO BE REPLACED WITH NAV
+        </h1>
+    </header>
+    <main class="bg-gradient-to-r from-slate-800 to-slate-900 flex-grow flex items-center justify-center">
         <div class="bg-gray-800 shadow-xl rounded-xl p-4 w-xs md:w-full max-w-2xl">
             <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-xl p-10 shadow-lg">
                 <h1 class="text-center mb-2 text-white font-bold text-xl"> BDPA Airlines </h1>
                 <h2 class="text-center mb-6 text-blue-300 text-lg"> Please Create An Account </h2>
             </div>
             <br>
-            <h3 class="text-center mb-3 text-red-100"> An Asterisk Denotes Required Fields </h3>
+            <h3 class="text-center mb-3 text-red-300"> * denotes Required Fields </h3>
             <form method="POST" class="flex items-center justify-center flex-col">
+                <?php echo $message; ?>
                 <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="first" class="font-medium text-white"> Account Title: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="title">
+                    <label for="title" class="font-medium text-white"> Account Title: </label>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="title" value="<?php echo htmlspecialchars($title); ?>">
                 </div> 
                 <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="first" class="font-medium text-white"> *First Name: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="first" required>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="first" value="<?php echo htmlspecialchars($first); ?>" required>
                 </div> 
                 <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="middle" class="font-medium text-white"> Middle Name: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="middle">
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="middle" value="<?php echo htmlspecialchars($middle); ?>">
                 </div> 
                 <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="last" class="font-medium text-white"> *Last Name: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="last" required>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="last" value="<?php echo htmlspecialchars($last); ?>" required>
                 </div> 
                 <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="suffix" class="font-medium text-white"> Suffix: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="suffix">
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="suffix" value="<?php echo htmlspecialchars($suffix); ?>">
                 </div> 
                 <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="birth" class="font-medium text-white"> *Date of Birth: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="date" name="birth" required>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="date" name="birth" value="<?php echo htmlspecialchars($birth); ?>" required>
                 </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="sex" class="font-medium text-white"> *Sex: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="radio" name="sex" id="male" value="male" required>
-                    <label for="male" class="font-medium text-white"> Male </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="radio" name="sex" id="female" value="female" required>
-                    <label for="female" class="font-medium text-white"> Female </label>
+
+                 <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                    <p class="font-medium text-white"> *Gender: </p>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="gender" value="<?php echo htmlspecialchars($gender); ?>" required>
                 </div> 
+
                 <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="street" class="font-medium text-white"> *Street Address: </label> <!-- Have this open a seperate menu -->
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="street" required>
+                    <label for="street" class="font-medium text-white"> *Street Address: </label>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="street" value="<?php echo htmlspecialchars($street); ?>" required>
                 </div> 
                 <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="city" class="font-medium text-white"> *City: </label> 
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="city" required> 
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="city" value="<?php echo htmlspecialchars($city); ?>" required> 
                 </div>
                 <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="country" class="font-medium text-white"> *Country: </label>
@@ -94,11 +191,11 @@
                         <option value="comoros"> Comoros </option>
                         <option value="congo"> Congo </option>
                         <option value="costa rica"> Costa Rica </option>
-                        <option value="côte d'ivoire"> Côte D'Ivoire </option>
+                        <option value="cote-d'ivoire"> Côte D'Ivoire </option>
                         <option value="croatia"> Croatia </option>
                         <option value="cuba"> Cuba </option>
                         <option value="czechia"> Czechia </option>
-                        <option value="dcemocratic people's republic of korea"> Democratic People's Republic of Korea </option>
+                        <option value="democratic people's republic of korea"> Democratic People's Republic of Korea </option>
                         <option value="democratic republic of the congo"> Democratic Republic of the Congo </option>
                         <option value="denmark"> Denmark </option>
                         <option value="djibouti"> Djibouti </option>
@@ -209,9 +306,9 @@
                         <option value="seychelles"> Seychelles </option>
                         <option value="sierra leone"> Sierra Leone </option>
                         <option value="singapore"> Singapore </option>
-                        <option value="slovakia"> Slovakia </option>
-                        <option value="slovenia"> Slovenia </option>
-                        <option value="solomon islands"> Solomon Islands </option>
+                        <option value="Slovakia "> Slovakia </option>
+                        <option value="Slovenia"> Slovenia </option>
+                        <option value="Solomon Islands"> Solomon Islands </option>
                         <option value="somalia"> Somalia </option>
                         <option value="south africa"> South Africa </option>
                         <option value="south sudan"> South Sudan </option>
@@ -237,200 +334,204 @@
                         <option value="united arab emirates"> United Arab Emirates </option>
                         <option value="united kingdom of great britain and northern ireland"> United Kingdom of Great Britain and Northern Ireland </option>
                         <option value="united republic of tanzania"> United Republic of Tanzania </option>
-                        <option value="united states of america"> United States of America </option>
+                        <option value="US"> United States of America </option>
                         <option value="uruguay"> Uruguay </option>
                         <option value="uzbekistan"> Uzbekistan </option>
                         <option value="vanuatu"> Vanuatu </option>
                         <option value="venezuela"> Venezuela </option>
-                        <option value="viet nam"> Viet Nam </option>
+                        <option value="vietnam"> Vietnam </option>
                         <option value="yemen"> Yemen </option>
                         <option value="zambia"> Zambia </option>
                         <option value="zimbabwe"> Zimbabwe </option>
                     </select>
                 </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="state" class="font-medium text-white"> State: </label> <!-- Make it only appear if US has been selected -->
-                    <select class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95t" type="text" name="state" id="state">
-                        <option value="alabama"> Alabama </option>
-                        <option value="alaska"> Alaska </option>
-                        <option value="arizona"> Arizona </option>
-                        <option value="arkansas"> Arkansas </option>
-                        <option value="california"> California </option>
-                        <option vakue="colorado"> Colorado </option>
-                        <option value="connecticut"> Connecticut </option>
-                        <option value="delaware"> Delaware </option>
-                        <option value="district of columbia"> District of Columbia </option>
-                        <option value="florida"> Florida </option>
-                        <option value="georgia"> Georgia </option>
-                        <option value="gawaii"> Hawaii </option>
-                        <option value="idaho"> Idaho </option>
-                        <option value="illinois"> Illinois </option>
-                        <option value="indiana"> Indiana </option>
-                        <option value="iowa"> Iowa </option>
-                        <option value="kansas"> Kansas </option>
-                        <option value="kentucky"> Kentucky </option>
-                        <option value="louisiana"> Louisiana </option>
-                        <option value="maine"> Maine </option>
-                        <option value="maryland"> Maryland </option>
-                        <option value="massachusetts"> Massachusetts </option>
-                        <option value="michigan"> Michigan </option>
-                        <option value="minnesota"> Minnesota </option>
-                        <option value="mississippi"> Mississippi </option>
-                        <option value="missouri"> Missouri </option>
-                        <option value="montana"> Montana </option>
-                        <option value="mebraska"> Nebraska </option>
-                        <option value="mevada"> Nevada </option>
-                        <option value="new hampshire"> New Hampshire </option>
-                        <option value="new jersey"> New Jersey </option>
-                        <option value="new mexico"> New Mexico </option>
-                        <option value="new york"> New York </option>
-                        <option value="north carolina"> North Carolina </option>
-                        <option value="north dakota"> North Dakota </option>
-                        <option value="ohio"> Ohio </option>
-                        <option value="oklahoma"> Oklahoma </option>
-                        <option value="oregon"> Oregon </option>
-                        <option value="pennsylvania"> Pennsylvania </option>
-                        <option value="rhode island"> Rhode Island </option>
-                        <option value="south carolina"> South Carolina </option>
-                        <option value="south dakota"> South Dakota </option>
-                        <option value="tennessee"> Tennessee </option>
-                        <option value="texas"> Texas </option>
-                        <option value="utah"> Utah </option>
-                        <option value="vermont"> Vermont </option>
-                        <option value="virginia"> Virginia </option>
-                        <option value="washington"> Washington </option>
-                        <option value="west virginia"> West Virginia </option>
-                        <option value="wisconsin"> Wisconsin </option>
-                        <option value="wyoming"> Wyoming </option>
+                <div id="state-container" class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                    <label for="state" class="font-medium text-white">*State: </label> 
+                    <select class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="state" id="state" required>
+<option value="AL">Alabama</option>
+<option value="AK">Alaska</option>
+<option value="AZ">Arizona</option>
+<option value="AR">Arkansas</option>
+<option value="CA">California</option>
+<option value="CO">Colorado</option>
+<option value="CT">Connecticut</option>
+<option value="DE">Delaware</option>
+<option value="DC">District of Columbia</option>
+<option value="FL">Florida</option>
+<option value="GA">Georgia</option>
+<option value="HI">Hawaii</option>
+<option value="ID">Idaho</option>
+<option value="IL">Illinois</option>
+<option value="IN">Indiana</option>
+<option value="IA">Iowa</option>
+<option value="KS">Kansas</option>
+<option value="KY">Kentucky</option>
+<option value="LA">Louisiana</option>
+<option value="ME">Maine</option>
+<option value="MD">Maryland</option>
+<option value="MA">Massachusetts</option>
+<option value="MI">Michigan</option>
+<option value="MN">Minnesota</option>
+<option value="MS">Mississippi</option>
+<option value="MO">Missouri</option>
+<option value="MT">Montana</option>
+<option value="NE">Nebraska</option>
+<option value="NV">Nevada</option>
+<option value="NH">New Hampshire</option>
+<option value="NJ">New Jersey</option>
+<option value="NM">New Mexico</option>
+<option value="NY">New York</option>
+<option value="NC">North Carolina</option>
+<option value="ND">North Dakota</option>
+<option value="OH">Ohio</option>
+<option value="OK">Oklahoma</option>
+<option value="OR">Oregon</option>
+<option value="PA">Pennsylvania</option>
+<option value="RI">Rhode Island</option>
+<option value="SC">South Carolina</option>
+<option value="SD">South Dakota</option>
+<option value="TN">Tennessee</option>
+<option value="TX">Texas</option>
+<option value="UT">Utah</option>
+<option value="VT">Vermont</option>
+<option value="VA">Virginia</option>
+<option value="WA">Washington</option>
+<option value="WV">West Virginia</option>
+<option value="WI">Wisconsin</option>
+<option value="WY">Wyoming</option>
                     </select>
                 </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="zip" class="font-medium text-white"> Zip Code: </label> <!--Should only appear if US has been selected-->
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="number" name="zip" maxlength="10"> 
-                </div>
+                
+                <div id="zip-container" class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                    <label class="font-medium text-white"> *Zip Code: </label>
+                    <input id="zip" class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="zip" value="<?php echo htmlspecialchars($zip); ?>" required>
+                </div> 
+
                 <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label class="font-medium text-white"> Phone: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="tel" name="phone" maxlength="15"> <!-- Maxlength is not working for some reason -->
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="tel" name="phone" maxlength="15" value="<?php echo htmlspecialchars($phone); ?>">
                 </div>
                 <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                     <label for="email" class="font-medium text-white"> *Email: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="email" name="email" required> 
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="email" name="email" value="<?php echo htmlspecialchars($email); ?>" required> 
+                </div>
+
+                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                    <p class="font-medium text-white"> Password: </p>
+                    <div class="flex flex-col w-full">
+                        <input id="password" class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="password" name="password" required>
+                        <p id="password-strength" class="mt-2 text-sm text-white">Password must be more than 10 characters.</p>
+                    </div>
+                </div>
+
+                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
+                    <label for="question1" class="font-medium text-white"> *Custom Security Question 1</label>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="question1" value="<?php echo htmlspecialchars($question1); ?>" required> 
                 </div>
                 <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="password" class="font-medium text-white"> *Password: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="password" name="password" id="password" required> 
-                    <p class="font-medium text-white"> Strength: 
-                        <b id="strength"> </b>
-                    </p>
+                    <label for="answer1" class="font-medium text-white"> *Answer 1</label>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="answer1" value="<?php echo htmlspecialchars($answer1); ?>" required> 
                 </div>
                 <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="question1" class="font-medium text-white"> *Custom Security Question: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="question1" required> 
+                    <label for="question2" class="font-medium text-white"> *Custom Security Question 2</label>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="question2" value="<?php echo htmlspecialchars($question2); ?>" required> 
                 </div>
                 <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="answer1" class="font-medium text-white"> *Answer: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="answer1" required> 
+                    <label for="answer2" class="font-medium text-white"> *Answer 2</label>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="answer2" value="<?php echo htmlspecialchars($answer2); ?>" required> 
                 </div>
                 <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="question2" class="font-medium text-white"> *Custom Security Question: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="question2" required> 
+                    <label for="question3" class="font-medium text-white"> *Custom Security Question 3</label>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="question3" value="<?php echo htmlspecialchars($question3); ?>" required>
                 </div>
                 <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="answer2" class="font-medium text-white"> *Answer: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="answer2" required> 
-                </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="question3" class="font-medium text-white"> *Custom Security Question: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="question3" required>
-                </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="answer3" class="font-medium text-white"> *Answer: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="answer3" required> 
+                    <label for="answer3" class="font-medium text-white"> *Answer 3</label>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="answer3" value="<?php echo htmlspecialchars($answer3); ?>" required> 
                 </div>
                 <br>
                 <div class="text-center bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="captcha" class="font-medium text-white"> 
-                        <b> *What is </b>
-                        <b id="1"> </b>
-                        <b> + </b>
-                        <b id="2"> </b>
-                        <b> ? </b> <!-- Fix the hanging question mark -->
-                    </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="number" name="captcha" id="captcha" required>
+                    <p class="font-medium text-white"> 
+                        <b> What is <?php echo htmlspecialchars($num1); ?> + <?php echo htmlspecialchars($num2); ?> ? </b> 
+                    </p>
+                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="captcha" value="<?php echo htmlspecialchars($captcha); ?>" required>
+                    <input type="hidden" name="num1" value="<?php echo htmlspecialchars($num1); ?>">
+                    <input type="hidden" name="num2" value="<?php echo htmlspecialchars($num2); ?>">
                 </div>
                 <br>
-                <input class="bg-blue-600 text-white px-6 py-2 rounded transition duration-200 hover:bg-blue-700 hover:shadow-md active:scale-95"  type="submit" name="button" id="submit" value="Create Account" disabled>
+                <div class="text-center">
+                    <input class="bg-blue-600 text-white px-6 py-2 rounded transition duration-200 hover:bg-blue-700 hover:shadow-md active:scale-95" type="submit" name="button" value="Create Account">
+                </div>
             </form>
+            </main>
         </div>
         <script>
-            document.addEventListener("DOMContentLoaded", function() {
-                //Limit the input of spaces for the password field?
-                var passwordinput=document.getElementById("password"); //Test logic
-                passwordinput.addEventListener("input", (event) => {
-                    var inputvalue=passwordinput.value;
-                    var length=inputvalue.length;
-                    if (length <= 10) {
-                        document.getElementById("submit").setAttribute("disabled", "");
-                        document.getElementById("strength").textContent="Weak";
+            //password strength checker
+            document.addEventListener('DOMContentLoaded', function () {
+                var passwordInput = document.getElementById('password');
+                var strengthText = document.getElementById('password-strength');
+
+                function updateStrength() {
+                    var length = passwordInput.value.length;
+                    if (length === 0) {
+                        strengthText.textContent = 'Password must be more than 10 characters.';
+                        strengthText.className = 'mt-2 text-sm text-white';
+                    } else if (length <= 10) {
+                        strengthText.textContent = 'Weak password';
+                        strengthText.className = 'mt-2 text-sm text-red-400';
+                    } else if (length <= 17) {
+                        strengthText.textContent = 'Medium strength password';
+                        strengthText.className = 'mt-2 text-sm text-yellow-300';
                     } else {
-                        document.getElementById("strength").textContent="Acceptable";
-                        ocument.getElementById("submit").removeAttribute("disabled");
+                        strengthText.textContent = 'Strong password';
+                        strengthText.className = 'mt-2 text-sm text-green-400';
                     }
-                    if (length >= 17) {
-                        document.getElementById("strength").textContent="Strong";
-                    }
-                });
-                var max=10;
-                var number1=Math.floor(Math.random()*max);
-                var number2=Math.floor(Math.random()*max);
-                document.getElementById("1").textContent=number1;
-                document.getElementById("2").textContent=number2;
-                var captchainput=document.getElementById("captcha");
-                captchainput.addEventListener("input", (event) => {
-                    var inputvalue=captchainput.value;
-                    var sum=number1+number2;
-                    if (inputvalue != sum) {
-                        document.getElementById("submit").setAttribute("disabled", "");
-                    } else {
-                        document.getElementById("submit").removeAttribute("disabled");
-                    }
-                });
+                }
+
+                passwordInput.addEventListener('input', updateStrength);
+                updateStrength();
             });
+
+document.addEventListener("DOMContentLoaded", function () {
+    const countrySelect = document.getElementById("country");
+    const stateSelect = document.getElementById("state");
+    const zipInput = document.getElementById("zip");
+
+    const stateContainer = document.getElementById("state-container");
+    const zipContainer = document.getElementById("zip-container");
+
+    const selectedCountry = <?php echo json_encode($country); ?>;
+    const selectedState = <?php echo json_encode($state); ?>;
+
+    if (selectedCountry) {
+        countrySelect.value = selectedCountry;
+    }
+
+    if (selectedState) {
+        stateSelect.value = selectedState;
+    }
+
+    function updateUSFields() {
+        const isUS =
+            countrySelect.value === "US";
+
+        stateContainer.style.display = isUS ? "flex" : "none";
+        zipContainer.style.display = isUS ? "flex" : "none";
+
+        stateSelect.required = isUS;
+        zipInput.required = isUS;
+
+        if (!isUS) {
+            stateSelect.value = "";
+            zipInput.value = "";
+        }
+    }
+
+    updateUSFields();
+
+    countrySelect.addEventListener("change", updateUSFields);
+});
         </script>
     </body>
 </html>
-<?php
-    if (isset($_POST["title"])) {
-        $title=$_POST["title"];
-        $first=$_POST["first"];
-        $middle=$_POST["middle"];
-        $last=$_POST["last"];
-        $suffix=$_POST["suffix"];
-        $birth=$_POST["birth"];
-        $sex=$_POST["sex"];
-        $street=$_POST["street"];
-        $city=$_POST["city"];
-        $country=$_POST["country"];
-        $state=$_POST["state"];  
-        $zip=$_POST["zip"];
-        $phone=$_POST["phone"];
-        $email=$_POST["email"];
-        $password=$_POST["password"];
-        $question1=$_POST["question1"];
-        $answer1=$_POST["answer1"];
-        $question2=$_POST["question2"];
-        $answer2=$_POST["answer2"];
-        $question3=$_POST["question3"];
-        $answer3=$_POST["answer3"];
-        $captcha=$_POST["captcha"];
-        $role="customer";
-        $host='db.uekcvegjgdnqcvdfwcjc.supabase.co';
-        $port='5432';
-        $dbname='postgres';
-        $user='postgres';
-        $passworddb='bdp@Smn2025!?'; //Look into why this can't just be pasted
-        //Do API and database stuff here, don't froget to give message, redirect, and start a session.
-    }
-?>
 
 
