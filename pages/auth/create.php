@@ -199,6 +199,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
             <label class="text-xs text-gray-400">* Country</label>
             <select required name="country" id="country"
                 class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
+                <option value="">Select Country</option>
 <option value="Afghanistan">Afghanistan</option>
 <option value="Albania">Albania</option>
 <option value="Algeria">Algeria</option>
