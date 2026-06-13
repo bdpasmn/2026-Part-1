@@ -9,9 +9,9 @@ $last = trim($_POST['last'] ?? '');
 $suffix = trim($_POST['suffix'] ?? '');
 $birth = trim($_POST['birth'] ?? '');
 $email = trim($_POST['email'] ?? '');
-$gender = trim($_POST['gender'] ?? '');
+$gender = strtolower(trim($_POST['gender'] ?? ''));
 $phone = trim($_POST['phone'] ?? '');
-$street = trim($_POST['street'] ?? '');
+$street = trim($_POST['street-address'] ?? '');
 $city = trim($_POST['city'] ?? '');
 $state = trim($_POST['state'] ?? '');
 $zip = trim($_POST['zip'] ?? '');
@@ -89,6 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
     }
 }
 ?>
+<!DOCTYPE html>
 <html>
 <head>
     <title>Create Account</title>
@@ -96,374 +97,473 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
 </head>
 
 <body class="bg-gray-900 min-h-screen text-white flex flex-col">
-    <header class="h-16 bg-gray-800 flex items-center px-8 border-b border-gray-700">
-        <h1 class="font-bold text-xl">
-            BDPA Airports - TO BE REPLACED WITH NAV
-        </h1>
-    </header>
-    <main class="bg-gradient-to-r from-slate-800 to-slate-900 flex-grow flex items-center justify-center">
-        <div class="bg-gray-800 shadow-xl rounded-xl p-4 w-xs md:w-full max-w-2xl">
-            <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-xl p-10 shadow-lg">
-                <h1 class="text-center mb-2 text-white font-bold text-xl"> BDPA Airlines </h1>
-                <h2 class="text-center mb-6 text-blue-300 text-lg"> Please Create An Account </h2>
-            </div>
-            <br>
-            <h3 class="text-center mb-3 text-red-300"> * denotes Required Fields </h3>
-            <form method="POST" class="flex items-center justify-center flex-col">
-                <?php echo $message; ?>
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="title" class="font-medium text-white"> Account Title: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="title" value="<?php echo htmlspecialchars($title); ?>">
-                </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="first" class="font-medium text-white"> *First Name: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="first" value="<?php echo htmlspecialchars($first); ?>" required>
-                </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="middle" class="font-medium text-white"> Middle Name: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="middle" value="<?php echo htmlspecialchars($middle); ?>">
-                </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="last" class="font-medium text-white"> *Last Name: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="last" value="<?php echo htmlspecialchars($last); ?>" required>
-                </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="suffix" class="font-medium text-white"> Suffix: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="suffix" value="<?php echo htmlspecialchars($suffix); ?>">
-                </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="birth" class="font-medium text-white"> *Date of Birth: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="date" name="birth" value="<?php echo htmlspecialchars($birth); ?>" required>
-                </div>
 
-                 <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <p class="font-medium text-white"> *Gender: </p>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="gender" value="<?php echo htmlspecialchars($gender); ?>" required>
-                </div> 
+<header class="h-16 bg-gray-800 flex items-center px-8 border-b border-gray-700">
+    <h1 class="font-bold text-xl">BDPA Airlines</h1>
+</header>
 
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="street" class="font-medium text-white"> *Street Address: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="street" value="<?php echo htmlspecialchars($street); ?>" required>
-                </div> 
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="city" class="font-medium text-white"> *City: </label> 
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="city" value="<?php echo htmlspecialchars($city); ?>" required> 
-                </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="country" class="font-medium text-white"> *Country: </label>
-                    <select class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="country" id="country" required>
-                        <option value="afghanistan"> Afghanistan </option>
-                        <option value="albania"> Albania </option>
-                        <option value="algeria"> Algeria </option>
-                        <option value="andorra"> Andorra </option>
-                        <option value="angola"> Angola </option>
-                        <option value="antigu and barbuda"> Antigua and Barbuda </option>
-                        <option value="argentina"> Argentina </option>
-                        <option value="armenia"> Armenia </option>
-                        <option value="australia"> Australia </option>
-                        <option value="australia"> Austria </option>
-                        <option value="azerbaijan"> Azerbaijan </option>
-                        <option value="bahamas"> Bahamas </option>
-                        <option value="bahrain"> Bahrain </option>
-                        <option value="bangladesh"> Bangladesh </option>
-                        <option value="barbados"> Barbados </option>
-                        <option value="belarus"> Belarus </option>
-                        <option value="belgium"> Belgium </option>
-                        <option value="belize"> Belize </option>
-                        <option value="benin"> Benin </option>
-                        <option value="bhutan"> Bhutan </option>
-                        <option value="bolivia"> Bolivia </option>
-                        <option value="bosnia and herzegovina"> Bosnia and Herzegovina </option>
-                        <option value="botswana"> Botswana  </option>
-                        <option value="brazil"> Brazil  </option>
-                        <option value="brunei darussalam"> Brunei Darussalam </option>
-                        <option value="bulgaria"> Bulgaria </option>
-                        <option value="burkina faso"> Burkina Faso </option>
-                        <option value="burundi"> Burundi </option>
-                        <option value="cabo verde"> Cabo Verde </option>
-                        <option value="cameroon"> Cameroon </option>
-                        <option value="canada"> Canada </option>
-                        <option value="central african republic"> Central African Republic </option>
-                        <option value="chad"> Chad </option>
-                        <option value="chile"> Chile </option>
-                        <option value="china"> China </option>
-                        <option value="colombia"> Colombia </option>
-                        <option value="comoros"> Comoros </option>
-                        <option value="congo"> Congo </option>
-                        <option value="costa rica"> Costa Rica </option>
-                        <option value="cote-d'ivoire"> Côte D'Ivoire </option>
-                        <option value="croatia"> Croatia </option>
-                        <option value="cuba"> Cuba </option>
-                        <option value="czechia"> Czechia </option>
-                        <option value="democratic people's republic of korea"> Democratic People's Republic of Korea </option>
-                        <option value="democratic republic of the congo"> Democratic Republic of the Congo </option>
-                        <option value="denmark"> Denmark </option>
-                        <option value="djibouti"> Djibouti </option>
-                        <option value="dominica"> Dominica </option>
-                        <option value="dominican republic"> Dominican Republic </option>
-                        <option value="ecuador"> Ecuador </option>
-                        <option value="egypt"> Egypt </option>
-                        <option value="el salvador"> El Salvador </option>
-                        <option value="equatorial guinea"> Equatorial Guinea </option>
-                        <option value="eritrea"> Eritrea </option>
-                        <option value="estonia"> Estonia </option>
-                        <option value="eswatini"> Eswatini </option>
-                        <option value="ethiopia"> Ethiopia </option>
-                        <option value="fiji"> Fiji </option>
-                        <option value="finland"> Finland </option>
-                        <option value="france"> France  </option>
-                        <option value="gabon"> Gabon  </option>
-                        <option value="gambia"> Gambia </option>
-                        <option value="georgia"> Georgia </option>
-                        <option value="germany"> Germany </option>
-                        <option value="ghana"> Ghana </option>
-                        <option value="greece"> Greece </option>
-                        <option value="grenada"> Grenada </option>
-                        <option value="guatemala"> Guatemala </option>
-                        <option value="guinea"> Guinea </option>
-                        <option value="guinea bissau"> Guinea Bissau </option>
-                        <option value="guyana"> Guyana </option>
-                        <option value="haiti"> Haiti </option>
-                        <option value="honduras"> Honduras </option>
-                        <option value="hungary"> Hungary </option>
-                        <option value="iceland"> Iceland </option>
-                        <option value="india"> India </option>
-                        <option value="indonesia"> Indonesia </option>
-                        <option value="iran"> Iran </option>
-                        <option value="iraq"> Iraq </option>
-                        <option value="ireland"> Ireland </option>
-                        <option value="israel"> Israel </option>
-                        <option value="italy"> Italy </option>
-                        <option value="jamaica"> Jamaica </option>
-                        <option value="japan"> Japan </option>
-                        <option value="jordan"> Jordan </option>
-                        <option value="kazakhstan"> Kazakhstan </option>
-                        <option value="kenya"> Kenya </option>
-                        <option value="kiribati"> Kiribati </option>
-                        <option value="kuwait"> Kuwait </option>
-                        <option value="kyrgyzstan"> Kyrgyzstan </option>
-                        <option value="lao people's democratic republic"> Lao People's Democratic Republic </option>
-                        <option value="latvia"> Latvia </option>
-                        <option value="lebanon"> Lebanon </option>
-                        <option value="lesotho"> Lesotho </option>
-                        <option value="liberia"> Liberia </option>
-                        <option value="libya"> Libya </option>
-                        <option value="liechtenstein"> Liechtenstein </option>
-                        <option value="lithuania"> Lithuania </option>
-                        <option value="luxembourg"> Luxembourg </option>
-                        <option value="madagascar"> Madagascar </option>
-                        <option value="malawi"> Malawi </option>
-                        <option value="malaysia"> Malaysia </option>
-                        <option value="maldives"> Maldives </option>
-                        <option value="mali"> Mali  </option>
-                        <option value="malta"> Malta </option>
-                        <option value="marshall islands"> Marshall Islands </option>
-                        <option value="mauritania"> Mauritania </option>
-                        <option value="mauritius"> Mauritius </option>
-                        <option value="mexico"> Mexico </option>
-                        <option value="micronesia"> Micronesia </option>
-                        <option value="monaco"> Monaco </option>
-                        <option value="mongolia"> Mongolia </option>
-                        <option value="montenegro"> Montenegro </option>
-                        <option value="morocco"> Morocco </option>
-                        <option value="mozambique"> Mozambique </option>
-                        <option value="myanmar"> Myanmar </option>
-                        <option value="namibia"> Namibia </option>
-                        <option value="nauru"> Nauru </option>
-                        <option value="nepal"> Nepal </option>
-                        <option value="netherlands"> Netherlands </option>
-                        <option value="new zealand"> New Zealand </option>
-                        <option value="nicaragua"> Nicaragua </option>
-                        <option value="niger"> Niger </option>
-                        <option value="nigeria"> Nigeria </option>
-                        <option value="north macedonia"> North Macedonia </option>
-                        <option value="norway"> Norway </option>
-                        <option value="oman"> Oman </option>
-                        <option value="pakistan"> Pakistan </option>
-                        <option value="palau"> Palau </option>
-                        <option value="panama"> Panama </option>
-                        <option value="papua new guinea"> Papua New Guinea </option>
-                        <option value="paraguay"> Paraguay </option>
-                        <option value="peru"> Peru </option>
-                        <option value="philippines"> Philippines </option>
-                        <option value="poland"> Poland </option>
-                        <option value="portugal"> Portugal </option>
-                        <option value="qatar"> Qatar </option>
-                        <option value="republic of korea"> Republic of Korea </option>
-                        <option value="republic of moldova"> Republic of Moldova </option>
-                        <option value="romania"> Romania </option>
-                        <option value="russian federation"> Russian Federation </option>
-                        <option value="rwanda"> Rwanda </option>
-                        <option value="saint kitts and nevis"> Saint Kitts and Nevis </option>
-                        <option value="saint lucia"> Saint Lucia </option>
-                        <option value="saint vincent and the grenadines"> Saint Vincent and the Grenadines </option>
-                        <option value="samoa"> Samoa </option>
-                        <option value="san marino"> San Marino </option>
-                        <option value="sao tome and principe"> Sao Tome and Principe </option>
-                        <option value="saudi arabia"> Saudi Arabia </option>
-                        <option value="senegal"> Senegal </option>
-                        <option value="serbia"> Serbia </option>
-                        <option value="seychelles"> Seychelles </option>
-                        <option value="sierra leone"> Sierra Leone </option>
-                        <option value="singapore"> Singapore </option>
-                        <option value="Slovakia "> Slovakia </option>
-                        <option value="Slovenia"> Slovenia </option>
-                        <option value="Solomon Islands"> Solomon Islands </option>
-                        <option value="somalia"> Somalia </option>
-                        <option value="south africa"> South Africa </option>
-                        <option value="south sudan"> South Sudan </option>
-                        <option value="spain"> Spain </option>
-                        <option value="sri lanka"> Sri Lanka </option>
-                        <option value="sudan"> Sudan </option>
-                        <option value="suriname"> Suriname </option>
-                        <option value="sweden"> Sweden </option>
-                        <option value="switzerland"> Switzerland </option>
-                        <option value="syrian arab republic"> Syrian Arab Republic </option>
-                        <option value="tajikistan"> Tajikistan </option>
-                        <option value="thailand"> Thailand </option>
-                        <option value="timor-leste"> Timor-Leste </option>
-                        <option value="togo"> Togo </option>
-                        <option value="tonga"> Tonga </option>
-                        <option value="trinidad and tobago"> Trinidad and Tobago </option>
-                        <option value="tunisia"> Tunisia </option>
-                        <option value="türkiye"> Türkiye </option>
-                        <option value="turkmenistan"> Turkmenistan </option>
-                        <option value="tuvalu"> Tuvalu </option>
-                        <option value="uganda"> Uganda </option>
-                        <option value="ukraine"> Ukraine </option>
-                        <option value="united arab emirates"> United Arab Emirates </option>
-                        <option value="united kingdom of great britain and northern ireland"> United Kingdom of Great Britain and Northern Ireland </option>
-                        <option value="united republic of tanzania"> United Republic of Tanzania </option>
-                        <option value="US"> United States of America </option>
-                        <option value="uruguay"> Uruguay </option>
-                        <option value="uzbekistan"> Uzbekistan </option>
-                        <option value="vanuatu"> Vanuatu </option>
-                        <option value="venezuela"> Venezuela </option>
-                        <option value="vietnam"> Vietnam </option>
-                        <option value="yemen"> Yemen </option>
-                        <option value="zambia"> Zambia </option>
-                        <option value="zimbabwe"> Zimbabwe </option>
-                    </select>
-                </div> 
-                <div id="state-container" class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="state" class="font-medium text-white">*State: </label> 
-                    <select class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="state" id="state" required>
-<option value="AL">Alabama</option>
-<option value="AK">Alaska</option>
-<option value="AZ">Arizona</option>
-<option value="AR">Arkansas</option>
-<option value="CA">California</option>
-<option value="CO">Colorado</option>
-<option value="CT">Connecticut</option>
-<option value="DE">Delaware</option>
-<option value="DC">District of Columbia</option>
-<option value="FL">Florida</option>
-<option value="GA">Georgia</option>
-<option value="HI">Hawaii</option>
-<option value="ID">Idaho</option>
-<option value="IL">Illinois</option>
-<option value="IN">Indiana</option>
-<option value="IA">Iowa</option>
-<option value="KS">Kansas</option>
-<option value="KY">Kentucky</option>
-<option value="LA">Louisiana</option>
-<option value="ME">Maine</option>
-<option value="MD">Maryland</option>
-<option value="MA">Massachusetts</option>
-<option value="MI">Michigan</option>
-<option value="MN">Minnesota</option>
-<option value="MS">Mississippi</option>
-<option value="MO">Missouri</option>
-<option value="MT">Montana</option>
-<option value="NE">Nebraska</option>
-<option value="NV">Nevada</option>
-<option value="NH">New Hampshire</option>
-<option value="NJ">New Jersey</option>
-<option value="NM">New Mexico</option>
-<option value="NY">New York</option>
-<option value="NC">North Carolina</option>
-<option value="ND">North Dakota</option>
-<option value="OH">Ohio</option>
-<option value="OK">Oklahoma</option>
-<option value="OR">Oregon</option>
-<option value="PA">Pennsylvania</option>
-<option value="RI">Rhode Island</option>
-<option value="SC">South Carolina</option>
-<option value="SD">South Dakota</option>
-<option value="TN">Tennessee</option>
-<option value="TX">Texas</option>
-<option value="UT">Utah</option>
-<option value="VT">Vermont</option>
-<option value="VA">Virginia</option>
-<option value="WA">Washington</option>
-<option value="WV">West Virginia</option>
-<option value="WI">Wisconsin</option>
-<option value="WY">Wyoming</option>
-                    </select>
-                </div> 
-                
-                <div id="zip-container" class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label class="font-medium text-white"> *Zip Code: </label>
-                    <input id="zip" class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="zip" value="<?php echo htmlspecialchars($zip); ?>" required>
-                </div> 
+<main class="flex-grow flex items-center justify-center bg-gradient-to-r from-slate-900 to-slate-800 p-6">
 
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label class="font-medium text-white"> Phone: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="tel" name="phone" maxlength="15" value="<?php echo htmlspecialchars($phone); ?>">
-                </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="email" class="font-medium text-white"> *Email: </label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="email" name="email" value="<?php echo htmlspecialchars($email); ?>" required> 
-                </div>
+<div class="w-full max-w-3xl space-y-6">
 
-                <div class="md:flex md:flex-row md:gap-5 md:m-5 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <p class="font-medium text-white"> Password: </p>
-                    <div class="flex flex-col w-full">
-                        <input id="password" class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="password" name="password" required>
-                        <p id="password-strength" class="mt-2 text-sm text-white">Password must be more than 10 characters.</p>
-                    </div>
-                </div>
+<div class="bg-gray-800 border border-gray-700 rounded-xl p-8 shadow-lg text-center">
+    <h1 class="text-2xl font-bold">Create Account</h1>
+    <p class="text-blue-300 mt-2">Please fill in your details</p>
+    <p class="text-red-300 mt-3 text-sm">* Required fields</p>
+</div>
 
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="question1" class="font-medium text-white"> *Custom Security Question 1</label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="question1" value="<?php echo htmlspecialchars($question1); ?>" required> 
-                </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="answer1" class="font-medium text-white"> *Answer 1</label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="answer1" value="<?php echo htmlspecialchars($answer1); ?>" required> 
-                </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="question2" class="font-medium text-white"> *Custom Security Question 2</label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="question2" value="<?php echo htmlspecialchars($question2); ?>" required> 
-                </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="answer2" class="font-medium text-white"> *Answer 2</label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="answer2" value="<?php echo htmlspecialchars($answer2); ?>" required> 
-                </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="question3" class="font-medium text-white"> *Custom Security Question 3</label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="question3" value="<?php echo htmlspecialchars($question3); ?>" required>
-                </div>
-                <div class="md:flex md:flex-row md:gap-5 md:m-2 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <label for="answer3" class="font-medium text-white"> *Answer 3</label>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent hover:shadow-md active:scale-95" type="text" name="answer3" value="<?php echo htmlspecialchars($answer3); ?>" required> 
-                </div>
-                <br>
-                <div class="text-center bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-                    <p class="font-medium text-white"> 
-                        <b> What is <?php echo htmlspecialchars($num1); ?> + <?php echo htmlspecialchars($num2); ?> ? </b> 
-                    </p>
-                    <input class="border-2 border-white p-1 rounded-md text-white bg-transparent" type="text" name="captcha" value="<?php echo htmlspecialchars($captcha); ?>" required>
-                    <input type="hidden" name="num1" value="<?php echo htmlspecialchars($num1); ?>">
-                    <input type="hidden" name="num2" value="<?php echo htmlspecialchars($num2); ?>">
-                </div>
-                <br>
-                <div class="text-center">
-                    <input class="bg-blue-600 text-white px-6 py-2 rounded transition duration-200 hover:bg-blue-700 hover:shadow-md active:scale-95" type="submit" name="button" value="Create Account">
-                </div>
-            </form>
-            </main>
+<div class="bg-gray-800 border border-gray-700 rounded-xl p-8 shadow-lg">
+
+    <?php echo $message; ?>
+
+    <form method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <!-- TITLE -->
+        <div class="md:col-span-2">
+            <label class="text-xs text-gray-400">Account Title</label>
+            <input type="text" name="title"
+                value="<?= htmlspecialchars($title) ?>"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
         </div>
+
+
+    <div class="md:col-span-2">
+    <h2 class="text-lg font-semibold text-white text-center mt-2 mb-2">
+       Personal Information
+    </h2>
+    </div>
+
+
+        <!-- NAME -->
+        <div>
+            <label class="text-xs text-gray-400">* First Name</label>
+            <input required type="text" name="first"
+                value="<?= htmlspecialchars($first) ?>"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
+        </div>
+
+        <div>
+            <label class="text-xs text-gray-400">Middle Name</label>
+            <input type="text" name="middle"
+                value="<?= htmlspecialchars($middle) ?>"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
+        </div>
+
+        <div>
+            <label class="text-xs text-gray-400">* Last Name</label>
+            <input required type="text" name="last"
+                value="<?= htmlspecialchars($last) ?>"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
+        </div>
+
+
+        <div>
+            <label class="text-xs text-gray-400">Suffix</label>
+            <input type="text" name="suffix"
+                value="<?= htmlspecialchars($suffix) ?>"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
+        </div>
+
+        <!-- DOB + GENDER -->
+        <div>
+            <label class="text-xs text-gray-400">* Date of Birth</label>
+            <input required type="date" name="birth"
+                value="<?= htmlspecialchars($birth) ?>"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
+        </div>
+
+        <div>
+            <label class="text-xs text-gray-400">* Gender</label>
+            <input required type="text" name="gender"
+                value="<?= htmlspecialchars($gender) ?>"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
+        </div>
+
+        <!-- ADDRESS -->
+        <div class="md:col-span-2">
+            <label class="text-xs text-gray-400">* Street Address</label>
+            <input required type="text" name="street-address"
+                value="<?= htmlspecialchars($street) ?>"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
+        </div>
+
+        <div>
+            <label class="text-xs text-gray-400">* City</label>
+            <input required type="text" name="city"
+                value="<?= htmlspecialchars($city) ?>"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
+        </div>
+
+        <!-- COUNTRY -->
+        <div>
+            <label class="text-xs text-gray-400">* Country</label>
+            <select required name="country" id="country"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
+                <option value="">Select Country</option>
+<option value="Afghanistan">Afghanistan</option>
+<option value="Albania">Albania</option>
+<option value="Algeria">Algeria</option>
+<option value="Andorra">Andorra</option>
+<option value="Angola">Angola</option>
+<option value="Antigua And Barbuda">Antigua And Barbuda</option>
+<option value="Argentina">Argentina</option>
+<option value="Armenia">Armenia</option>
+<option value="Australia">Australia</option>
+<option value="Austria">Austria</option>
+<option value="Azerbaijan">Azerbaijan</option>
+<option value="Bahamas">Bahamas</option>
+<option value="Bahrain">Bahrain</option>
+<option value="Bangladesh">Bangladesh</option>
+<option value="Barbados">Barbados</option>
+<option value="Belarus">Belarus</option>
+<option value="Belgium">Belgium</option>
+<option value="Belize">Belize</option>
+<option value="Benin">Benin</option>
+<option value="Bhutan">Bhutan</option>
+<option value="Bolivia">Bolivia</option>
+<option value="Bosnia And Herzegovina">Bosnia And Herzegovina</option>
+<option value="Botswana">Botswana</option>
+<option value="Brazil">Brazil</option>
+<option value="Brunei Darussalam">Brunei Darussalam</option>
+<option value="Bulgaria">Bulgaria</option>
+<option value="Burkina Faso">Burkina Faso</option>
+<option value="Burundi">Burundi</option>
+<option value="Cabo Verde">Cabo Verde</option>
+<option value="Cameroon">Cameroon</option>
+<option value="Canada">Canada</option>
+<option value="Central African Republic">Central African Republic</option>
+<option value="Chad">Chad</option>
+<option value="Chile">Chile</option>
+<option value="China">China</option>
+<option value="Colombia">Colombia</option>
+<option value="Comoros">Comoros</option>
+<option value="Congo">Congo</option>
+<option value="Costa Rica">Costa Rica</option>
+<option value="Cote D'Ivoire">Côte D'Ivoire</option>
+<option value="Croatia">Croatia</option>
+<option value="Cuba">Cuba</option>
+<option value="Czechia">Czechia</option>
+<option value="North Korea">North Korea</option>
+<option value="Democratic Republic Of The Congo">Democratic Republic Of The Congo</option>
+<option value="Denmark">Denmark</option>
+<option value="Djibouti">Djibouti</option>
+<option value="Dominica">Dominica</option>
+<option value="Dominican Republic">Dominican Republic</option>
+<option value="Ecuador">Ecuador</option>
+<option value="Egypt">Egypt</option>
+<option value="El Salvador">El Salvador</option>
+<option value="Equatorial Guinea">Equatorial Guinea</option>
+<option value="Eritrea">Eritrea</option>
+<option value="Estonia">Estonia</option>
+<option value="Eswatini">Eswatini</option>
+<option value="Ethiopia">Ethiopia</option>
+<option value="Fiji">Fiji</option>
+<option value="Finland">Finland</option>
+<option value="France">France</option>
+<option value="Gabon">Gabon</option>
+<option value="Gambia">Gambia</option>
+<option value="Georgia">Georgia</option>
+<option value="Germany">Germany</option>
+<option value="Ghana">Ghana</option>
+<option value="Greece">Greece</option>
+<option value="Grenada">Grenada</option>
+<option value="Guatemala">Guatemala</option>
+<option value="Guinea">Guinea</option>
+<option value="Guinea Bissau">Guinea Bissau</option>
+<option value="Guyana">Guyana</option>
+<option value="Haiti">Haiti</option>
+<option value="Honduras">Honduras</option>
+<option value="Hungary">Hungary</option>
+<option value="Iceland">Iceland</option>
+<option value="India">India</option>
+<option value="Indonesia">Indonesia</option>
+<option value="Iran">Iran</option>
+<option value="Iraq">Iraq</option>
+<option value="Ireland">Ireland</option>
+<option value="Israel">Israel</option>
+<option value="Italy">Italy</option>
+<option value="Jamaica">Jamaica</option>
+<option value="Japan">Japan</option>
+<option value="Jordan">Jordan</option>
+<option value="Kazakhstan">Kazakhstan</option>
+<option value="Kenya">Kenya</option>
+<option value="Kiribati">Kiribati</option>
+<option value="Kuwait">Kuwait</option>
+<option value="Kyrgyzstan">Kyrgyzstan</option>
+<option value="Laos">Laos</option>
+<option value="Latvia">Latvia</option>
+<option value="Lebanon">Lebanon</option>
+<option value="Lesotho">Lesotho</option>
+<option value="Liberia">Liberia</option>
+<option value="Libya">Libya</option>
+<option value="Liechtenstein">Liechtenstein</option>
+<option value="Lithuania">Lithuania</option>
+<option value="Luxembourg">Luxembourg</option>
+<option value="Madagascar">Madagascar</option>
+<option value="Malawi">Malawi</option>
+<option value="Malaysia">Malaysia</option>
+<option value="Maldives">Maldives</option>
+<option value="Mali">Mali</option>
+<option value="Malta">Malta</option>
+<option value="Marshall Islands">Marshall Islands</option>
+<option value="Mauritania">Mauritania</option>
+<option value="Mauritius">Mauritius</option>
+<option value="Mexico">Mexico</option>
+<option value="Micronesia">Micronesia</option>
+<option value="Monaco">Monaco</option>
+<option value="Mongolia">Mongolia</option>
+<option value="Montenegro">Montenegro</option>
+<option value="Morocco">Morocco</option>
+<option value="Mozambique">Mozambique</option>
+<option value="Myanmar">Myanmar</option>
+<option value="Namibia">Namibia</option>
+<option value="Nauru">Nauru</option>
+<option value="Nepal">Nepal</option>
+<option value="Netherlands">Netherlands</option>
+<option value="New Zealand">New Zealand</option>
+<option value="Nicaragua">Nicaragua</option>
+<option value="Niger">Niger</option>
+<option value="Nigeria">Nigeria</option>
+<option value="North Macedonia">North Macedonia</option>
+<option value="Norway">Norway</option>
+<option value="Oman">Oman</option>
+<option value="Pakistan">Pakistan</option>
+<option value="Palau">Palau</option>
+<option value="Panama">Panama</option>
+<option value="Papua New Guinea">Papua New Guinea</option>
+<option value="Paraguay">Paraguay</option>
+<option value="Peru">Peru</option>
+<option value="Philippines">Philippines</option>
+<option value="Poland">Poland</option>
+<option value="Portugal">Portugal</option>
+<option value="Qatar">Qatar</option>
+<option value="South Korea">South Korea</option>
+<option value="Moldova">Moldova</option>
+<option value="Romania">Romania</option>
+<option value="Russia">Russia</option>
+<option value="Rwanda">Rwanda</option>
+<option value="Saint Kitts And Nevis">Saint Kitts And Nevis</option>
+<option value="Saint Lucia">Saint Lucia</option>
+<option value="Saint Vincent And The Grenadines">Saint Vincent And The Grenadines</option>
+<option value="Samoa">Samoa</option>
+<option value="San Marino">San Marino</option>
+<option value="Sao Tome And Principe">Sao Tome And Principe</option>
+<option value="Saudi Arabia">Saudi Arabia</option>
+<option value="Senegal">Senegal</option>
+<option value="Serbia">Serbia</option>
+<option value="Seychelles">Seychelles</option>
+<option value="Sierra Leone">Sierra Leone</option>
+<option value="Singapore">Singapore</option>
+<option value="Slovakia">Slovakia</option>
+<option value="Slovenia">Slovenia</option>
+<option value="Solomon Islands">Solomon Islands</option>
+<option value="Somalia">Somalia</option>
+<option value="South Africa">South Africa</option>
+<option value="South Sudan">South Sudan</option>
+<option value="Spain">Spain</option>
+<option value="Sri Lanka">Sri Lanka</option>
+<option value="Sudan">Sudan</option>
+<option value="Suriname">Suriname</option>
+<option value="Sweden">Sweden</option>
+<option value="Switzerland">Switzerland</option>
+<option value="Syria">Syria</option>
+<option value="Tajikistan">Tajikistan</option>
+<option value="Thailand">Thailand</option>
+<option value="Timor Leste">Timor Leste</option>
+<option value="Togo">Togo</option>
+<option value="Tonga">Tonga</option>
+<option value="Trinidad And Tobago">Trinidad And Tobago</option>
+<option value="Tunisia">Tunisia</option>
+<option value="Turkey">Turkey</option>
+<option value="Turkmenistan">Turkmenistan</option>
+<option value="Tuvalu">Tuvalu</option>
+<option value="Uganda">Uganda</option>
+<option value="Ukraine">Ukraine</option>
+<option value="United Arab Emirates">United Arab Emirates</option>
+<option value="United Kingdom">United Kingdom</option>
+<option value="Tanzania">Tanzania</option>
+<option value="United States">United States</option>
+<option value="Uruguay">Uruguay</option>
+<option value="Uzbekistan">Uzbekistan</option>
+<option value="Vanuatu">Vanuatu</option>
+<option value="Venezuela">Venezuela</option>
+<option value="Vietnam">Vietnam</option>
+<option value="Yemen">Yemen</option>
+<option value="Zambia">Zambia</option>
+<option value="Zimbabwe">Zimbabwe</option>
+            </select>
+        </div>
+
+    <!-- STATE + ZIP -->
+        <div id="state-container">
+            <label class="text-xs text-gray-400">* State</label>
+            <select required name="state" id="state"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
+                <option value="">Select State</option>
+                <option value="AL">Alabama</option>
+                <option value="AK">Alaska</option>
+                <option value="AZ">Arizona</option>
+                <option value="AR">Arkansas</option>
+                <option value="CA">California</option>
+                <option value="CO">Colorado</option>
+                <option value="CT">Connecticut</option>
+                <option value="DE">Delaware</option>
+                <option value="DC">District of Columbia</option>
+                <option value="FL">Florida</option>
+                <option value="GA">Georgia</option>
+                <option value="HI">Hawaii</option>
+                <option value="ID">Idaho</option>
+                <option value="IL">Illinois</option>
+                <option value="IN">Indiana</option>
+                <option value="IA">Iowa</option>
+                <option value="KS">Kansas</option>
+                <option value="KY">Kentucky</option>
+                <option value="LA">Louisiana</option>
+                <option value="ME">Maine</option>
+                <option value="MD">Maryland</option>
+                <option value="MA">Massachusetts</option>
+                <option value="MI">Michigan</option>
+                <option value="MN">Minnesota</option>
+                <option value="MS">Mississippi</option>
+                <option value="MO">Missouri</option>
+                <option value="MT">Montana</option>
+                <option value="NE">Nebraska</option>
+                <option value="NV">Nevada</option>
+                <option value="NH">New Hampshire</option>
+                <option value="NJ">New Jersey</option>
+                <option value="NM">New Mexico</option>
+                <option value="NY">New York</option>
+                <option value="NC">North Carolina</option>
+                <option value="ND">North Dakota</option>
+                <option value="OH">Ohio</option>
+                <option value="OK">Oklahoma</option>
+                <option value="OR">Oregon</option>
+                <option value="PA">Pennsylvania</option>
+                <option value="RI">Rhode Island</option>
+                <option value="SC">South Carolina</option>
+                <option value="SD">South Dakota</option>
+                <option value="TN">Tennessee</option>
+                <option value="TX">Texas</option>
+                <option value="UT">Utah</option>
+                <option value="VT">Vermont</option>
+                <option value="VA">Virginia</option>
+                <option value="WA">Washington</option>
+                <option value="WV">West Virginia</option>
+                <option value="WI">Wisconsin</option>
+                <option value="WY">Wyoming</option>
+            </select>
+        </div>
+
+        
+        <div id="zip-container">
+            <label class="text-xs text-gray-400">* ZIP</label>
+            <input required type="text" name="zip" id="zip"
+                value="<?= htmlspecialchars($zip) ?>"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
+        </div>
+
+        <!-- PHONE + EMAIL -->
+<div>
+    <label class="text-xs text-gray-400">Phone Number</label>
+    <input type="tel" name="phone"
+        value="<?= htmlspecialchars($phone) ?>"
+        class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
+</div>
+
+<div>
+    <label class="text-xs text-gray-400">* Email</label>
+    <input required type="email" name="email"
+        value="<?= htmlspecialchars($email) ?>"
+        class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
+</div>
+
+        <!-- PASSWORD -->
+        <div class="md:col-span-2">
+            <label class="text-xs text-gray-400">* Password</label>
+            <input id="password" required type="password" name="password"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
+            <p id="password-strength" class="text-xs text-gray-400 mt-2">
+                Password must be more than 10 characters.
+            </p>
+        </div>
+
+        <!-- SECURITY QUESTIONS -->
+
+    <div class="md:col-span-2">
+    <h2 class="text-lg font-semibold text-white text-center mt-2 mb-2">
+        Security Questions Used for Account Recovery
+    </h2>
+    <p class="text-sm text-gray-400 text-center">
+        These questions are used to recover your account if you forget your password.
+    </p>
+    </div>
+        <div>
+            <label class="text-xs text-gray-400">* Question 1</label>
+            <input required type="text" name="question1"
+                value="<?= htmlspecialchars($question1) ?>"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm" required>
+        </div>
+        <div>
+            <label class="text-xs text-gray-400">* Answer 1</label>
+            <input required type="text" name="answer1"
+                value="<?= htmlspecialchars($answer1) ?>"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm" required>
+        </div>
+
+        <div>
+            <label class="text-xs text-gray-400">* Question 2</label>
+            <input required type="text" name="question2"
+                value="<?= htmlspecialchars($question2) ?>"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm" required>
+        </div>
+
+        <div>
+            <label class="text-xs text-gray-400">* Answer 2</label>
+            <input required type="text" name="answer2"
+                value="<?= htmlspecialchars($answer2) ?>"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm" required>
+        </div>
+
+        <div>
+            <label class="text-xs text-gray-400">* Question 3</label>
+            <input required type="text" name="question3"
+                value="<?= htmlspecialchars($question3) ?>"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm" required>
+        </div>
+
+        <div>
+            <label class="text-xs text-gray-400">* Answer 3</label>
+            <input required type="text" name="answer3"
+                value="<?= htmlspecialchars($answer3) ?>"
+                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm" required>
+        </div>
+
+        <!-- CAPTCHA -->
+
+<div class="md:col-span-2 text-center bg-gray-700 border border-gray-600 rounded-lg p-4">
+    <label required class="text-xs text-gray-400">* CAPTCHA</label>
+    <p class="font-medium text-white mt-1">
+        What is <?= htmlspecialchars($num1); ?> + <?= htmlspecialchars($num2); ?> ?
+    </p>
+    <input type="text" name="captcha"
+        value="<?= htmlspecialchars($captcha); ?>"
+        class="mt-2 w-32 h-10 bg-gray-800 border border-gray-600 rounded-lg text-center" required>
+    <input type="hidden" name="num1" value="<?= htmlspecialchars($num1); ?>">
+    <input type="hidden" name="num2" value="<?= htmlspecialchars($num2); ?>">
+</div>
+        <!-- SUBMIT -->
+        <div class="md:col-span-2 text-center">
+            <input class="bg-blue-600 text-white px-6 py-2 rounded transition duration-200 hover:bg-blue-700 hover:shadow-md active:scale-95"
+                type="submit" name="button" value="Create Account">
+        </div>
+
+    </form>
+</div>
+</div>
+</main>
+
+</body>
+</html>
         <script>
             //password strength checker
             document.addEventListener('DOMContentLoaded', function () {
@@ -490,7 +590,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
                 passwordInput.addEventListener('input', updateStrength);
                 updateStrength();
             });
-
+//country/state form fields
 document.addEventListener("DOMContentLoaded", function () {
     const countrySelect = document.getElementById("country");
     const stateSelect = document.getElementById("state");
@@ -512,7 +612,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function updateUSFields() {
         const isUS =
-            countrySelect.value === "US";
+            countrySelect.value === "United States" || countrySelect.value === "US"; //duality in case i need to change anything in the future
 
         stateContainer.style.display = isUS ? "flex" : "none";
         zipContainer.style.display = isUS ? "flex" : "none";
