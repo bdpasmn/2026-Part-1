@@ -48,7 +48,6 @@ function fetchAllFlights(AirportsAPI $api) {
 
     return $all;
 }
-
 // ---------------- LOAD ALL FLIGHTS ----------------
 $flights = fetchAllFlights($api);
 
@@ -64,25 +63,16 @@ $flights = array_map(function ($f) {
     return $f;
 
 }, $flights);
-
+// ---------------- REMOVE PAST FLIGHTS ----------------
+$flights = array_values(array_filter($flights, function ($f) {
+    return strtolower($f['status'] ?? '') !== 'past';
+}));
 // ---------------- TYPE FILTER ----------------
 if ($type !== 'all') {
     $flights = array_values(array_filter($flights, function ($f) use ($type) {
         return ($f['type'] ?? '') === $type;
     }));
 }
-
-// ---------------- SEARCH ----------------
-if ($search !== "") {
-    $flights = array_values(array_filter($flights, function ($f) use ($search) {
-
-        return stripos($f['flightNumber'] ?? '', $search) !== false
-            || stripos($f['airline'] ?? '', $search) !== false
-            || stripos($f['status'] ?? '', $search) !== false
-            || stripos($f['city'] ?? '', $search) !== false;
-    }));
-}
-
 // ---------------- TIME HELPER ----------------
 $getTime = function ($f) {
 
@@ -112,7 +102,7 @@ $getDate = function ($f) use ($getTime) {
 
     if (!$time) return "N/A";
 
-    return date("M d, Y", $time);
+    return date("M d, Y g:i A", $time);
 };
 
 // ---------------- SORT ----------------
@@ -120,9 +110,34 @@ usort($flights, function ($a, $b) use ($sort, $getTime) {
 
     switch ($sort) {
 
-        case 'airline':
+        // Airline
+        case 'airline_asc':
             return strcasecmp($a['airline'] ?? '', $b['airline'] ?? '');
 
+        case 'airline_desc':
+            return strcasecmp($b['airline'] ?? '', $a['airline'] ?? '');
+
+        // Gate
+        case 'gate_asc':
+            return strcasecmp(
+                $a['gate'] ?? '',
+                $b['gate'] ?? ''
+            );
+
+        case 'gate_desc':
+            return strcasecmp(
+                $b['gate'] ?? '',
+                $a['gate'] ?? ''
+            );
+
+        // Date
+        case 'date_asc':
+            return $getTime($a) <=> $getTime($b);
+
+        case 'date_desc':
+            return $getTime($b) <=> $getTime($a);
+
+        // Existing
         case 'status':
             return strcasecmp($a['status'] ?? '', $b['status'] ?? '');
 
@@ -133,13 +148,36 @@ usort($flights, function ($a, $b) use ($sort, $getTime) {
             );
 
         case 'flightNumber':
-            return strcasecmp($a['flightNumber'] ?? '', $b['flightNumber'] ?? '');
+            return strcasecmp(
+                $a['flightNumber'] ?? '',
+                $b['flightNumber'] ?? ''
+            );
 
         default:
             return $getTime($b) <=> $getTime($a);
     }
 });
+// ---------------- ROUTE HELPER ----------------
+$getRoute = function ($f) {
 
+    if (($f['type'] ?? '') === 'arrival') {
+
+        $from = $f['comingFrom'] ?? 'Unknown';
+        $to   = $f['landingAt'] ?? 'Unknown';
+
+        return trim("{$from} → {$to}");
+    }
+
+    if (($f['type'] ?? '') === 'departure') {
+
+        $from = $f['landingAt'] ?? 'Unknown';
+        $to   = $f['departingTo'] ?? 'Unknown';
+
+        return trim("{$from} → {$to}");
+    }
+
+    return 'N/A';
+};
 // ---------------- PAGINATION ----------------
 $totalFlights = count($flights);
 $totalPages = max(1, ceil($totalFlights / $perPage));
@@ -179,28 +217,52 @@ $pageFlights = array_slice($flights, $start, $perPage);
         <form method="GET" class="bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
             <div class="flex flex-col lg:flex-row gap-4">
 
-                <input type="text" name="search"
-                    value="<?= htmlspecialchars($search) ?>"
-                    placeholder="Enter flight number"
-                    class="flex-1 h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white">
-
                 <select name="type" class="flex-1 h-12 bg-gray-700 border border-gray-600 rounded-lg px-4">
                     <option value="all" <?= $type=="all"?"selected":"" ?>>All</option>
                     <option value="arrival" <?= $type=="arrival"?"selected":"" ?>>Arrivals</option>
                     <option value="departure" <?= $type=="departure"?"selected":"" ?>>Departures</option>
                 </select>
 
-                <select name="sort" class="flex-1 h-12 bg-gray-700 border border-gray-600 rounded-lg px-4">
-                    <option value="flightNumber" <?= $sort=="flightNumber"?"selected":"" ?>>Flight #</option>
-                    <option value="airline" <?= $sort=="airline"?"selected":"" ?>>Airline</option>
-                    <option value="status" <?= $sort=="status"?"selected":"" ?>>Status</option>
-                    <option value="city" <?= $sort=="city"?"selected":"" ?>>City</option>
-                </select>
-
                 <button class="h-12 px-8 bg-blue-600 rounded-lg font-medium hover:bg-blue-700">
                     Search
                 </button>
+                <!-- SORT BUTTONS -->
+                    <div class="mt-4 flex flex-wrap gap-3">
 
+                        <!-- Airline -->
+                        <a href="?search=<?= urlencode($search) ?>&type=<?= urlencode($type) ?>&sort=airline_asc"
+                        class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 hover:bg-blue-600">
+                            Airline A-Z
+                        </a>
+
+                        <a href="?search=<?= urlencode($search) ?>&type=<?= urlencode($type) ?>&sort=airline_desc"
+                        class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 hover:bg-blue-600">
+                            Airline Z-A
+                        </a>
+
+                        <!-- Gate -->
+                        <a href="?search=<?= urlencode($search) ?>&type=<?= urlencode($type) ?>&sort=gate_asc"
+                        class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 hover:bg-blue-600">
+                            Gate A-Z
+                        </a>
+
+                        <a href="?search=<?= urlencode($search) ?>&type=<?= urlencode($type) ?>&sort=gate_desc"
+                        class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 hover:bg-blue-600">
+                            Gate Z-A
+                        </a>
+
+                        <!-- Date -->
+                        <a href="?search=<?= urlencode($search) ?>&type=<?= urlencode($type) ?>&sort=date_asc"
+                        class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 hover:bg-blue-600">
+                            Oldest First
+                        </a>
+
+                        <a href="?search=<?= urlencode($search) ?>&type=<?= urlencode($type) ?>&sort=date_desc"
+                        class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 hover:bg-blue-600">
+                            Newest First
+                        </a>
+
+                    </div>
             </div>
         </form>
     </section>
@@ -222,28 +284,30 @@ $pageFlights = array_slice($flights, $start, $perPage);
                                 <?= $f['airline'] ?? "Unknown Airline" ?>
                             </p>
                         </div>
-
-                        <div>
-                            <p class="text-white font-medium">Status</p>
-                            <p class="text-gray-400">
-                                <?= $f['status'] ?? "N/A" ?>
-                            </p>
-                        </div>
-
                         <div>
                             <p class="text-white font-medium">Date</p>
                             <p class="text-gray-400">
                                 <?= $getDate($f) ?>
                             </p>
                         </div>
-
                         <div>
-                            <p class="text-white font-medium">City</p>
+                            <p class="text-white font-medium">Route</p>
                             <p class="text-gray-400">
-                                <?= $f['city'] ?? 'N/A' ?>
+                                <?= htmlspecialchars($getRoute($f)) ?>
                             </p>
                         </div>
-
+                        <div>
+                        <p class="text-white font-medium">Arrival/Departure</p>
+                            <p class="text-gray-400">
+                                <?= $f['type'] ?? "N/A" ?>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-white font-medium">Status</p>
+                            <p class="text-gray-400">
+                                <?= $f['status'] ?? "N/A" ?>
+                            </p>
+                        </div>
                         <div>
                             <p class="text-white font-medium">Gate</p>
                             <p class="text-gray-400">
