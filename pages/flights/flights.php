@@ -157,27 +157,6 @@ usort($flights, function ($a, $b) use ($sort, $getTime) {
             return $getTime($b) <=> $getTime($a);
     }
 });
-// ---------------- ROUTE HELPER ----------------
-$getRoute = function ($f) {
-
-    if (($f['type'] ?? '') === 'arrival') {
-
-        $from = $f['comingFrom'] ?? 'Unknown';
-        $to   = $f['landingAt'] ?? 'Unknown';
-
-        return trim("{$from} → {$to}");
-    }
-
-    if (($f['type'] ?? '') === 'departure') {
-
-        $from = $f['landingAt'] ?? 'Unknown';
-        $to   = $f['departingTo'] ?? 'Unknown';
-
-        return trim("{$from} → {$to}");
-    }
-
-    return 'N/A';
-};
 // ---------------- PAGINATION ----------------
 $totalFlights = count($flights);
 $totalPages = max(1, ceil($totalFlights / $perPage));
@@ -211,12 +190,17 @@ $pageFlights = array_slice($flights, $start, $perPage);
             </p>
         </div>
     </section>
-
     <!-- SEARCH -->
     <section class="px-6">
         <form method="GET" class="bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
             <div class="flex flex-col lg:flex-row gap-4">
-
+                <input
+                    type="text"
+                    name="search"
+                    placeholder="Enter flight number"
+                    value="<?= htmlspecialchars($search) ?>"
+                    class="flex-1 h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white"
+                    >
                 <select name="type" class="flex-1 h-12 bg-gray-700 border border-gray-600 rounded-lg px-4">
                     <option value="all" <?= $type=="all"?"selected":"" ?>>All</option>
                     <option value="arrival" <?= $type=="arrival"?"selected":"" ?>>Arrivals</option>
@@ -291,11 +275,41 @@ $pageFlights = array_slice($flights, $start, $perPage);
                             </p>
                         </div>
                         <div>
-                            <p class="text-white font-medium">Route</p>
+                            <p class="text-white font-medium">City</p>
                             <p class="text-gray-400">
-                                <?= htmlspecialchars($getRoute($f)) ?>
+                                <?= $f['city'] ?? "N/A" ?>
                             </p>
                         </div>
+                        <?php if (($f['type'] ?? '') === 'arrival'): ?>
+                        <div>
+                            <p class="text-white font-medium">Coming From</p>
+                            <p class="text-gray-400">
+                                <?= $f['comingFrom'] ?? '—' ?>
+                            </p>
+                        </div>
+
+                        <div>
+                            <p class="text-white font-medium">Landing At</p>
+                            <p class="text-gray-400">
+                                <?= $f['landingAt'] ?? '—' ?>
+                            </p>
+                        </div>
+
+                    <?php elseif (($f['type'] ?? '') === 'departure'): ?>
+                        <div>
+                            <p class="text-white font-medium">Landing At</p>
+                            <p class="text-gray-400">
+                                <?= $f['landingAt'] ?? '—' ?>
+                            </p>
+                        </div>
+
+                        <div>
+                            <p class="text-white font-medium">Departing To</p>
+                            <p class="text-gray-400">
+                                <?= $f['departingTo'] ?? '—' ?>
+                            </p>
+                        </div>
+                    <?php endif; ?>
                         <div>
                         <p class="text-white font-medium">Arrival/Departure</p>
                             <p class="text-gray-400">
@@ -316,22 +330,55 @@ $pageFlights = array_slice($flights, $start, $perPage);
                                     : '—' ?>
                             </p>
                         </div>
+                        <!-- BOOK BUTTON -->
+                    <div>
+                        <?php
+                            $flightTime = $getTime($f);
+                            $now = time();
 
-                        <div>
-                            <?php if (($f['type'] ?? '') === 'departure'): ?>
-                                <button href="" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700">
+                            $canBook = (
+                                ($f['type'] ?? '') === 'departure'
+                                && $flightTime > ($now + 86400)
+                            );
+                        ?>
+
+                        <?php if (($f['type'] ?? '') === 'departure'): ?>
+
+                            <?php if ($canBook): ?>
+                                <a
+                                    href="book.php?flight=<?= urlencode($f['flightNumber'] ?? '') ?>"
+                                    class="inline-block bg-blue-600 px-4 py-2 rounded hover:bg-blue-700"
+                                >
                                     Book
+                                </a>
+
+                            <?php elseif ($flightTime > 0 && $flightTime <= $now): ?>
+                                <button
+                                    disabled
+                                    class="bg-gray-600 px-4 py-2 rounded cursor-not-allowed opacity-60"
+                                >
+                                    Flight Departed
                                 </button>
+
                             <?php else: ?>
-                                <p class="text-gray-500 text-sm">View only</p>
+                                <button
+                                    disabled
+                                    class="bg-yellow-600 px-4 py-2 rounded cursor-not-allowed opacity-80"
+                                >
+                                    Booking Closed
+                                </button>
                             <?php endif; ?>
-                        </div>
+
+                        <?php else: ?>
+                            <p class="text-gray-500 text-sm">View Only</p>
+                        <?php endif; ?>
+                    </div>
 
                     </div>
                 </div>
-            <?php endforeach; ?>
-        </div>
-    </section>
+                    <?php endforeach; ?>
+                </div>
+            </section>
 
     <!-- PAGINATION -->
     <section class="p-6">
