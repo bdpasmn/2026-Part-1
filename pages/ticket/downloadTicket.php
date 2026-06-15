@@ -223,7 +223,7 @@ draw_scaled_text($img, 'To: ' . $dest, $leftCol, $y, 1.4, $textWhite); $y += 48;
 // right column large fields
 $ry = 160;
 draw_scaled_text($img, 'Confirmation #: ' . ($confirmation ?? 'TBD'), $center, $ry, 1.8, $textWhite);
-draw_scaled_text($img, 'Gate: ' . ($flight['gate'] ?? 'TBD'), $center, $ry+80, 2.6, $textWhite);
+draw_scaled_text($img, 'Gate: ' . (strtoupper($flight['gate'] ?? 'TBD')), $center, $ry+80, 2.6, $textWhite);
 draw_scaled_text($img, 'Seat: ' . ($ticketRow['seat'] ?? 'TBD'), $rightCol, $ry+80, 2.6, $textWhite);
 
 // footer
@@ -231,7 +231,7 @@ draw_scaled_text($img, 'Generated: ' . $generated, $leftCol, $h-60, 1.0, $muted)
 
 
 
-
+if (ob_get_length()) ob_end_clean(); // little cleanup cuz whitespace in neccesary files was causing png corruption
 header('Content-Type: image/png');
 header('Content-Disposition: attachment; filename="ticket-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $passengerName) . '.png"');
 imagepng($img);
