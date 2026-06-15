@@ -8,13 +8,25 @@ set_time_limit(1800);
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
-// ---------------- INPUTS ----------------
-$type   = $_GET['type'] ?? "all";
-$search = trim($_GET['search'] ?? "");
-$sort   = $_GET['sort'] ?? 'flightNumber';
-$page   = max(1, (int)($_GET['page'] ?? 1));
+$airportResults = $api->getAirports();
+$airports = $airportResults['airports'] ?? [];
 
-$perPage = 20;
+$airportLookup = [];
+
+foreach ($airports as $airport) {
+    $airportLookup[$airport['shortName']] = $airport;
+}
+// ---------------- INPUTS ----------------
+$mode   = $_GET['mode'] ?? 'all';
+$search = trim($_GET['search'] ?? '');
+$sort      = $_GET['sort'] ?? 'flightNumber';
+$page      = max(1, (int)($_GET['page'] ?? 1));
+
+if ($mode === 'all') {
+    // no filtering
+}
+
+$perPage = 25;
 
 // ---------------- SAFE API CURSOR FETCH ----------------
 function fetchAllFlights(AirportsAPI $api) {
@@ -51,27 +63,68 @@ function fetchAllFlights(AirportsAPI $api) {
 // ---------------- LOAD ALL FLIGHTS ----------------
 $flights = fetchAllFlights($api);
 
-$flights = array_map(function ($f) {
+$flights = array_map(function ($f) use ($airportLookup) {
 
     $f['airline'] = $f['airline'] ?? 'Unknown';
     $f['status']  = $f['status'] ?? 'Unknown';
 
-    $f['city'] = (($f['type'] ?? '') === 'arrival')
+    $airportCode = (($f['type'] ?? '') === 'arrival')
         ? ($f['comingFrom'] ?? 'ZZZ')
         : ($f['landingAt'] ?? 'ZZZ');
+
+    $f['airportCode'] = $airportCode;
+    $f['city'] = $airportLookup[$airportCode]['city'] ?? 'Unknown';
 
     return $f;
 
 }, $flights);
-// ---------------- REMOVE PAST FLIGHTS ----------------
+//----------------- REMOVE PAST FLIGHTS ------------
+
 $flights = array_values(array_filter($flights, function ($f) {
-    return strtolower($f['status'] ?? '') !== 'past';
+
+    $status = strtolower(trim($f['status'] ?? ''));
+
+    return $status !== 'past';
 }));
-// ---------------- TYPE FILTER ----------------
-if ($type !== 'all') {
-    $flights = array_values(array_filter($flights, function ($f) use ($type) {
-        return ($f['type'] ?? '') === $type;
-    }));
+// ---------------- DROPDOWN FILTER ----------------
+
+if (in_array($mode, ['arrival', 'departure'], true)) {
+
+    $flights = array_values(array_filter(
+        $flights,
+        function ($f) use ($mode) {
+            return strtolower(trim($f['type'] ?? '')) === strtolower($mode);
+        }
+    ));
+
+} elseif ($search !== '' && $mode !== 'all') {
+
+    $searchLower = strtolower($search);
+
+    $fieldMap = [
+        'flightNumber' => 'flightNumber',
+        'airline'      => 'airline',
+        'status'       => 'status',
+        'city'         => 'city',
+        'landingAt'    => 'landingAt'
+    ];
+
+    if (isset($fieldMap[$mode])) {
+
+        $field = $fieldMap[$mode];
+
+        $flights = array_values(array_filter(
+            $flights,
+            function ($f) use ($field, $searchLower) {
+
+                $value = strtolower(
+                    trim((string)($f[$field] ?? ''))
+                );
+
+                return str_contains($value, $searchLower);
+            }
+        ));
+    }
 }
 // ---------------- TIME HELPER ----------------
 $getTime = function ($f) {
@@ -143,8 +196,8 @@ usort($flights, function ($a, $b) use ($sort, $getTime) {
 
         case 'city':
             return strcasecmp(
-                $a['city'] ?? 'ZZZ',
-                $b['city'] ?? 'ZZZ'
+                htmlspecialchars($a['city'] ?? 'ZZZ'),
+                htmlspecialchars($b['city'] ?? 'ZZZ')
             );
 
         case 'flightNumber':
@@ -193,56 +246,87 @@ $pageFlights = array_slice($flights, $start, $perPage);
     <!-- SEARCH -->
     <section class="px-6">
         <form method="GET" class="bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
-            <div class="flex flex-col lg:flex-row gap-4">
+            <div class="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
                 <input
                     type="text"
                     name="search"
-                    placeholder="Enter flight number"
+                    placeholder="Search..."
                     value="<?= htmlspecialchars($search) ?>"
-                    class="flex-1 h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white"
-                    >
-                <select name="type" class="flex-1 h-12 bg-gray-700 border border-gray-600 rounded-lg px-4">
-                    <option value="all" <?= $type=="all"?"selected":"" ?>>All</option>
-                    <option value="arrival" <?= $type=="arrival"?"selected":"" ?>>Arrivals</option>
-                    <option value="departure" <?= $type=="departure"?"selected":"" ?>>Departures</option>
+                    class="w-80 h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white"
+                >
+
+                <select name="mode" class="h-12 bg-gray-700 border border-gray-600 rounded-lg px-4">
+
+                    <option value="all" <?= $mode === 'all' ? 'selected' : '' ?>>
+                        All Flights
+                    </option>
+
+                    <option value="arrival" <?= $mode === 'arrival' ? 'selected' : '' ?>>
+                        Arrivals
+                    </option>
+
+                    <option value="departure" <?= $mode === 'departure' ? 'selected' : '' ?>>
+                        Departures
+                    </option>
+
+                    <option value="flightNumber" <?= $mode === 'flightNumber' ? 'selected' : '' ?>>
+                        Flight Number
+                    </option>
+
+                    <option value="airline" <?= $mode === 'airline' ? 'selected' : '' ?>>
+                        Airline
+                    </option>
+
+                    <option value="status" <?= $mode === 'status' ? 'selected' : '' ?>>
+                        Status
+                    </option>
+
+                    <option value="city" <?= $mode === 'city' ? 'selected' : '' ?>>
+                        City
+                    </option>
+
+                    <option value="landingAt" <?= $mode === 'landingAt' ? 'selected' : '' ?>>
+                        Landing At
+                    </option>
+
                 </select>
 
                 <button class="h-12 px-8 bg-blue-600 rounded-lg font-medium hover:bg-blue-700">
                     Search
                 </button>
                 <!-- SORT BUTTONS -->
-                    <div class="mt-4 flex flex-wrap gap-3">
+                    <div class="flex items-center gap-3">
 
                         <!-- Airline -->
-                        <a href="?search=<?= urlencode($search) ?>&type=<?= urlencode($type) ?>&sort=airline_asc"
-                        class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 hover:bg-blue-600">
+                        <a href="?search=<?= urlencode($search) ?>&mode=<?= urlencode($mode) ?>&sort=airline_asc"
+                        class="h-12 px-4 rounded-lg border border-gray-600 bg-gray-700 hover:bg-blue-600 inline-flex items-center justify-center">
                             Airline A-Z
                         </a>
 
-                        <a href="?search=<?= urlencode($search) ?>&type=<?= urlencode($type) ?>&sort=airline_desc"
-                        class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 hover:bg-blue-600">
+                        <a href="?search=<?= urlencode($search) ?>&mode=<?= urlencode($mode) ?>&sort=airline_desc"
+                        class="h-12 px-4 rounded-lg border border-gray-600 bg-gray-700 hover:bg-blue-600 inline-flex items-center justify-center">
                             Airline Z-A
                         </a>
 
                         <!-- Gate -->
-                        <a href="?search=<?= urlencode($search) ?>&type=<?= urlencode($type) ?>&sort=gate_asc"
-                        class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 hover:bg-blue-600">
+                        <a href="?search=<?= urlencode($search) ?>&mode=<?= urlencode($mode) ?>&sort=gate_asc"
+                        class="h-12 px-4 rounded-lg border border-gray-600 bg-gray-700 hover:bg-blue-600 inline-flex items-center justify-center">
                             Gate A-Z
                         </a>
 
-                        <a href="?search=<?= urlencode($search) ?>&type=<?= urlencode($type) ?>&sort=gate_desc"
-                        class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 hover:bg-blue-600">
+                        <a href="?search=<?= urlencode($search) ?>&mode=<?= urlencode($mode) ?>&sort=gate_desc"
+                        class="h-12 px-4 rounded-lg border border-gray-600 bg-gray-700 hover:bg-blue-600 inline-flex items-center justify-center">
                             Gate Z-A
                         </a>
 
                         <!-- Date -->
-                        <a href="?search=<?= urlencode($search) ?>&type=<?= urlencode($type) ?>&sort=date_asc"
-                        class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 hover:bg-blue-600">
+                        <a href="?search=<?= urlencode($search) ?>&mode=<?= urlencode($mode) ?>&sort=date_asc"
+                        class="h-12 px-4 rounded-lg border border-gray-600 bg-gray-700 hover:bg-blue-600 inline-flex items-center justify-center">
                             Oldest First
                         </a>
 
-                        <a href="?search=<?= urlencode($search) ?>&type=<?= urlencode($type) ?>&sort=date_desc"
-                        class="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 hover:bg-blue-600">
+                        <a href="?search=<?= urlencode($search) ?>&mode=<?= urlencode($mode) ?>&sort=date_desc"
+                        class="h-12 px-4 rounded-lg border border-gray-600 bg-gray-700 hover:bg-blue-600 inline-flex items-center justify-center">
                             Newest First
                         </a>
 
@@ -252,96 +336,110 @@ $pageFlights = array_slice($flights, $start, $perPage);
     </section>
 
     <!-- FLIGHTS -->
-    <section class="p-6">
-        <h2 class="text-2xl font-bold mb-4">Available Flights</h2>
+<section class="p-6">
+    <h2 class="text-2xl font-bold mb-4">Available Flights</h2>
 
-        <div class="space-y-4">
-            <?php foreach ($pageFlights as $f): ?>
-                <div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
-                    <div class="flex flex-col lg:flex-row lg:justify-between gap-6">
+    <div class="space-y-4">
+        <?php foreach ($pageFlights as $f): ?>
 
-                        <div>
-                            <h3 class="font-bold text-lg">
-                                <?= $f['flightNumber'] ?? "N/A" ?>
-                            </h3>
-                            <p class="text-gray-400">
-                                <?= $f['airline'] ?? "Unknown Airline" ?>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-white font-medium">Date</p>
-                            <p class="text-gray-400">
-                                <?= $getDate($f) ?>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-white font-medium">City</p>
-                            <p class="text-gray-400">
-                                <?= $f['city'] ?? "N/A" ?>
-                            </p>
-                        </div>
-                        <?php if (($f['type'] ?? '') === 'arrival'): ?>
-                        <div>
-                            <p class="text-white font-medium">Coming From</p>
-                            <p class="text-gray-400">
-                                <?= $f['comingFrom'] ?? '—' ?>
-                            </p>
-                        </div>
+            <?php
+                $flightTime = $getTime($f);
+                $now = time();
 
-                        <div>
-                            <p class="text-white font-medium">Landing At</p>
-                            <p class="text-gray-400">
-                                <?= $f['landingAt'] ?? '—' ?>
-                            </p>
-                        </div>
+                $canBook = (
+                    ($f['type'] ?? '') === 'departure'
+                    && $flightTime > ($now + 86400)
+                );
+            ?>
 
-                    <?php elseif (($f['type'] ?? '') === 'departure'): ?>
-                        <div>
-                            <p class="text-white font-medium">Landing At</p>
-                            <p class="text-gray-400">
-                                <?= $f['landingAt'] ?? '—' ?>
-                            </p>
-                        </div>
+            <div class="bg-gray-800 border border-gray-700 rounded-lg p-5">
 
-                        <div>
-                            <p class="text-white font-medium">Departing To</p>
-                            <p class="text-gray-400">
-                                <?= $f['departingTo'] ?? '—' ?>
-                            </p>
-                        </div>
-                    <?php endif; ?>
-                        <div>
-                        <p class="text-white font-medium">Arrival/Departure</p>
-                            <p class="text-gray-400">
-                                <?= $f['type'] ?? "N/A" ?>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-white font-medium">Status</p>
-                            <p class="text-gray-400">
-                                <?= $f['status'] ?? "N/A" ?>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-white font-medium">Gate</p>
-                            <p class="text-gray-400">
-                                <?= ($f['type'] ?? '') === 'departure'
-                                    ? ($f['gate'] ?? '—')
-                                    : '—' ?>
-                            </p>
-                        </div>
-                        <!-- BOOK BUTTON -->
+                <div class="grid grid-cols-9 gap-6 items-start">
+
+                    <!-- Flight -->
                     <div>
-                        <?php
-                            $flightTime = $getTime($f);
-                            $now = time();
+                        <h3 class="font-bold text-lg">
+                            <?= htmlspecialchars($f['flightNumber'] ?? 'N/A') ?>
+                        </h3>
+                        <p class="text-gray-400">
+                            <?= htmlspecialchars($f['airline'] ?? 'Unknown Airline') ?>
+                        </p>
+                    </div>
 
-                            $canBook = (
-                                ($f['type'] ?? '') === 'departure'
-                                && $flightTime > ($now + 86400)
-                            );
-                        ?>
+                    <!-- Date -->
+                    <div>
+                        <p class="font-medium text-white">Date</p>
+                        <p class="text-gray-400 whitespace-nowrap">
+                            <?= $getDate($f) ?>
+                        </p>
+                    </div>
 
+                    <!-- City -->
+                    <div>
+                        <p class="font-medium text-white">City</p>
+                        <p class="text-gray-400">
+                            <?= htmlspecialchars($f['city'] ?? 'N/A') ?>
+                        </p>
+                    </div>
+
+                    <!-- Column 4 -->
+                    <div>
+                        <p class="font-medium text-white">
+                            <?= ($f['type'] ?? '') === 'arrival'
+                                ? 'Coming From'
+                                : 'Landing At' ?>
+                        </p>
+
+                        <p class="text-gray-400">
+                            <?= ($f['type'] ?? '') === 'arrival'
+                                ? htmlspecialchars($f['comingFrom'] ?? '—')
+                                : htmlspecialchars($f['landingAt'] ?? '—') ?>
+                        </p>
+                    </div>
+
+                    <!-- Column 5 -->
+                    <div>
+                        <p class="font-medium text-white">
+                            <?= ($f['type'] ?? '') === 'arrival'
+                                ? 'Landing At'
+                                : 'Departing To' ?>
+                        </p>
+
+                        <p class="text-gray-400">
+                            <?= ($f['type'] ?? '') === 'arrival'
+                                ? htmlspecialchars($f['landingAt'] ?? '—')
+                                : htmlspecialchars($f['departingTo'] ?? '—') ?>
+                        </p>
+                    </div>
+
+                    <!-- Type -->
+                    <div>
+                        <p class="font-medium text-white">Arrival/Departure</p>
+                        <p class="text-gray-400 capitalize">
+                            <?= htmlspecialchars($f['type'] ?? 'N/A') ?>
+                        </p>
+                    </div>
+
+                    <!-- Status -->
+                    <div>
+                        <p class="font-medium text-white">Status</p>
+                        <p class="text-gray-400 capitalize">
+                            <?= htmlspecialchars($f['status'] ?? 'N/A') ?>
+                        </p>
+                    </div>
+
+                    <!-- Gate -->
+                    <div>
+                        <p class="font-medium text-white">Gate</p>
+                        <p class="text-gray-400">
+                            <?= ($f['type'] ?? '') === 'departure'
+                                ? htmlspecialchars($f['gate'] ?? '—')
+                                : '—' ?>
+                        </p>
+                    </div>
+
+                    <!-- Action -->
+                    <div class="text-right">
                         <?php if (($f['type'] ?? '') === 'departure'): ?>
 
                             <?php if ($canBook): ?>
@@ -353,40 +451,37 @@ $pageFlights = array_slice($flights, $start, $perPage);
                                 </a>
 
                             <?php elseif ($flightTime > 0 && $flightTime <= $now): ?>
-                                <button
-                                    disabled
-                                    class="bg-gray-600 px-4 py-2 rounded cursor-not-allowed opacity-60"
-                                >
+                                <p class="text-gray-500 text-sm">
                                     Flight Departed
-                                </button>
+                                </p>
 
                             <?php else: ?>
-                                <button
-                                    disabled
-                                    class="bg-yellow-600 px-4 py-2 rounded cursor-not-allowed opacity-80"
-                                >
+                                <p class="text-gray-500 text-sm">
                                     Booking Closed
-                                </button>
+                                </p>
                             <?php endif; ?>
 
                         <?php else: ?>
-                            <p class="text-gray-500 text-sm">View Only</p>
+                            <p class="text-gray-500 text-sm">
+                                View Only
+                            </p>
                         <?php endif; ?>
                     </div>
 
-                    </div>
                 </div>
-                    <?php endforeach; ?>
-                </div>
-            </section>
 
+            </div>
+
+        <?php endforeach; ?>
+    </div>
+</section>
     <!-- PAGINATION -->
     <section class="p-6">
         <div class="flex justify-end items-center gap-4">
 
             <?php if ($page > 1): ?>
                 <a class="px-4 py-2 bg-gray-700 rounded"
-                   href="?page=<?= $page - 1 ?>&type=<?= urlencode($type) ?>&sort=<?= urlencode($sort) ?>&search=<?= urlencode($search) ?>">
+                   href="?page=<?= $page - 1 ?>&mode=<?= urlencode($mode) ?>&sort=<?= urlencode($sort) ?>&search=<?= urlencode($search) ?>">
                     Previous
                 </a>
             <?php endif; ?>
@@ -397,7 +492,7 @@ $pageFlights = array_slice($flights, $start, $perPage);
 
             <?php if ($page < $totalPages): ?>
                 <a class="px-4 py-2 bg-blue-600 rounded"
-                   href="?page=<?= $page + 1 ?>&type=<?= urlencode($type) ?>&sort=<?= urlencode($sort) ?>&search=<?= urlencode($search) ?>">
+                   href="?page=<?= $page + 1 ?>&mode=<?= urlencode($mode) ?>&sort=<?= urlencode($sort) ?>&search=<?= urlencode($search) ?>">
                     Next
                 </a>
             <?php endif; ?>
