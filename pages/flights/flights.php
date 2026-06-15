@@ -3,7 +3,7 @@ session_start();
 
 require_once __DIR__ . '/../../api/api.php';
 require_once __DIR__ . '/../../api/key.php';
-
+include "./components/nav.php";
 set_time_limit(1800);
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
