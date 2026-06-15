@@ -96,30 +96,33 @@
         ]);
     }
 
+    $flightInfo = $api->getFlightById($flightId);
+    $destination = $flightInfo['departingTo'] ?? '';
+
     $ticketPrice = floatval($_POST['price'] ?? 0);
     $confirmationCode = strtoupper(substr(md5(uniqid()), 0, 8));
 
-    $stmt = $pdo->prepare("INSERT INTO \"Tickets\" (user_id, flight_id, confirmation_code, seat, name_first, name_middle, name_last, sex, date_birth, phone_number, email, bags_carried, bags_checked, price) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-
+    $stmt = $pdo->prepare("INSERT INTO \"Tickets\" (user_id, flight_id, confirmation_code, seat, destination, name_first, name_middle, name_last, sex, date_birth, phone_number, email, bags_carried, bags_checked, price) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     $stmt->execute([
         $userId,
         $flightId,
         $confirmationCode,
         $seat,
-
+        $destination,
+    
         $_POST['first_name'],
         $_POST['middle_name'],
         $_POST['last_name'],
-
+    
         $_POST['sex'],
         $_POST['dob'],
-
+    
         $_POST['phone'],
         $_POST['email'],
-
+    
         intval($_POST['bags_carried']),
         intval($_POST['bags_checked']),
-
+    
         $ticketPrice,
     ]);
 

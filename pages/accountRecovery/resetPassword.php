@@ -23,7 +23,7 @@
                 $stmt->execute([":password" => $hashedPassword, ":email" => $email]);
 
                 if ($stmt->rowCount() > 0) {
-                    header("Location: login.php");
+                    header("Location: ../auth/auth.php");
                     exit;
                 } else {
                     $message = "Account wasn't found. Try again?";
@@ -39,9 +39,7 @@
     </head>
     <body class="bg-gray-900 min-h-screen text-white">
         <div class="w-full min-h-screen bg-gray-900">
-            <header class="h-16 bg-gray-800 flex items-center justify-between px-8 border-b border-gray-700">
-                <h1 class="text-white font-bold text-xl">BDPA Airports - TO BE REPLACED WITH NAV</h1>
-            </header>
+            <?php include "../../components/nav.php"; ?>
 
             <section class="p-6">
                 <div class="max-w-3xl mx-auto bg-gray-800 border border-gray-700 rounded-xl p-8 shadow-lg">
