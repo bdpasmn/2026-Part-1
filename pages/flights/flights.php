@@ -48,6 +48,10 @@ function fetchAllFlights(AirportsAPI $api) {
 
     return $all;
 }
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 // ---------------- LOAD ALL FLIGHTS ----------------
 $flights = fetchAllFlights($api);
 
@@ -63,16 +67,35 @@ $flights = array_map(function ($f) {
     return $f;
 
 }, $flights);
+<<<<<<< Updated upstream
 // ---------------- REMOVE PAST FLIGHTS ----------------
 $flights = array_values(array_filter($flights, function ($f) {
     return strtolower($f['status'] ?? '') !== 'past';
 }));
+=======
+
+>>>>>>> Stashed changes
 // ---------------- TYPE FILTER ----------------
 if ($type !== 'all') {
     $flights = array_values(array_filter($flights, function ($f) use ($type) {
         return ($f['type'] ?? '') === $type;
     }));
 }
+<<<<<<< Updated upstream
+=======
+
+// ---------------- SEARCH ----------------
+if ($search !== "") {
+    $flights = array_values(array_filter($flights, function ($f) use ($search) {
+
+        return stripos($f['flightNumber'] ?? '', $search) !== false
+            || stripos($f['airline'] ?? '', $search) !== false
+            || stripos($f['status'] ?? '', $search) !== false
+            || stripos($f['city'] ?? '', $search) !== false;
+    }));
+}
+
+>>>>>>> Stashed changes
 // ---------------- TIME HELPER ----------------
 $getTime = function ($f) {
 
@@ -102,7 +125,11 @@ $getDate = function ($f) use ($getTime) {
 
     if (!$time) return "N/A";
 
+<<<<<<< Updated upstream
     return date("M d, Y g:i A", $time);
+=======
+    return date("M d, Y", $time);
+>>>>>>> Stashed changes
 };
 
 // ---------------- SORT ----------------
@@ -110,6 +137,7 @@ usort($flights, function ($a, $b) use ($sort, $getTime) {
 
     switch ($sort) {
 
+<<<<<<< Updated upstream
         // Airline
         case 'airline_asc':
             return strcasecmp($a['airline'] ?? '', $b['airline'] ?? '');
@@ -138,6 +166,11 @@ usort($flights, function ($a, $b) use ($sort, $getTime) {
             return $getTime($b) <=> $getTime($a);
 
         // Existing
+=======
+        case 'airline':
+            return strcasecmp($a['airline'] ?? '', $b['airline'] ?? '');
+
+>>>>>>> Stashed changes
         case 'status':
             return strcasecmp($a['status'] ?? '', $b['status'] ?? '');
 
@@ -148,15 +181,23 @@ usort($flights, function ($a, $b) use ($sort, $getTime) {
             );
 
         case 'flightNumber':
+<<<<<<< Updated upstream
             return strcasecmp(
                 $a['flightNumber'] ?? '',
                 $b['flightNumber'] ?? ''
             );
+=======
+            return strcasecmp($a['flightNumber'] ?? '', $b['flightNumber'] ?? '');
+>>>>>>> Stashed changes
 
         default:
             return $getTime($b) <=> $getTime($a);
     }
 });
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 // ---------------- PAGINATION ----------------
 $totalFlights = count($flights);
 $totalPages = max(1, ceil($totalFlights / $perPage));
@@ -184,16 +225,25 @@ $pageFlights = array_slice($flights, $start, $perPage);
     <section class="p-6">
         <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-xl p-10 shadow-lg">
             <p class="tracking-[0.25em] text-sm text-blue-300 mb-4">BDPA AIRPORTS</p>
+<<<<<<< Updated upstream
             <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">Find Flights</h1>
+=======
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">Flight Search</h1>
+>>>>>>> Stashed changes
             <p class="text-lg text-gray-300 max-w-2xl">
                 Search available flights and book your next trip with BDPA Airports.
             </p>
         </div>
     </section>
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
     <!-- SEARCH -->
     <section class="px-6">
         <form method="GET" class="bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
             <div class="flex flex-col lg:flex-row gap-4">
+<<<<<<< Updated upstream
                 <input
                     type="text"
                     name="search"
@@ -201,12 +251,21 @@ $pageFlights = array_slice($flights, $start, $perPage);
                     value="<?= htmlspecialchars($search) ?>"
                     class="flex-1 h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white"
                     >
+=======
+
+                <input type="text" name="search"
+                    value="<?= htmlspecialchars($search) ?>"
+                    placeholder="Enter flight number"
+                    class="flex-1 h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white">
+
+>>>>>>> Stashed changes
                 <select name="type" class="flex-1 h-12 bg-gray-700 border border-gray-600 rounded-lg px-4">
                     <option value="all" <?= $type=="all"?"selected":"" ?>>All</option>
                     <option value="arrival" <?= $type=="arrival"?"selected":"" ?>>Arrivals</option>
                     <option value="departure" <?= $type=="departure"?"selected":"" ?>>Departures</option>
                 </select>
 
+<<<<<<< Updated upstream
                 <button class="h-12 px-8 bg-blue-600 rounded-lg font-medium hover:bg-blue-700">
                     Search
                 </button>
@@ -247,6 +306,19 @@ $pageFlights = array_slice($flights, $start, $perPage);
                         </a>
 
                     </div>
+=======
+                <select name="sort" class="flex-1 h-12 bg-gray-700 border border-gray-600 rounded-lg px-4">
+                    <option value="flightNumber" <?= $sort=="flightNumber"?"selected":"" ?>>Flight #</option>
+                    <option value="airline" <?= $sort=="airline"?"selected":"" ?>>Airline</option>
+                    <option value="status" <?= $sort=="status"?"selected":"" ?>>Status</option>
+                    <option value="city" <?= $sort=="city"?"selected":"" ?>>City</option>
+                </select>
+
+                <button class="h-12 px-8 bg-blue-600 rounded-lg font-medium hover:bg-blue-700">
+                    Search
+                </button>
+
+>>>>>>> Stashed changes
             </div>
         </form>
     </section>
@@ -268,6 +340,7 @@ $pageFlights = array_slice($flights, $start, $perPage);
                                 <?= $f['airline'] ?? "Unknown Airline" ?>
                             </p>
                         </div>
+<<<<<<< Updated upstream
                         <div>
                             <p class="text-white font-medium">Date</p>
                             <p class="text-gray-400">
@@ -317,11 +390,33 @@ $pageFlights = array_slice($flights, $start, $perPage);
                             </p>
                         </div>
                         <div>
+=======
+
+                        <div>
+>>>>>>> Stashed changes
                             <p class="text-white font-medium">Status</p>
                             <p class="text-gray-400">
                                 <?= $f['status'] ?? "N/A" ?>
                             </p>
                         </div>
+<<<<<<< Updated upstream
+=======
+
+                        <div>
+                            <p class="text-white font-medium">Date</p>
+                            <p class="text-gray-400">
+                                <?= $getDate($f) ?>
+                            </p>
+                        </div>
+
+                        <div>
+                            <p class="text-white font-medium">City</p>
+                            <p class="text-gray-400">
+                                <?= $f['city'] ?? 'N/A' ?>
+                            </p>
+                        </div>
+
+>>>>>>> Stashed changes
                         <div>
                             <p class="text-white font-medium">Gate</p>
                             <p class="text-gray-400">
@@ -330,6 +425,7 @@ $pageFlights = array_slice($flights, $start, $perPage);
                                     : '—' ?>
                             </p>
                         </div>
+<<<<<<< Updated upstream
                         <!-- BOOK BUTTON -->
                     <div>
                         <?php
@@ -379,6 +475,24 @@ $pageFlights = array_slice($flights, $start, $perPage);
                     <?php endforeach; ?>
                 </div>
             </section>
+=======
+
+                        <div>
+                            <?php if (($f['type'] ?? '') === 'departure'): ?>
+                                <button class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700">
+                                    Book
+                                </button>
+                            <?php else: ?>
+                                <p class="text-gray-500 text-sm">View only</p>
+                            <?php endif; ?>
+                        </div>
+
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </section>
+>>>>>>> Stashed changes
 
     <!-- PAGINATION -->
     <section class="p-6">

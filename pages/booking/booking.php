@@ -1,5 +1,10 @@
 <?php
     session_start();
+<<<<<<< Updated upstream
+=======
+    $_SESSION['user_id'] = 11;
+    //unset($_SESSION['user_id']);
+>>>>>>> Stashed changes
 
     require_once "../../api/api.php";
     require_once "../../api/key.php";
