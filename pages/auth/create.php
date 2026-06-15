@@ -27,6 +27,7 @@ $captcha = trim($_POST['captcha'] ?? '');
 $num1 = isset($_POST['num1']) ? (int) $_POST['num1'] : rand(1, 10);
 $num2 = isset($_POST['num2']) ? (int) $_POST['num2'] : rand(1, 10);
 $message = '';
+$redirect = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
     if (strlen($password) <= 10) {
@@ -71,7 +72,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
             ]);
 
             $pdo->commit();
-            $message = "<p class='text-green-600 font-semibold text-center mb-4'> Account Created Successfully! Welcome aboard. </p>";
+             $message = "
+                 <p class='text-green-600 font-semibold text-center mb-2'>Account Created Successfully! Welcome aboard.</p>
+                 <p class='text-sm text-gray-300 text-center'>Redirecting in <span id='count'>5</span> second(s)...</p>
+                  ";
+            $redirect = true;
         } catch (PDOException $e) {
 
     if ($pdo->inTransaction()) {
@@ -94,7 +99,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
 <head>
     <title>Create Account</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
 </head>
+
+<?php if (!empty($redirect)): ?>
+<script>
+    let count = 5;
+    const el = document.getElementById('count');
+    const timer = setInterval(() => {
+        count--;
+        el.textContent = count;
+        if (count <= 0) { clearInterval(timer); window.location.href = 'auth.php'; }
+    }, 1000);
+</script>
+<?php endif; ?>
 
 <body class="bg-gray-900 min-h-screen text-white flex flex-col">
 
@@ -396,7 +414,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
 
     <!-- STATE + ZIP -->
         <div id="state-container">
-            <label class="text-xs text-gray-400">* State</label>
+            <label class="text-xs text-gray-400">*State</label>
             <select required name="state" id="state"
                 class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
                 <option value="">Select State</option>
@@ -456,7 +474,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
 
         
         <div id="zip-container">
-            <label class="text-xs text-gray-400">* ZIP</label>
+            <label class="text-xs text-gray-400">*ZIP</label>
             <input required type="text" name="zip" id="zip"
                 value="<?= htmlspecialchars($zip) ?>"
                 class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
