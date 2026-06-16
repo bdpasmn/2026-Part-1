@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
             $pdo->commit();
              $message = "
                  <p class='text-green-600 font-semibold text-center mb-2'>Account Created Successfully! Welcome aboard.</p>
-                 <p class='text-sm text-gray-300 text-center'>Redirecting in <span id='count'>5</span> second(s)...</p>
+                 <p class='text-sm text-gray-300 text-center'>Redirecting to login in <span id='count'>5</span> second(s)...</p>
                   ";
             $redirect = true;
         } catch (PDOException $e) {
@@ -104,13 +104,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
 
 <?php if (!empty($redirect)): ?>
 <script>
+    document.addEventListener('DOMContentLoaded', function () {
     let count = 5;
     const el = document.getElementById('count');
     const timer = setInterval(() => {
         count--;
-        el.textContent = count;
+        if (el) el.textContent = count;
         if (count <= 0) { clearInterval(timer); window.location.href = 'auth.php'; }
     }, 1000);
+     });
 </script>
 <?php endif; ?>
 

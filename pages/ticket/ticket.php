@@ -48,6 +48,28 @@ if (isset($_GET['xhr']) && $_GET['xhr'] === 'flight-status') {
     exit;
 }
 
+//ticket deletion handler
+if (isset($_GET['xhr']) && $_GET['xhr'] === 'delete-ticket') {
+    header('Content-Type: application/json');
+    $confirmation = $_GET['confirmation'] ?? null;
+
+    if (!$confirmation) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Missing confirmation code']);
+        exit;
+    }
+
+    try {
+        $stmt = $pdo->prepare('DELETE FROM "Tickets" WHERE confirmation_code = ?');
+        $stmt->execute([$confirmation]);
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+    exit;
+}
+
 if ($ticketRow) {
     $flightsResponse = $api->searchFlights(
         ['flight_id' => $flightId],
@@ -113,9 +135,11 @@ if ($ticketRow) {
             'departure_time' => $flight['departFromSender']
                 ? date('h:i A', $flight['departFromSender'] / 1000)
                 : 'TBD',
+            'departure_time_raw' => $flight['departFromSender'] ?? null,
             'arrival_time' => $flight['arriveAtReceiver']
                 ? date('h:i A', $flight['arriveAtReceiver'] / 1000)
                 : 'TBD',
+            'arrival_time_raw' => $flight['arriveAtReceiver'] ?? null,
             'passenger_name' => $passengerName,
             'gate' => strtoupper($flight['gate'] ?? 'TBD'),
             'status' => isset($flight['status']) ? ucwords(strtolower($flight['status'])) : 'Unknown'
@@ -163,198 +187,168 @@ $statusClass = match ($status) {
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="icon" href="/bdpa/favicon.ico" type="image/x-icon">
 </head>
+ 
 <body class="bg-gray-900 min-h-screen text-white">
-    <div class="w-full min-h-screen bg-gray-900">
-        <?php include __DIR__ . '/../../components/nav.php'; ?>
-
+<div class="w-full min-h-screen bg-gray-900">
+    <?php include __DIR__ . '/../../components/nav.php'; ?>
+ 
     <main class="w-full p-6">
+ 
         <?php if (!$ticketRow): ?>
-
-            <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-lg p-6 flex flex-col items-center justify-center gap-4 py-16">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+ 
+            <div class="bg-slate-800 border border-gray-700 rounded-xl p-16 flex flex-col items-center gap-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                 </svg>
-
-<p class="text-yellow-400 font-semibold text-lg">No Ticket Detected</p>
-<p class="text-slate-400 text-sm">
-    <?php if ($confirmation): ?>
-        No ticket was found for confirmation code
-        <span class="font-mono text-slate-300"><?= htmlspecialchars($confirmation) ?></span>
-    <?php else: ?>
-        No confirmation code was provided.
-    <?php endif; ?>
-</p>
+                <p class="text-yellow-400 font-semibold text-2xl">No Ticket Detected</p>
+                <p class="text-slate-400 text-base">
+                    <?php if ($confirmation): ?>
+                        No ticket was found for confirmation code <span class="font-mono text-slate-300"><?= htmlspecialchars($confirmation) ?></span>
+                    <?php else: ?>
+                        No confirmation code was provided.
+                    <?php endif; ?>
+                </p>
             </div>
-
+ 
         <?php else: ?>
-
-            <section class="p-6">
-                <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-xl p-10 shadow-lg mb-6">
-                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+ 
+            <!-- ticket car -->
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
+ 
+                <!-- top half -->
+                <div class="p-6 md:p-10">
+ 
+                    <!-- status/headline -->
+                    <div class="flex justify-between items-center mb-8">
+                        <div class="flex flex-col gap-1">
+                            <p class="text-sm tracking-widest text-blue-400 uppercase">BDPA Airports &middot; Ticket View</p>
+                            <p id="local-clock" class="text-xs text-slate-500 font-mono"></p>
+                        </div>
+                        <span id="flight-status" class="px-6 py-2 rounded-full text-xl font-semibold <?= $statusClass ?>">
+                            <?= htmlspecialchars($ticket['status']) ?>
+                        </span>
+                    </div>
+ 
+                    <!-- route -->
+                    <div class="flex items-center gap-6 mb-10">
                         <div>
-                            <p class="tracking-[0.25em] text-sm text-blue-300 mb-4">BDPA AIRPORTS</p>
-                            <h1 class="text-4xl md:text-5xl font-bold text-white mb-8">Flight Ticket</h1>
-                            <h2 class="text-3xl font-bold text-white mb-2">
-                                <?= htmlspecialchars($ticket['passenger_name']) ?>
-                            </h2>
+                            <p class="text-5xl md:text-7xl font-semibold text-white leading-none"><?= htmlspecialchars($ticket['departure_airport']) ?></p>
+                            <p class="text-base text-slate-500 mt-2"><?= htmlspecialchars($ticket['departure_airport']) ?></p>
                         </div>
-
-                        <div class="flex flex-1 flex-col sm:flex-row items-center justify-center gap-8 px-4 py-2">
-                            <div class="min-w-[180px] max-w-[220px] text-center">
-                                <div class="text-sm uppercase tracking-[0.3em] text-slate-400 mb-2">Seat</div>
-                                <div class="text-5xl font-bold text-blue-400 mb-3">
-                                    <?= htmlspecialchars($ticket['seat']) ?>
-                                </div>
-                                <div class="inline-flex items-center justify-center gap-2 rounded-full border border-slate-700 px-4 py-2 text-sm uppercase tracking-[0.3em] text-slate-400 mb-4">
-                                    <span>Gate</span>
-                                    <span class="font-bold text-blue-400"><?= htmlspecialchars($ticket['gate']) ?></span>
-                                </div>
-
-                                <div class="flex flex-col sm:flex-row items-center justify-center gap-2 text-white">
-                                    <div class="text-left">
-                                        <div class="text-[0.65rem] uppercase text-slate-400">From</div>
-                                        <div class="text-base font-semibold">
-                                            <?= htmlspecialchars($ticket['departure_airport']) ?>
-                                        </div>
-                                    </div>
-
-                                    <div class="text-blue-400 text-2xl font-bold">
-                                        &rarr;
-                                    </div>
-
-                                    <div class="text-right">
-                                        <div class="text-[0.65rem] uppercase text-slate-400">To</div>
-                                        <div class="text-base font-semibold">
-                                            <?= htmlspecialchars($ticket['destination_airport_code']) ?>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="flex-1 flex flex-col items-center gap-3">
+                            <div class="w-full h-px bg-slate-700"></div>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="48" height="48" overflow="hidden"><g transform="translate(320, 320) rotate(0) scale(1, 1) translate(-320, -320)"><path fill="#60A5FA" d="M552 264c30.9 0 56 25.1 56 56s-25.1 56-56 56H424.7L265.5 549.6c-6.1 6.6-14.6 10.4-23.6 10.4h-43.7c-10.9 0-18.6-10.7-15.2-21.1L237.3 376h-99.7l-52.8 66c-3 3.8-7.6 6-12.5 6H52.5c-10.4 0-18-9.8-15.5-19.9L64 320L37 211.9c-2.6-10.1 5.1-19.9 15.5-19.9h19.8c4.9 0 9.5 2.2 12.5 6l52.8 66h99.7L183 101.1c-3.4-10.4 4.3-21.1 15.2-21.1h43.7c9 0 17.5 3.8 23.6 10.4L424.7 264z"/></g></svg>
                         </div>
-
-                        <div class="w-full sm:w-auto ml-auto text-right flex flex-col items-end gap-10 px-4 py-4 lg:self-center">
-                            <h2 class="text-3xl font-bold text-white mb-2">
-                                <?= htmlspecialchars($ticket['airline']) ?>
-                                <?= htmlspecialchars($ticket['flight_number']) ?>
-                            </h2>
-
-                            <span id="flight-status" class="inline-block px-5 py-5 rounded-full text-2xl font-semibold <?= $statusClass ?>">
-                                <?= htmlspecialchars($ticket['status']) ?>
+                        <div class="text-right">
+                            <p class="text-5xl md:text-7xl font-semibold text-white leading-none"><?= htmlspecialchars($ticket['destination_airport_code']) ?></p>
+                            <p class="text-base text-slate-500 mt-2"><?= htmlspecialchars($ticket['destination_display'] ?: $ticket['destination_airport_code']) ?></p>
+                        </div>
+                    </div>
+ 
+                    <!-- key info pills -->
+                    <div class="grid grid-cols-2 md:flex justify-center gap-4">
+                        <div class="flex-1 bg-slate-900 rounded-xl px-6 py-6 text-center">
+                            <p class="text-xs tracking-widest text-slate-500 uppercase mb-3">Seat</p>
+                            <p class="text-4xl font-semibold text-blue-400"><?= htmlspecialchars($ticket['seat']) ?></p>
+                        </div>
+                        <div class="flex-1 bg-slate-900 rounded-xl px-6 py-6 text-center">
+                            <p class="text-xs tracking-widest text-slate-500 uppercase mb-3">Gate</p>
+                            <p id="gate" class="text-4xl font-semibold text-blue-400"><?= htmlspecialchars($ticket['gate']) ?></p>
+                        </div>
+                        <div class="flex-1 bg-slate-900 rounded-xl px-6 py-6 text-center">
+                            <p class="text-xs tracking-widest text-slate-500 uppercase mb-3">Departs</p>
+                            <p id="departure-time" class="text-2xl font-semibold text-blue-400 mt-1"><?= htmlspecialchars($ticket['departure_time']) ?></p>
+                            <p id="departure-date" class="text-[10px] text-slate-600 uppercase tracking-tighter mt-1"></p>
+                        </div>
+                        <div class="flex-1 bg-slate-900 rounded-xl px-6 py-6 text-center">
+                            <p class="text-xs tracking-widest text-slate-500 uppercase mb-3">Arrives</p>
+                            <p id="arrival-time" class="text-2xl font-semibold text-blue-400 mt-1"><?= htmlspecialchars($ticket['arrival_time']) ?></p>
+                            <p id="arrival-date" class="text-[10px] text-slate-600 uppercase tracking-tighter mt-1"></p>
+                        </div>
+                    </div>
+                </div>
+ 
+                <!-- cool tear line -->
+                <div class="flex items-center">
+                    <div class="w-6 h-6 rounded-full bg-gray-900 border border-slate-700 -ml-3 flex-shrink-0"></div>
+                    <div class="flex-1 border-t-2 border-dashed border-slate-700"></div>
+                    <div class="w-6 h-6 rounded-full bg-gray-900 border border-slate-700 -mr-3 flex-shrink-0"></div>
+                </div>
+ 
+                <!-- bottom half -->
+                <div class="p-6 md:p-10">
+ 
+                    <!-- Passenger -->
+                    <p class="text-xs tracking-widest text-slate-500 uppercase mb-2">Passenger</p>
+                    <p class="text-2xl font-semibold text-white mb-6"><?= htmlspecialchars($ticket['passenger_name']) ?></p>
+ 
+                    <!-- Detail rows -->
+                    <div>
+                        <div class="flex justify-between py-3 border-b border-slate-700/50">
+                            <span class="text-sm text-slate-500">Airline / Flight</span>
+                            <span class="text-sm text-slate-300"><?= htmlspecialchars($ticket['airline']) ?> <?= htmlspecialchars($ticket['flight_number']) ?></span>
+                        </div>
+                        <div class="flex justify-between items-start py-3 border-b border-slate-700/50">
+                            <span class="text-sm text-slate-500">Destination</span>
+                            <span class="text-sm text-right">
+                                <div class="text-slate-300 font-semibold"><?= htmlspecialchars($ticket['destination_airport_name']) ?></div>
+                                <div class="text-slate-500 mt-0.5"><?= htmlspecialchars(implode(', ', array_filter([$ticket['destination_city'] ?? '', $ticket['destination_state'] ?? '', $ticket['destination_country'] ?? '']))) ?></div>
                             </span>
                         </div>
+                        <div class="flex justify-between py-3 border-b border-slate-700/50">
+                            <span class="text-sm text-slate-500">Ticket ID</span>
+                            <span class="text-sm font-mono text-slate-400"><?= htmlspecialchars($ticket['ticket_id']) ?></span>
+                        </div>
+                        <div class="flex justify-between py-3">
+                            <span class="text-sm text-slate-500">Flight type</span>
+                            <span class="text-sm text-slate-300"><?= htmlspecialchars($ticket['flight_type']) ?></span>
+                        </div>
                     </div>
-                </div>
-            </section>
+ 
+                    <!-- footer -->
+                    <div class="flex justify-between items-center mt-8 pt-6 border-t border-slate-700">
+                        <div>
+                            <p class="text-xs tracking-widest text-slate-500 uppercase mb-2">Confirmation</p>
+                            <p class="font-mono text-blue-400 text-2xl tracking-widest"><?= htmlspecialchars($ticket['confirmation_number']) ?></p>
+                        </div>
+                        
+                        <button onclick="confirmDeleteTicket()" 
+                                class="px-4 py-2 bg-slate-900 hover:bg-red-900/30 text-slate-500 hover:text-red-400 text-xs rounded-lg transition duration-150 border border-slate-700/50">
+                            Delete Ticket
+                        </button>
 
-            <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-lg p-6">
-                <h3 class="text-xl font-bold mb-6 text-white">Ticket Details</h3>
-                
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center border-b border-gray-700 pb-4">
-                        <span class="font-medium text-gray-300">Ticket ID</span>
-                        <span class="font-mono text-white"><?= htmlspecialchars($ticket['ticket_id']) ?></span>
+                        <a href="downloadTicket.php?confirmation=<?= urlencode($ticket['confirmation_number']) ?>"
+                               class="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm rounded-xl transition duration-150">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                Download Ticket
+                            </a>
                     </div>
-
-                    <div class="flex justify-between items-center border-b border-gray-700 pb-4">
-                        <span class="font-medium text-gray-300">Confirmation Number</span>
-                        <span class="font-mono text-white"><?= htmlspecialchars($ticket['confirmation_number']) ?></span>
-                    </div>
-
-                    <div class="flex justify-between items-center border-b border-gray-700 pb-4">
-                        <span class="font-medium text-gray-300">Passenger</span>
-                        <span class="text-white">
-                            <?= htmlspecialchars($ticket['passenger_name']) ?>
-                        </span>
-                    </div>
-
-                    <div class="flex justify-between items-center border-b border-gray-700 pb-4">
-                        <span class="font-medium text-gray-300">Seat</span>
-                        <span class="font-bold text-blue-400 text-lg">
-                            <?= htmlspecialchars($ticket['seat']) ?>
-                        </span>
-                    </div>
-
-                    <div class="flex justify-between items-center border-b border-gray-700 pb-4">
-                        <span class="font-medium text-gray-300">Airline / Flight</span>
-                        <span class="text-white">
-                            <?= htmlspecialchars($ticket['airline']) ?>
-                            <?= htmlspecialchars($ticket['flight_number']) ?>
-                        </span>
-                    </div>
-
-                    <div class="flex justify-between items-center border-b border-gray-700 pb-4">
-                        <span class="font-medium text-gray-300">Departure</span>
-                        <span class="text-right text-white">
-                            <?= htmlspecialchars($ticket['departure_airport']) ?>
-                        </span>
-                    </div>
-
-                    <div class="flex justify-between items-center border-b border-gray-700 pb-4">
-                        <span class="font-medium text-gray-300">Destination</span>
-                        <span class="text-right text-white">
-                            <div class="font-semibold"><?= htmlspecialchars($ticket['destination_display'] ?: ($ticket['destination_airport_name'] ?: $ticket['destination_airport'])) ?></div>
-                            <div class="text-sm text-slate-400">Airport: <?= htmlspecialchars($ticket['destination_airport_name'] ?: $ticket['destination_airport']) ?><?php if (!empty($ticket['destination_airport_code'])): ?> (<?= htmlspecialchars($ticket['destination_airport_code']) ?>)<?php endif; ?></div>
-                        </span>
-                    </div>
-
-                    <div class="flex justify-between items-center border-b border-gray-700 pb-4">
-                        <span class="font-medium text-gray-300">Departure Time</span>
-                        <span class="text-white" id="departure-time">
-                            <?= htmlspecialchars($ticket['departure_time']) ?>
-                        </span>
-                    </div>
-
-                    <div class="flex justify-between items-center border-b border-gray-700 pb-4">
-                        <span class="font-medium text-gray-300">Arrival Time</span>
-                        <span class="text-white" id="arrival-time">
-                            <?= htmlspecialchars($ticket['arrival_time']) ?>
-                        </span>
-                    </div>
-
-                    <div class="flex justify-between items-center border-b border-gray-700 pb-4">
-                        <span class="font-medium text-gray-300">Gate</span>
-                        <span id="gate" class="font-bold text-blue-400 text-lg">
-                            <?= htmlspecialchars($ticket['gate']) ?>
-                        </span>
-                    </div>
-
-                    <div class="flex justify-between items-center border-b border-gray-700 pb-4">
-                        <span class="font-medium text-gray-300">Flight Status</span>
-                        <span class="text-right text-white">
-                            <span class="inline-block px-2 py-2 rounded-full text-sm font-semibold <?= $statusClass ?>">
-                                <?= htmlspecialchars($ticket['status']) ?>
-                            </span>
-                        </span>
-                    </div>
-
-                    <div class="flex justify-between items-center border-b border-gray-700 pb-4">
-                        <span class="font-medium text-gray-300">Flight Type</span>
-                        <span class="font-mono text-white text-lg">
-                            <?= htmlspecialchars($ticket['flight_type']) ?>
-                        </span>
-                    </div>
-                </div>
-
-                <div class="flex justify-between items-center border-b border-gray-700 pb-4">
-                    <span class="font-medium text-gray-300">Flight ID (for development purposes only)</span>
-                    <span class="font-mono text-white text-lg">
-                        <?= htmlspecialchars($ticket['flight_id']) ?>
-                    </span>
-                </div>
-
-                <div class="flex justify-between mt-8 pt-6 border-t border-gray-700">
-                    <a id="download-ticket" href="downloadTicket.php?confirmation=<?php echo urlencode($ticket['confirmation_number']); ?>" class="px-8 py-3 bg-blue-600 text-white rounded-lg transition duration-200 hover:bg-blue-700 active:scale-95 inline-block">Download Ticket</a>
+ 
                 </div>
             </div>
-
         <?php endif; ?>
+
+ 
+ 
     </main>
+</div>
 
     <script>
         function formatFlightTime(ms) {
-            if (!ms) return 'TBD';
+            if (!ms) return { time: 'TBD', date: '' };
             const date = new Date(ms);
-            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return {
+                time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                date: date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+            };
+        }
+
+        function updateLocalClock() {
+            const clockEl = document.getElementById('local-clock');
+            if (!clockEl) return;
+            clockEl.textContent = 'Local Time: ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
 
         async function refreshTicketFlightStatus() {
@@ -366,12 +360,22 @@ $statusClass = match ($status) {
                 const data = await res.json();
 
                 const departureEl = document.getElementById('departure-time');
+                const departureDateEl = document.getElementById('departure-date');
                 const arrivalEl = document.getElementById('arrival-time');
+                const arrivalDateEl = document.getElementById('arrival-date');
                 const gateEl = document.getElementById('gate');
                 const statusEl = document.getElementById('flight-status');
 
-                if (departureEl) departureEl.textContent = formatFlightTime(data.departure);
-                if (arrivalEl) arrivalEl.textContent = formatFlightTime(data.arrival);
+                if (departureEl) {
+                    const fmt = formatFlightTime(data.departure);
+                    departureEl.textContent = fmt.time;
+                    if (departureDateEl) departureDateEl.textContent = fmt.date;
+                }
+                if (arrivalEl) {
+                    const fmt = formatFlightTime(data.arrival);
+                    arrivalEl.textContent = fmt.time;
+                    if (arrivalDateEl) arrivalDateEl.textContent = fmt.date;
+                }
                 if (gateEl) gateEl.textContent = data.gate || 'TBD';
                 if (statusEl && data.status) statusEl.textContent = data.status;
             } catch (error) {
@@ -379,7 +383,32 @@ $statusClass = match ($status) {
             }
         }
 
+        async function confirmDeleteTicket() {
+            const confirmation = "<?= $ticket['confirmation_number'] ?? '' ?>";
+            if (!confirmation) return;
+            if (!confirm("Are you sure you want to delete this ticket? This action cannot be undone.")) {
+                return;
+            }
+
+            try {
+                const url = new URL(window.location.href);
+                url.searchParams.set('xhr', 'delete-ticket');
+                const res = await fetch(url.toString());
+                const data = await res.json();
+
+                if (data.success) {
+                    window.location.href = 'ticket.php'; 
+                } else {
+                    alert("Error deleting ticket: " + data.error);
+                }
+            } catch (error) {
+                alert("A network error occurred.");
+            }
+        }
+
         <?php if ($ticketRow): ?>
+        updateLocalClock();
+        setInterval(updateLocalClock, 1000);
         refreshTicketFlightStatus();
         setInterval(refreshTicketFlightStatus, 15000);
         <?php endif; ?>
