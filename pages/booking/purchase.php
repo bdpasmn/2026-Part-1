@@ -102,7 +102,7 @@
     $ticketPrice = floatval($_POST['price'] ?? 0);
     $confirmationCode = strtoupper(substr(md5(uniqid()), 0, 8));
 
-    $stmt = $pdo->prepare("INSERT INTO \"Tickets\" (user_id, flight_id, confirmation_code, seat, destination, name_first, name_middle, name_last, sex, date_birth, phone_number, email, bags_carried, bags_checked, price) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO \"Tickets\" (user_id, flight_id, confirmation_code, seat, destination, name_first, name_middle, name_last, sex, date_birth, phone_number, email, bags_carried, bags_checked, price, status) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     $stmt->execute([
         $userId,
         $flightId,
@@ -124,6 +124,7 @@
         intval($_POST['bags_checked']),
     
         $ticketPrice,
+        "active"
     ]);
 
     if ($userId && !empty($_POST['save_card']) && !empty($_POST['card_name'])) {
