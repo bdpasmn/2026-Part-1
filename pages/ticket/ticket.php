@@ -161,12 +161,11 @@ $statusClass = match ($status) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Flight Ticket</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/bdpa/favicon.ico" type="image/x-icon">
 </head>
 <body class="bg-gray-900 min-h-screen text-white">
-    <header class="h-16 bg-gray-800 flex items-center px-8 border-b border-gray-700">
-        <h1 class="text-white font-bold text-xl">BDPA Airports - TO BE REPLACED WITH NAV</h1>
-    </header>
+    <div class="w-full min-h-screen bg-gray-900">
+        <?php include __DIR__ . '/../../components/nav.php'; ?>
 
     <main class="w-full p-6">
         <?php if (!$ticketRow): ?>

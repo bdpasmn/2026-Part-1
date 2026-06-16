@@ -2,12 +2,22 @@
 require_once __DIR__ . '/../../api/key.php';
 require_once __DIR__ . '/../../api/api.php';
 require_once __DIR__ . '/../../database/db.php';
+require_once __DIR__ . '/qrcode.php';
 
 $confirmation = $_GET['confirmation'] ?? null;
 
+
 if (!$confirmation) {
     http_response_code(400);
-    echo 'Invalid request: confirmation code is required';
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!doctype html><html><head><meta charset="utf-8"><title>Error</title>
+    <style>body{font-family:Arial,sans-serif;background:#0f1724;color:#e6eef8;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
+    .box{text-align:center;padding:40px;border:1px solid #374151;border-radius:12px}
+    h1{color:#f87171;margin-bottom:8px}p{color:#94a3b8}</style></head>
+    <body><div class="box">
+        <h1>Ticket Generation Failed</h1>
+        <p>Confirmation code is required</p>
+    </div></body></html>';
     exit;
 }
 
@@ -17,9 +27,11 @@ $ticketRow = $stmt->fetch();
 
 if (!$ticketRow) {
     http_response_code(404);
-    echo 'Ticket not found';
+    echo '';
     exit;
 }
+
+$qrData = 'Confirmation code is ' . $confirmation;
 
 $flightId = $ticketRow['flight_id'] ?? null;
 
@@ -231,11 +243,34 @@ draw_scaled_text($img, 'Generated: ' . $generated, $leftCol, $h-60, 1.0, $muted)
 
 
 
-if (ob_get_length()) ob_end_clean(); // little cleanup cuz whitespace in neccesary files was causing png corruption
-header('Content-Type: image/png');
-header('Content-Disposition: attachment; filename="ticket-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $passengerName) . '.png"');
-imagepng($img);
-imagedestroy($img);
-exit;
+if (ob_get_length()) ob_end_clean(); // little cleanup cuz whitespace in neccesary files was causing png corrupti
+try { 
+    $qrGen = new QRCode($qrData, ['s' => 'qr-m', 'sf' => 8, 'p' => 1]);
+    $qrGd  = $qrGen->render_image();
+
+    $qrSize = 130;
+    $qrX    = $w - 30 - $qrSize - 20;
+    $qrY    = $h - 60 - $qrSize - 15;
+
+    imagecopyresampled($img, $qrGd, $qrX, $qrY, 0, 0, $qrSize, $qrSize, imagesx($qrGd), imagesy($qrGd));
+    imagedestroy($qrGd);
+
+    header('Content-Type: image/png');
+    header('Content-Disposition: attachment; filename="ticket-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $passengerName) . '.png"');
+    imagepng($img);
+    imagedestroy($img);
+} catch (Throwable $e) {
+    http_response_code(500);
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!doctype html><html><head><meta charset="utf-8"><title>Error</title>
+    <style>body{font-family:Arial,sans-serif;background:#0f1724;color:#e6eef8;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
+    .box{text-align:center;padding:40px;border:1px solid #374151;border-radius:12px}
+    h1{color:#f87171;margin-bottom:8px}p{color:#94a3b8}</style></head>
+    <body><div class="box">
+        <h1>Ticket Generation Failed</h1>
+        <p>Could not generate ticket for confirmation <strong style="color:#e6eef8">' . htmlspecialchars($confirmation) . '</strong></p>
+        <p style="font-size:12px;margin-top:16px">' . htmlspecialchars($e->getMessage()) . '</p>
+    </div></body></html>';
+}
 
 ?>
