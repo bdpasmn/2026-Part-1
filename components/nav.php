@@ -35,6 +35,17 @@
         $dashboardLink = BASE_URL . "/pages/dashboard/root/root.php";
     }
 ?>
+<!-- loading overlay -->
+<div id="loading-overlay" class="fixed inset-0 z-50 hidden bg-gray-900/70 backdrop-blur-sm flex items-center justify-center">
+    <div class="flex flex-col items-center gap-4">
+        <div class="w-12 h-12 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+
+        <p id="loading-text"
+           class="text-blue-400 font-semibold tracking-widest uppercase text-sm">
+            Loading...
+        </p>
+    </div>
+</div>
 
 <header class="h-16 bg-gray-800 border-b border-gray-700">
     <div class="h-full px-8 flex items-center justify-between">
@@ -64,7 +75,7 @@
             <?php endif; ?>
 
             <?php $active = isActive('/flights/'); ?>
-            <a href="<?= BASE_URL ?>/pages/flights/flights.php" class="relative group">
+            <a href="<?= BASE_URL ?>/pages/flights/flights.php" class="relative group" data-loader="page">
                 <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Browse Flights</span>
                 <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
             </a>
@@ -121,3 +132,62 @@
         
     </div>
 </header>
+<script>
+    //loading overlay loader
+const Loader = {
+    get overlay() {
+        return document.getElementById('loading-overlay');
+    },
+
+    get text() {
+        return document.getElementById('loading-text');
+    },
+
+    slowTimer: null,
+
+    show(message = "Loading...") {
+        const overlay = this.overlay;
+        if (!overlay) return;
+
+        const text = this.text;
+        if (text) text.textContent = message;
+
+        overlay.classList.remove('hidden');
+        //slow time detection
+        this.slowTimer = setTimeout(() => {
+            const t = this.text;
+            if (t) t.textContent = "Hmm... this is taking longer than usual";
+        }, 5000);
+    },
+
+    hide() {
+        const overlay = this.overlay;
+        if (!overlay) return;
+
+        overlay.classList.add('hidden');
+
+        clearTimeout(this.slowTimer);
+        this.slowTimer = null;
+
+        const text = this.text;
+        if (text) text.textContent = "Loading...";
+    }
+};
+
+window.addEventListener('pageshow', () => Loader.hide());
+window.addEventListener('pagehide', () => Loader.hide());
+
+document.addEventListener('click', (e) => {
+    const link = e.target.closest('a');
+    if (!link) return;
+
+    const href = link.getAttribute('href');
+    if (!href || href.startsWith('#')) return;
+
+    if (link.target === '_blank') return;
+
+    if (link.dataset.loader === "page") {
+        Loader.show();
+    }
+});
+</script>

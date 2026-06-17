@@ -42,7 +42,7 @@ if (isset($_GET['xhr']) && $_GET['xhr'] === 'flight-status') {
     echo json_encode([
         'departure' => $flight['departFromSender'] ?? null,
         'arrival' => $flight['arriveAtReceiver'] ?? null,
-        'gate' => strtoupper($flight['gate'] ?? 'TBD'),
+        'gate' => (strtolower($flight['status'] ?? '') === 'past') ? 'N/A' : strtoupper($flight['gate'] ?? 'TBD'),
         'status' => isset($flight['status']) ? ucwords(strtolower($flight['status'])) : 'Unknown'
     ]);
     exit;
@@ -60,10 +60,30 @@ if (isset($_GET['xhr']) && $_GET['xhr'] === 'delete-ticket') {
     }
 
     try {
-        $stmt = $pdo->prepare('DELETE FROM "Tickets" WHERE confirmation_code = ?');
-        $stmt->execute([$confirmation]);
+        $pdo->beginTransaction();
+
+        // get flight_id and the specific seat assigned to this ticket
+        $stmtGet = $pdo->prepare('SELECT flight_id, seat FROM "Tickets" WHERE confirmation_code = ? LIMIT 1');
+        $stmtGet->execute([$confirmation]);
+        $ticketData = $stmtGet->fetch();
+
+        if ($ticketData) {
+            $fId = $ticketData['flight_id'];
+            $seatToRemove = $ticketData['seat'];
+            //select seat and remove
+            $stmtFlight = $pdo->prepare('UPDATE "Flights" SET taken_seats = (SELECT jsonb_agg(elem) FROM jsonb_array_elements(taken_seats) AS elem WHERE elem::text != :seat) WHERE flight_id = ?');
+            $stmtFlight->execute([$seatToRemove, $fId]);
+        }
+
+        $stmtUpdate = $pdo->prepare('UPDATE "Tickets" SET status = ? WHERE confirmation_code = ?');
+        $stmtUpdate->execute(['Cancelled', $confirmation]);
+        
+        $pdo->commit();
         echo json_encode(['success' => true]);
     } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         http_response_code(500);
         echo json_encode(['error' => $e->getMessage()]);
     }
@@ -141,8 +161,8 @@ if ($ticketRow) {
                 : 'TBD',
             'arrival_time_raw' => $flight['arriveAtReceiver'] ?? null,
             'passenger_name' => $passengerName,
-            'gate' => strtoupper($flight['gate'] ?? 'TBD'),
-            'status' => isset($flight['status']) ? ucwords(strtolower($flight['status'])) : 'Unknown'
+            'status' => isset($flight['status']) ? ucwords(strtolower($flight['status'])) : 'Unknown',
+            'gate' => (strtolower($flight['status'] ?? '') === 'past') ? 'N/A' : strtoupper($flight['gate'] ?? 'TBD')
         ];
 
         $destinationParts = array_filter([
@@ -212,7 +232,7 @@ $statusClass = match ($status) {
  
         <?php else: ?>
  
-            <!-- ticket car -->
+            <!-- ticket card -->
             <div class="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
  
                 <!-- top half -->
@@ -317,7 +337,7 @@ $statusClass = match ($status) {
                             Delete Ticket
                         </button>
 
-                        <a href="downloadTicket.php?confirmation=<?= urlencode($ticket['confirmation_number']) ?>"
+                        <a href="downloadTicket.php?confirmation=<?= urlencode($ticket['confirmation_number']) ?>"  
                                class="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm rounded-xl transition duration-150">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -334,84 +354,118 @@ $statusClass = match ($status) {
  
     </main>
 </div>
+<script>
+//clock
+function updateLocalClock() {
+    const el = document.getElementById('local-clock');
+    if (!el) return;
 
-    <script>
-        function formatFlightTime(ms) {
-            if (!ms) return { time: 'TBD', date: '' };
-            const date = new Date(ms);
-            return {
-                time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                date: date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
-            };
+    el.textContent =
+        'Local Time: ' +
+        new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+}
+
+//flight format
+function formatFlightTime(ms) {
+    if (!ms) return { time: 'TBD', date: '' };
+
+    const date = new Date(ms);
+
+    return {
+        time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: date.toLocaleDateString([], {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        })
+    };
+}
+
+//flight refresh
+async function refreshTicketFlightStatus() {
+    try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('xhr', 'flight-status');
+
+        const res = await fetch(url.toString(), {
+            credentials: 'same-origin'
+        });
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        const departureEl = document.getElementById('departure-time');
+        const departureDateEl = document.getElementById('departure-date');
+        const arrivalEl = document.getElementById('arrival-time');
+        const arrivalDateEl = document.getElementById('arrival-date');
+        const gateEl = document.getElementById('gate');
+        const statusEl = document.getElementById('flight-status');
+
+        if (departureEl) {
+            const fmt = formatFlightTime(data.departure);
+            departureEl.textContent = fmt.time;
+            if (departureDateEl) departureDateEl.textContent = fmt.date;
         }
 
-        function updateLocalClock() {
-            const clockEl = document.getElementById('local-clock');
-            if (!clockEl) return;
-            clockEl.textContent = 'Local Time: ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        if (arrivalEl) {
+            const fmt = formatFlightTime(data.arrival);
+            arrivalEl.textContent = fmt.time;
+            if (arrivalDateEl) arrivalDateEl.textContent = fmt.date;
         }
 
-        async function refreshTicketFlightStatus() {
-            try {
-                const url = new URL(window.location.href);
-                url.searchParams.set('xhr', 'flight-status');
-                const res = await fetch(url.toString(), { credentials: 'same-origin' });
-                if (!res.ok) return;
-                const data = await res.json();
+        if (gateEl) gateEl.textContent = data.gate || 'TBD';
+        if (statusEl && data.status) statusEl.textContent = data.status;
 
-                const departureEl = document.getElementById('departure-time');
-                const departureDateEl = document.getElementById('departure-date');
-                const arrivalEl = document.getElementById('arrival-time');
-                const arrivalDateEl = document.getElementById('arrival-date');
-                const gateEl = document.getElementById('gate');
-                const statusEl = document.getElementById('flight-status');
+    } catch (err) {
+        console.error('Flight refresh failed:', err);
+    }
+}
 
-                if (departureEl) {
-                    const fmt = formatFlightTime(data.departure);
-                    departureEl.textContent = fmt.time;
-                    if (departureDateEl) departureDateEl.textContent = fmt.date;
-                }
-                if (arrivalEl) {
-                    const fmt = formatFlightTime(data.arrival);
-                    arrivalEl.textContent = fmt.time;
-                    if (arrivalDateEl) arrivalDateEl.textContent = fmt.date;
-                }
-                if (gateEl) gateEl.textContent = data.gate || 'TBD';
-                if (statusEl && data.status) statusEl.textContent = data.status;
-            } catch (error) {
-                console.error('Could not refresh flight status:', error);
-            }
+//ticket deletion
+async function confirmDeleteTicket() {
+    const confirmation = "<?= $ticket['confirmation_number'] ?? '' ?>";
+    if (!confirmation) return;
+
+    if (!confirm("Are you sure you want to delete this ticket? This action cannot be undone.")) {
+        return;
+    }
+
+    try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('xhr', 'delete-ticket');
+
+        const res = await fetch(url.toString(), {
+            credentials: 'same-origin'
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            window.location.href = 'ticket.php';
+        } else {
+            alert("Error deleting ticket: " + data.error);
         }
 
-        async function confirmDeleteTicket() {
-            const confirmation = "<?= $ticket['confirmation_number'] ?? '' ?>";
-            if (!confirmation) return;
-            if (!confirm("Are you sure you want to delete this ticket? This action cannot be undone.")) {
-                return;
-            }
+    } catch (err) {
+        console.error(err);
+        alert("A network error occurred.");
+    }
+}
 
-            try {
-                const url = new URL(window.location.href);
-                url.searchParams.set('xhr', 'delete-ticket');
-                const res = await fetch(url.toString());
-                const data = await res.json();
+//init
+<?php if ($ticketRow): ?>
+updateLocalClock();
+setInterval(updateLocalClock, 1000);
 
-                if (data.success) {
-                    window.location.href = 'ticket.php'; 
-                } else {
-                    alert("Error deleting ticket: " + data.error);
-                }
-            } catch (error) {
-                alert("A network error occurred.");
-            }
-        }
-
-        <?php if ($ticketRow): ?>
-        updateLocalClock();
-        setInterval(updateLocalClock, 1000);
-        refreshTicketFlightStatus();
-        setInterval(refreshTicketFlightStatus, 15000);
-        <?php endif; ?>
-    </script>
+refreshTicketFlightStatus();
+setInterval(refreshTicketFlightStatus, 15000);
+<?php endif; ?>
+</script>
 </body>
 </html>

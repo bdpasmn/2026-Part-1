@@ -31,7 +31,7 @@ if (!$ticketRow) {
     exit;
 }
 
-$qrData = 'Confirmation code is ' . $confirmation;
+$qrData = 'pages/ticket/ticket.php?code=' . urlencode($confirmation); //preperation for AWS
 
 $flightId = $ticketRow['flight_id'] ?? null;
 

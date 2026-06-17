@@ -34,8 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
         $message = "<p class='text-red-500 font-semibold text-center mb-4'> Weak password. Password must be longer than 10 characters. </p>";
     } elseif ($captcha === '' || (int) $captcha !== $num1 + $num2) {
         $message = "<p class='text-red-500 font-semibold text-center mb-4'> Wrong answer for captcha! </p>";
-    } elseif ($email === '') {
-        $message = "<p class='text-red-500 font-semibold text-center mb-4'> Email is required. </p>";
+    } elseif ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $message = "<p class='text-red-500 font-semibold text-center mb-4'> A valid email is required. </p>";
     } else {
         try {
             $pdo->beginTransaction();
@@ -78,18 +78,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
                   ";
             $redirect = true;
         } catch (PDOException $e) {
-
-    if ($pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
-    if ($e->getCode() === '23505') {
-        $message = "<p class='text-red-500 font-semibold text-center mb-4'>An account with that email already exists.</p>";
-    } else {
-    $message = "<p class='text-red-500 font-semibold text-center mb-4'>
-        Sorry, we couldn't create your account right now. Please try again later.
-    </p>";
-    }
-
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            if ($e->getCode() === '23505') {
+                $message = "<p class='text-red-500 font-semibold text-center mb-4'>An account with that email already exists.</p>";
+            } else {
+                $message = "<p class='text-red-500 font-semibold text-center mb-4'>
+                    Sorry, we couldn't create your account right now. Please try again later.
+                </p>";
+            }
         }
     }
 }
@@ -133,19 +131,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
 
 <div class="bg-gray-800 border border-gray-700 rounded-xl p-8 shadow-lg">
 
-    <?php echo $message; ?>
+        <?php if ($message): ?>
+            <div class="mb-6"><?= $message ?></div>
+        <?php endif; ?>
 
-    <form method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
 
-        <!-- TITLE -->
-        <div class="md:col-span-2">
-            <label class="text-xs text-gray-400">Account Title</label>
-            <input type="text" name="title"
-                value="<?= htmlspecialchars($title) ?>"
-                class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
-        </div>
-
-
+            <!-- TITLE -->
+            <div class="md:col-span-2">
+                <label class="text-xs text-gray-400">Account Title</label>
+                <input type="text" name="title"
+                    value="<?= htmlspecialchars($title) ?>"
+                    class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
+            </div>
     <div class="md:col-span-2">
     <h2 class="text-lg font-semibold text-white text-center mt-2 mb-2">
        Personal Information
@@ -193,9 +192,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
 
         <div>
             <label class="text-xs text-gray-400">* Gender</label>
-            <input required type="text" name="gender"
-                value="<?= htmlspecialchars($gender) ?>"
+            <select required name="gender"
                 class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm">
+                <option value="" disabled <?= $gender === '' ? 'selected' : '' ?>>Select Gender</option>
+                <option value="male" <?= $gender === 'male' ? 'selected' : '' ?>>Male</option>
+                <option value="female" <?= $gender === 'female' ? 'selected' : '' ?>>Female</option>
+                <option value="other" <?= $gender === 'other' ? 'selected' : '' ?>>Other</option>
+                <option value="prefer not to say" <?= $gender === 'prefer not to say' ? 'selected' : '' ?>>Prefer not to say</option>
+            </select>
         </div>
 
         <!-- ADDRESS -->
