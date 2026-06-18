@@ -1,9 +1,5 @@
 <?php
     session_start();
-    $_SESSION['user_id'] = 1;
-    $_SESSION['role'] = 'Customer';
-    unset($_SESSION['user_id']);
-    unset($_SESSION['role']);
 
     require_once "./database/db.php";
 
