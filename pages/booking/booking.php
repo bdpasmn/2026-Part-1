@@ -1,11 +1,16 @@
 <?php
     session_start();
-    //$_SESSION['user_id'] = 1;
-    unset($_SESSION['user_id']);
 
     require_once "../../api/api.php";
     require_once "../../api/key.php";
     require_once "../../database/db.php";
+    
+    $role = $_SESSION['role'] ?? null;
+
+    if ($role == 'admin' || $role == 'root') {
+        header("Location: ../../index.php");
+        exit;
+    }
 
     $api = new AirportsAPI(AIRPORTS_API_KEY);
 
@@ -31,9 +36,7 @@
         <script src="https://cdn.tailwindcss.com"></script>
     </head>
     <body class="bg-gray-900 min-h-screen text-white">
-        <header class="h-16 bg-gray-800 flex items-center px-8 border-b border-gray-700">
-            <h1 class="text-white font-bold text-xl">BDPA Airports - TO BE REPLACED WITH NAV</h1>
-        </header>
+        <?php include "../../components/nav.php"; ?>
 
         <main class="max-w-7xl mx-auto p-6">
             <div class="bg-gray-800 border border-gray-700 rounded-lg p-5 mb-0 transition-all duration-300 hover:bg-gray-750 hover:border-blue-400 hover:shadow-lg">

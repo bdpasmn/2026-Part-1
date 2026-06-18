@@ -5,6 +5,13 @@
     require_once "../../api/key.php";
 
     $api = new AirportsAPI(AIRPORTS_API_KEY);
+    
+    $role = $_SESSION['role'] ?? null;
+
+    if ($role == 'admin' || $role == 'root') {
+        header("Location: ../../index.php");
+        exit;
+    }
 
     $destination = trim($_GET['destination'] ?? '');
     $date = $_GET['date'] ?? '';
@@ -87,6 +94,11 @@
     $noBookableFlights = ($totalFlights == 0);
 
     $totalPages = max(1, ceil($totalFlights / $perPage));
+
+    if ($page > $totalPages) {
+        $page = $totalPages;
+    }
+
     $offset = ($page - 1) * $perPage;
 
     $flights = array_slice($batch, $offset, $perPage);
@@ -98,9 +110,7 @@
     </head>
     <body class="bg-gray-900 min-h-screen text-white">
         <div class="w-full min-h-screen bg-gray-900">
-            <header class="h-16 bg-gray-800 flex items-center px-8 border-b border-gray-700">
-                <h1 class="text-white font-bold text-xl">BDPA Airports - TO BE REPLACED WITH NAV</h1>
-            </header>
+            <?php include "../../components/nav.php"; ?>
 
             <section class="p-6">
                 <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-xl p-10 shadow-lg">

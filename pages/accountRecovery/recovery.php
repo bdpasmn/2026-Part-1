@@ -1,6 +1,12 @@
 <?php 
     session_start();
     require_once "../../database/db.php";
+    
+    if (isset($_SESSION['user_id'])) {
+        header("Location: ../../index.php");
+        exit;
+    }
+
 
     $message = "";
 
@@ -41,9 +47,14 @@
             exit;
         }
 
-        $a1 = strtolower(trim($answers[1] ?? ""));
-        $a2 = strtolower(trim($answers[2] ?? ""));
-        $a3 = strtolower(trim($answers[3] ?? ""));
+        if (!isset($answers[1]) || !isset($answers[2]) || !isset($answers[3])) {
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit;
+        }
+        
+        $a1 = strtolower(trim($answers[1]));
+        $a2 = strtolower(trim($answers[2]));
+        $a3 = strtolower(trim($answers[3]));
 
         $db1 = strtolower(trim($userSecurityCheck["question1_answer"] ?? ""));
         $db2 = strtolower(trim($userSecurityCheck["question2_answer"] ?? ""));
@@ -67,9 +78,7 @@
     </head>
     <body class="bg-gray-900 min-h-screen text-white">
         <div class="w-full min-h-screen bg-gray-900">
-            <header class="h-16 bg-gray-800 flex items-center justify-between px-8 border-b border-gray-700">
-                <h1 class="text-white font-bold text-xl">BDPA Airports - TO BE REPLACED WITH NAV</h1>
-            </header>
+            <?php include "../../components/nav.php"; ?>
 
             <section class="p-6">
                 <div class="max-w-3xl mx-auto bg-gray-800 border border-gray-700 rounded-xl p-8 shadow-lg">

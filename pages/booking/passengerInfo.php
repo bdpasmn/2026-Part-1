@@ -86,9 +86,9 @@
                                     <h3 class="font-semibold mb-4 text-white">Saved Payment Methods</h3>
                                     <select id="savedCard" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white">
                                         <option value="">Select Payment Method</option>
-
+                                        
                                         <?php foreach ($savedCards as $card): ?>
-                                            <option value="<?= $card['id'] ?>" data-name="<?= htmlspecialchars($card['cardholder_name']) ?>" data-number="<?= htmlspecialchars($card['card_number']) ?>" data-exp="<?= htmlspecialchars($card['expiration_date']) ?>" data-cvc="<?= htmlspecialchars($card['cvc']) ?>" data-address="<?= htmlspecialchars($card['billing_address']) ?>" data-zip="<?= htmlspecialchars($card['zip_code']) ?>">
+                                            <option value="<?= $card['card_id'] ?>" data-name="<?= htmlspecialchars($card['cardholder_name']) ?>" data-number="<?= htmlspecialchars($card['card_number']) ?>" data-exp="<?= htmlspecialchars($card['expiration_date']) ?>" data-cvc="<?= htmlspecialchars($card['cvc']) ?>" data-address="<?= htmlspecialchars($card['billing_address']) ?>" data-zip="<?= htmlspecialchars($card['zip_code']) ?>">
                                                 <?= htmlspecialchars($card['card_name']) ?>
                                             </option>
                                         <?php endforeach; ?>

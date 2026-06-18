@@ -1,4 +1,13 @@
 <?php
+    session_start();
+    
+    $role = $_SESSION['role'] ?? null;
+
+    if ($role == 'admin' || $role == 'root') {
+        header("Location: ../../index.php");
+        exit;
+    }
+
     $message = $_GET['message'] ?? 'Booking could not be completed.';
 ?>
 <html>
@@ -7,9 +16,7 @@
         <script src="https://cdn.tailwindcss.com"></script>
     </head>
     <body class="bg-gray-900 min-h-screen text-white">
-        <header class="h-16 bg-gray-800 flex items-center px-8 border-b border-gray-700">
-            <h1 class="text-white font-bold text-xl">BDPA Airports - TO BE REPLACED WITH NAV</h1>
-        </header>
+        <?php include "../../components/nav.php"; ?>
 
         <main class="max-w-7xl mx-auto p-6">
             <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-lg p-6 mb-6">

@@ -1,4 +1,13 @@
 <?php
+    session_start();
+        
+    $role = $_SESSION['role'] ?? null;
+
+    if ($role == 'admin' || $role == 'root') {
+        header("Location: ../../index.php");
+        exit;
+    }
+
     $confirmationCode = $_GET['confirmation'] ?? '';
 ?>
 <html>
@@ -7,10 +16,8 @@
         <script src="https://cdn.tailwindcss.com"></script>
     </head>
     <body class="bg-gray-900 min-h-screen text-white">
-        <header class="h-16 bg-gray-800 flex items-center px-8 border-b border-gray-700">
-            <h1 class="text-white font-bold text-xl">BDPA Airports - TO BE REPLACED WITH NAV</h1>
-        </header>
-
+        <?php include "../../components/nav.php"; ?>
+        
         <main class="max-w-7xl mx-auto p-6">
             <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-lg p-6 mb-6">
                 <h1 class="text-3xl font-bold text-white">Booking Confirmed</h1>
@@ -35,7 +42,7 @@
 
                     <div class="flex flex-col sm:flex-row gap-4 justify-between">
                         <a href="searchFlights.php" class="px-6 h-12 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-600 transition">Book Another Flight</a>
-                        <a href="ticket.php?confirmation=<?= urlencode($confirmationCode) ?>"class="px-6 h-12 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">View Ticket</a>
+                        <a href="../ticket/ticket.php?confirmation=<?= urlencode($confirmationCode) ?>"class="px-6 h-12 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">View Ticket</a>
                     </div>
                 </div>
             </div>

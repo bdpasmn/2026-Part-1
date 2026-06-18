@@ -23,6 +23,7 @@ $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
 $admins    = array_values(array_filter($allUsers, fn($u) => in_array(strtolower($u['role'] ?? ''), ['admin', 'root'])));
 $customers = array_values(array_filter($allUsers, fn($u) => strtolower($u['role'] ?? '') === 'customer'));
 
+
 $now      = time();
 $daySec   = 86400;
 $weekSec  = 7  * $daySec;
@@ -139,7 +140,7 @@ function roleBadge(string $role): string {
     return "<span class=\"px-3 py-1 rounded-full text-xs font-semibold {$cls}\">" . htmlspecialchars($role) . "</span>";
 }
 
-// ahhhhhhhhhhhhhhhhhh im going to fleeping crash out 
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
