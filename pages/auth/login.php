@@ -153,12 +153,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <br>
 
-            <h3 class="mb-3 text-red-100">
-                Attempts Remaining:
-                <span id="incorrect">
-                    <?= htmlspecialchars($_SESSION['display_attempts']) ?>
-                </span>
-            </h3>
+<h3 class="mb-3 text-red-100">
+    Attempts Remaining:
+    <span id="incorrect">
+        <?= htmlspecialchars($_SESSION['attempts_left'] ?? '3') ?>
+    </span>
+</h3>
 
             <?php if (!empty($message)): ?>
                 <div class="mb-4 text-red-300">
