@@ -2,6 +2,7 @@
 
 session_start();
 require_once __DIR__ . '/../../database/db.php';
+require_once __DIR__ . '/../../components/config.php';
 
 //session based captchas!
 if (empty($_SESSION['captcha_num1']) || empty($_SESSION['captcha_num2']) || $_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -120,6 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
             $pdo->commit();
 
             $_SESSION["email"] = $email;
+            $_SESSION["user"]=$title;
             $_SESSION["name"] = $first;
             $_SESSION["id"] = $userId;
             $_SESSION["user"] = "Customer";
@@ -163,7 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
 <head>
     <title>Create Account</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link rel="icon" href="/bdpa/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="<?= BASE_URL ?>/favicon.ico" type="image/x-icon">
 </head>
 
 <?php if (!empty($redirect)): ?>
@@ -174,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
     const timer = setInterval(() => {
         count--;
         if (el) el.textContent = count;
-        if (count <= 0) { clearInterval(timer); window.location.href = '/bdpa/pages/dashboard/customer/customer.php'; }
+        if (count <= 0) { clearInterval(timer); window.location.href = '<?= BASE_URL ?>/pages/dashboard/customer/customer.php'; }
     }, 1000);
      });
 </script>

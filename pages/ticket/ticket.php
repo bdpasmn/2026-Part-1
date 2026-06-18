@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../api/key.php';
 require_once __DIR__ . '/../../api/api.php';
 require_once __DIR__ . '/../../database/db.php';
+require_once __DIR__ . '/../../components/config.php';
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
@@ -213,7 +214,7 @@ $statusClass = match ($status) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Flight Ticket</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="icon" href="/bdpa/favicon.ico" type="image/x-icon">
+<link rel="icon" href="<?= BASE_URL ?>/favicon.ico" type="image/x-icon">
 </head>
  
 <body class="bg-gray-900 min-h-screen text-white">
