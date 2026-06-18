@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
 
             $redirect = true;
 
-        } catch (PDOException $e) {
+        } catch (Throwable $e) {
 
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -148,10 +148,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
                     An account with that email already exists.
                 </p>";
             } else {
-                $message = "<pre class='text-red-400 text-xs p-4 bg-gray-800 rounded'>
+                $message = "<p class='text-red-500 font-semibold text-center mb-4'>
+                Sorry, we couldn't create your account right now. Please try again later.
             DB ERROR: " . htmlspecialchars($e->getMessage()) . "
             CODE: " . $e->getCode() . "
-            </pre>";
+            </p>";
             }
         }
     }
