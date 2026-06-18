@@ -1,6 +1,18 @@
 <?php
 
+session_start();
 require_once __DIR__ . '/../../database/db.php';
+
+//session based captchas!
+if (empty($_SESSION['captcha_num1']) || empty($_SESSION['captcha_num2']) || $_SERVER['REQUEST_METHOD'] === 'GET') {
+    $_SESSION['captcha_num1'] = rand(1, 10);
+    $_SESSION['captcha_num2'] = rand(1, 10);
+}
+
+$num1 = $_SESSION['captcha_num1'];
+$num2 = $_SESSION['captcha_num2'];
+
+//inputs
 
 $first = trim($_POST['first'] ?? '');
 $title = trim($_POST['title'] ?? '');
@@ -17,30 +29,55 @@ $state = trim($_POST['state'] ?? '');
 $zip = trim($_POST['zip'] ?? '');
 $country = trim($_POST['country'] ?? '');
 $password = $_POST['password'] ?? '';
+
 $question1 = trim($_POST['question1'] ?? '');
 $question2 = trim($_POST['question2'] ?? '');
 $question3 = trim($_POST['question3'] ?? '');
 $question1_answer = trim($_POST['answer1'] ?? '');
 $question2_answer = trim($_POST['answer2'] ?? '');
 $question3_answer = trim($_POST['answer3'] ?? '');
+
 $captcha = trim($_POST['captcha'] ?? '');
-$num1 = isset($_POST['num1']) ? (int) $_POST['num1'] : rand(1, 10);
-$num2 = isset($_POST['num2']) ? (int) $_POST['num2'] : rand(1, 10);
+
 $message = '';
 $redirect = false;
 
+//form handler
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
+
+    $captchaValid = ((int)$captcha === ($num1 + $num2));
+
     if (strlen($password) <= 10) {
-        $message = "<p class='text-red-500 font-semibold text-center mb-4'> Weak password. Password must be longer than 10 characters. </p>";
-    } elseif ($captcha === '' || (int) $captcha !== $num1 + $num2) {
-        $message = "<p class='text-red-500 font-semibold text-center mb-4'> Wrong answer for captcha! </p>";
+        $message = "<p class='text-red-500 font-semibold text-center mb-4'>
+            Weak password. Must be longer than 10 characters.
+        </p>";
+
+    } elseif (!$captchaValid) {
+        $message = "<p class='text-red-500 font-semibold text-center mb-4'>
+            Wrong answer for captcha!
+        </p>";
+
     } elseif ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $message = "<p class='text-red-500 font-semibold text-center mb-4'> A valid email is required. </p>";
+        $message = "<p class='text-red-500 font-semibold text-center mb-4'>
+            A valid email is required.
+        </p>";
+
     } else {
+
         try {
             $pdo->beginTransaction();
 
-            $stmt = $pdo->prepare('INSERT INTO public."Users" (first_name, middle_name, last_name, suffix, date_birth, title, sex, street_address, city, country, state, zip_code, phone, email, password, role) VALUES (:first_name, :middle_name, :last_name, :suffix, :date_birth, :title, :sex, :street_address, :city, :country, :state, :zip_code, :phone, :email, :password, :role)');
+            //insert user
+            $stmt = $pdo->prepare('
+                INSERT INTO public."Users"
+                (first_name, middle_name, last_name, suffix, date_birth, title, sex,
+                 street_address, city, country, state, zip_code, phone, email, password, role)
+                VALUES
+                (:first_name, :middle_name, :last_name, :suffix, :date_birth, :title, :sex,
+                 :street_address, :city, :country, :state, :zip_code, :phone, :email, :password, :role)
+                RETURNING user_id
+            ');
+
             $stmt->execute([
                 ':first_name' => $first,
                 ':middle_name' => $middle,
@@ -60,7 +97,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
                 ':role' => 'Customer',
             ]);
 
-            $stmt = $pdo->prepare('INSERT INTO public."User Security Questions" (email, question1, question1_answer, question2, question2_answer, question3, question3_answer) VALUES (:email, :question1, :question1_answer, :question2, :question2_answer, :question3, :question3_answer)');
+            $userId = $stmt->fetchColumn();
+
+           //security questions
+            $stmt = $pdo->prepare('
+                INSERT INTO public."User Security Questions"
+                (email, question1, question1_answer, question2, question2_answer, question3, question3_answer)
+                VALUES
+                (:email, :question1, :question1_answer, :question2, :question2_answer, :question3, :question3_answer)
+            ');
+
             $stmt->execute([
                 ':email' => $email,
                 ':question1' => $question1,
@@ -72,21 +118,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
             ]);
 
             $pdo->commit();
-             $message = "
-                 <p class='text-green-600 font-semibold text-center mb-2'>Account Created Successfully! Welcome aboard.</p>
-                 <p class='text-sm text-gray-300 text-center'>Redirecting to login in <span id='count'>5</span> second(s)...</p>
-                  ";
+
+            $_SESSION["email"] = $email;
+            $_SESSION["name"] = $first;
+            $_SESSION["id"] = $userId;
+            $_SESSION["user"] = "Customer";
+
+            unset($_SESSION['captcha_num1'], $_SESSION['captcha_num2']);
+
+            $message = "
+                <p class='text-green-600 font-semibold text-center mb-2'>
+                    Account Created Successfully! Welcome aboard.
+                </p>
+                <p class='text-sm text-gray-300 text-center'>
+                    Redirecting to customer page in <span id='count'>5</span> second(s)...
+                </p>
+            ";
+
             $redirect = true;
+
         } catch (PDOException $e) {
+
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
+
             if ($e->getCode() === '23505') {
-                $message = "<p class='text-red-500 font-semibold text-center mb-4'>An account with that email already exists.</p>";
-            } else {
                 $message = "<p class='text-red-500 font-semibold text-center mb-4'>
-                    Sorry, we couldn't create your account right now. Please try again later.
+                    An account with that email already exists.
                 </p>";
+            } else {
+                $message = "<pre class='text-red-400 text-xs p-4 bg-gray-800 rounded'>
+            DB ERROR: " . htmlspecialchars($e->getMessage()) . "
+            CODE: " . $e->getCode() . "
+            </pre>";
             }
         }
     }
@@ -108,7 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
     const timer = setInterval(() => {
         count--;
         if (el) el.textContent = count;
-        if (count <= 0) { clearInterval(timer); window.location.href = 'auth.php'; }
+        if (count <= 0) { clearInterval(timer); window.location.href = '/bdpa/pages/dashboard/customer/customer.php'; }
     }, 1000);
      });
 </script>
@@ -136,7 +201,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
         <?php endif; ?>
 
         <form method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
 
             <!-- TITLE -->
             <div class="md:col-span-2">
@@ -529,7 +593,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
         <div>
             <label class="text-xs text-gray-400">* Answer 1</label>
             <input required type="text" name="answer1"
-                value="<?= htmlspecialchars($answer1) ?>"
                 class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm" required>
         </div>
 
@@ -543,7 +606,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
         <div>
             <label class="text-xs text-gray-400">* Answer 2</label>
             <input required type="text" name="answer2"
-                value="<?= htmlspecialchars($answer2) ?>"
                 class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm" required>
         </div>
 
@@ -557,7 +619,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
         <div>
             <label class="text-xs text-gray-400">* Answer 3</label>
             <input required type="text" name="answer3"
-                value="<?= htmlspecialchars($answer3) ?>"
                 class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm" required>
         </div>
 
@@ -585,8 +646,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
 </div>
 </main>
 
-</body>
-</html>
         <script>
             //password strength checker
             document.addEventListener('DOMContentLoaded', function () {
@@ -637,8 +696,8 @@ document.addEventListener("DOMContentLoaded", function () {
         const isUS =
             countrySelect.value === "United States" || countrySelect.value === "US"; //duality in case i need to change anything in the future
 
-        stateContainer.style.display = isUS ? "flex" : "none";
-        zipContainer.style.display = isUS ? "flex" : "none";
+        stateContainer.style.display = isUS ? "" : "none";
+        zipContainer.style.display = isUS ? "" : "none";
 
         stateSelect.required = isUS;
         zipInput.required = isUS;

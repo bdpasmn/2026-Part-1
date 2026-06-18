@@ -71,12 +71,20 @@ if (isset($_GET['xhr']) && $_GET['xhr'] === 'delete-ticket') {
             $fId = $ticketData['flight_id'];
             $seatToRemove = $ticketData['seat'];
             //select seat and remove
-            $stmtFlight = $pdo->prepare('UPDATE "Flights" SET taken_seats = (SELECT jsonb_agg(elem) FROM jsonb_array_elements(taken_seats) AS elem WHERE elem::text != :seat) WHERE flight_id = ?');
-            $stmtFlight->execute([$seatToRemove, $fId]);
+$stmtFlight = $pdo->prepare('
+    UPDATE "Flights"
+    SET taken_seats = taken_seats - :seat::text
+    WHERE flight_id = :fid
+');
+
+$stmtFlight->execute([
+    ':seat' => $seatToRemove,
+    ':fid' => $fId
+]);
         }
 
         $stmtUpdate = $pdo->prepare('UPDATE "Tickets" SET status = ? WHERE confirmation_code = ?');
-        $stmtUpdate->execute(['Cancelled', $confirmation]);
+        $stmtUpdate->execute(['cancelled', $confirmation]);
         
         $pdo->commit();
         echo json_encode(['success' => true]);
