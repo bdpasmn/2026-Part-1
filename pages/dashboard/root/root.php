@@ -178,12 +178,7 @@ tbody tr:hover { background: rgba(55,65,81,.45); }
 </head>
 <body class="min-h-screen">
 
-<header class="h-14 bg-gray-900 border-b border-gray-800 flex items-center px-6 justify-between sticky top-0 z-40">
-  <div class="flex items-center gap-3">
-    <span class="text-gray-400 text-sm hidden sm:block">placeholder Nav for Dashboard</span>
-  </div>
-  <span class="text-xs text-gray-500"><?= date('D, M j Y · H:i') ?></span>
-</header>
+
 
 <main class="max-w-7xl mx-auto p-4 sm:p-6 space-y-5">
 
