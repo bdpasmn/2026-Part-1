@@ -1,4 +1,13 @@
 <?php
+    session_start();
+    
+    $role = $_SESSION['role'] ?? null;
+
+    if ($role == 'admin' || $role == 'root') {
+        header("Location: ../../index.php");
+        exit;
+    }
+
     $message = $_GET['message'] ?? 'Booking could not be completed.';
 ?>
 <html>

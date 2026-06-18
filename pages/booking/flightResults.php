@@ -5,6 +5,13 @@
     require_once "../../api/key.php";
 
     $api = new AirportsAPI(AIRPORTS_API_KEY);
+    
+    $role = $_SESSION['role'] ?? null;
+
+    if ($role == 'admin' || $role == 'root') {
+        header("Location: ../../index.php");
+        exit;
+    }
 
     $destination = trim($_GET['destination'] ?? '');
     $date = $_GET['date'] ?? '';
@@ -87,6 +94,11 @@
     $noBookableFlights = ($totalFlights == 0);
 
     $totalPages = max(1, ceil($totalFlights / $perPage));
+
+    if ($page > $totalPages) {
+        $page = $totalPages;
+    }
+
     $offset = ($page - 1) * $perPage;
 
     $flights = array_slice($batch, $offset, $perPage);

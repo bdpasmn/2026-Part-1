@@ -13,6 +13,19 @@
         }
     }
 ?>
+
+<style>
+    .taken-seat {
+        pointer-events: none !important;
+    }
+
+    .taken-seat:hover {
+        background-color: rgb(51 65 85) !important;
+        border-color: rgb(71 85 105) !important;
+        transform: none !important;
+    }
+</style>
+
 <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
     <h2 class="text-xl font-bold mb-6 text-white">Select Your Seat</h2>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -20,8 +33,9 @@
             <div class="mb-4 text-sm text-gray-400">Click a seat to select it. All seats are the same price.</div>
 
             <script>
+                const flightId = <?= json_encode($flightId) ?>;
                 const seatPrice = <?= json_encode($flight['seatPrice'] ?? 0) ?>;
-                const takenSeats = <?= json_encode($takenSeats) ?>;
+                let takenSeats = <?= json_encode($takenSeats) ?>;
             </script>
 
             <div class="grid gap-2" style="grid-template-columns: repeat(3, minmax(0, 1fr)) 0.3fr repeat(3, minmax(0, 1fr)) 0.3fr repeat(3, minmax(0, 1fr));">
@@ -51,7 +65,7 @@
 
                             btn.innerText = seatId;
 
-                            const isTaken = takenSeats.includes(seatId);
+                            const isTaken = Array.isArray(takenSeats) && takenSeats.includes(seatId);
 
                             if (isTaken) {
                                 btn.className = "h-10 w-full text-xs rounded bg-slate-700 border border-slate-600 text-gray-300 cursor-not-allowed";
@@ -117,3 +131,49 @@
         </div>
     </div>
 </div>
+
+<script>
+    let latestTakenSeats = new Set(<?= json_encode($takenSeats) ?>);
+
+    function updateSeatsUI(newTakenSeats) {
+        const seatButtons = document.querySelectorAll(".seat-btn");
+
+        seatButtons.forEach(btn => {
+            const seatId = btn.innerText;
+
+            const isNowTaken = newTakenSeats.includes(seatId);
+
+            if (isNowTaken) {
+
+                btn.disabled = true;
+
+                btn.className =
+                    "h-10 w-full text-xs rounded bg-slate-700 border border-slate-600 text-gray-300 cursor-not-allowed taken-seat";
+
+            }
+        });
+
+        latestTakenSeats = new Set(newTakenSeats);
+    }
+
+    async function pollSeats() {
+        try {
+            const res = await fetch(`checkSeats.php?flight_id=${flightId}`);
+            const data = await res.json();
+
+            if (!data.takenSeats) return;
+
+            const newSeats = data.takenSeats;
+
+            if (JSON.stringify([...latestTakenSeats].sort()) !== JSON.stringify([...newSeats].sort())) {
+                updateSeatsUI(newSeats);
+            }
+
+        } catch (err) {
+            console.error("Seat polling failed:", err);
+        }
+    }
+
+    pollSeats();
+    setInterval(pollSeats, 3000);
+</script>

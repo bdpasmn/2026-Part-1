@@ -1,8 +1,17 @@
 <?php
+    session_start();
+
     require_once "../../api/api.php";
     require_once "../../api/key.php";
 
     $api = new AirportsAPI(AIRPORTS_API_KEY);
+
+    $role = $_SESSION['role'] ?? null;
+
+    if ($role == 'admin' || $role == 'root') {
+        header("Location: ../../index.php");
+        exit;
+    }
 
     $airportResult = $api->getAirports();
     $airports = $airportResult['airports'] ?? [];

@@ -1,9 +1,9 @@
 <?php
     session_start();
-    $_SESSION['user_id'] = 18;
-    $_SESSION['role'] = 'root';
-    //unset($_SESSION['user_id']);
-    //unset($_SESSION['role']);
+    $_SESSION['user_id'] = 1;
+    $_SESSION['role'] = 'Customer';
+    unset($_SESSION['user_id']);
+    unset($_SESSION['role']);
 
     require_once "./database/db.php";
 
@@ -12,6 +12,8 @@
 
     $stmt = $pdo->query("SELECT COUNT(*) FROM \"Users\" WHERE role = 'Customer'");
     $totalCustomers = $stmt->fetchColumn();
+
+    $role = $_SESSION['role'] ?? 'Guest';
 ?>
 <html>
     <head>
@@ -35,10 +37,25 @@
                             <p class="text-xl text-gray-300 max-w-3xl mb-8">Search flights, book tickets, and track real-time arrivals, departures, gate changes, and flight status update from the official BDPA Airports portal.</p>
 
                             <div class="flex flex-wrap gap-4">
-                                <a href="index.php" class="px-8 py-4 bg-blue-600 rounded-lg font-medium hover:bg-blue-700 hover:shadow-md transition">Explore BDPA Airports</a>
-                                <a href="./pages/flights/flights.php" class="px-8 py-4 bg-gray-700 border border-gray-600 rounded-lg font-medium hover:bg-gray-600 transition">Browse Flights</a>
-                                <a href="./pages/booking/searchFlights.php" class="px-8 py-4 bg-gray-700 border border-gray-600 rounded-lg font-medium hover:bg-gray-600 transition">Book Your Next Trip</a>
-                                <a href="./pages/ticket/viewTicket.php" class="px-8 py-4 bg-gray-700 border border-gray-600 rounded-lg font-medium hover:bg-gray-600 transition">View Your Tickets</a>
+                                <a href="index.php" class="px-8 py-4 bg-blue-600 rounded-lg font-medium hover:bg-blue-700 hover:shadow-md transition">
+                                    Explore BDPA Airports
+                                </a>
+
+                                <a href="./pages/flights/flights.php" class="px-8 py-4 bg-gray-700 border border-gray-600 rounded-lg font-medium hover:bg-gray-600 transition">
+                                    Browse Flights
+                                </a>
+
+                                <?php if ($role == 'guest' || $role == 'Customer'): ?>
+                                    <a href="./pages/booking/searchFlights.php" class="px-8 py-4 bg-gray-700 border border-gray-600 rounded-lg font-medium hover:bg-gray-600 transition">
+                                        Book Your Next Trip
+                                    </a>
+                                <?php endif; ?>
+
+                                <?php if ($role == 'guest'): ?>
+                                    <a href="./pages/ticket/viewTicket.php" class="px-8 py-4 bg-gray-700 border border-gray-600 rounded-lg font-medium hover:bg-gray-600 transition">
+                                        View Your Tickets
+                                    </a>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -88,27 +105,42 @@
 
                     <div class="bg-gray-800 border border-gray-700 rounded-lg p-8">
                         <h3 class="text-2xl font-bold mb-6">Other Stats</h3>
+                        <div>
+                            <div id="ticketCount" class="text-4xl font-bold text-blue-400">0</div>
+                            <div class="text-gray-400">Flights Booked</div>
+                        </div>
 
-                        <div class="space-y-6">
-                            <div>
-                                <div class="text-4xl font-bold text-blue-400"><?= number_format($totalTickets) ?></div>
-                                <div class="text-gray-400">Flights Booked</div>
-                            </div>
+                        <div>
+                            <div class="text-4xl font-bold text-blue-400">12+</div>
+                            <div class="text-gray-400">Airports Served</div>
+                        </div>
 
-                            <div>
-                                <div class="text-4xl font-bold text-blue-400">12+</div>
-                                <div class="text-gray-400">Airports Served</div>
-                            </div>
-
-                            <div>
-                                <div class="text-4xl font-bold text-blue-400"><?= number_format($totalCustomers) ?></div>
-                                <div class="text-gray-400">Registered Customers</div>
-                            </div>
+                        <div>
+                            <div id="customerCount" class="text-4xl font-bold text-blue-400">0</div>
+                            <div class="text-gray-400">Registered Customers</div>
                         </div>
                     </div>
                 </div>
             </section>
             
         </div>
+
+        <script>
+            async function loadStats() {
+                try {
+                    const res = await fetch('./stats.php');
+                    const data = await res.json();
+
+                    document.getElementById('ticketCount').innerText = data.tickets.toLocaleString();
+                    document.getElementById('customerCount').innerText = data.customers.toLocaleString();
+
+                } catch (err) {
+                    console.error("Failed to load stats:", err);
+                }
+            }
+
+            loadStats();
+            setInterval(loadStats, 5000);
+        </script>
     </body>
 </html>

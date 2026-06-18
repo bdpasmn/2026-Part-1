@@ -1,14 +1,16 @@
 <?php
     session_start();
-<<<<<<< Updated upstream
-=======
-    $_SESSION['user_id'] = 11;
-    //unset($_SESSION['user_id']);
->>>>>>> Stashed changes
 
     require_once "../../api/api.php";
     require_once "../../api/key.php";
     require_once "../../database/db.php";
+    
+    $role = $_SESSION['role'] ?? null;
+
+    if ($role == 'admin' || $role == 'root') {
+        header("Location: ../../index.php");
+        exit;
+    }
 
     $api = new AirportsAPI(AIRPORTS_API_KEY);
 

@@ -1,4 +1,13 @@
 <?php
+    session_start();
+        
+    $role = $_SESSION['role'] ?? null;
+
+    if ($role == 'admin' || $role == 'root') {
+        header("Location: ../../index.php");
+        exit;
+    }
+
     $confirmationCode = $_GET['confirmation'] ?? '';
 ?>
 <html>
