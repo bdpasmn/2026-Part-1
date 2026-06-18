@@ -891,8 +891,13 @@ $filteredTickets = array_slice(
           $rawP  = $t['price'] ?? '0';
           $safeP = (is_numeric($rawP) && (float)$rawP >= 0 && (float)$rawP <= 100000)
                     ? '$' . number_format((float)$rawP, 2) : '—';
-          $route = $f ? htmlspecialchars(($f['origin'] ?? '?') . ' → ' . ($f['destination'] ?? '?')) : '—';
-          $dep   = $depTs ? fmtTs($depTs) : '—';
+         $route = 'SMN → ' . (
+         $f['departingTo']
+        ?? $f['landingAt']
+        ?? '—'
+      );
+
+      $dep = 'SMN';
         ?>
         <tr class="<?= $isCancelled ? 'cancelled-row' : '' ?>">
           <td class="px-4 py-3">
