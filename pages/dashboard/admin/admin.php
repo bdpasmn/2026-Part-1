@@ -18,8 +18,17 @@ $selfName = $selfUser ? trim(($selfUser['first_name'] ?? '') . ' ' . ($selfUser[
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
+$airportResults = $api->getAirports();
+$airports = $airportResults['airports'] ?? [];
+
+$airportLookup = [];
+foreach ($airports as $airport) {
+    $airportLookup[strtolower($airport['shortName'])] = $airport;
+}
+
 $allFlightsData = $api->getAllFlights();
 $allFlights     = $allFlightsData['flights'] ?? [];
+
 
 $noFlyData = $api->getNoFlyList();
 $noFlyList = [];
@@ -34,7 +43,10 @@ if ($noFlyData && isset($noFlyData['noFlyList'])) {
 
 $flightMap = [];
 foreach ($allFlights as $f) {
-    $fid = $f['flightId'] ?? $f['id'] ?? '';
+$fid = $f['flight_id']
+    ?? $f['flightId']
+    ?? $f['id']
+    ?? '';    
     if ($fid) $flightMap[$fid] = $f;
 }
 
@@ -44,7 +56,6 @@ $allTickets  = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
 $usersStmt = $pdo->query('SELECT * FROM "Users" WHERE LOWER(role) = \'customer\' ORDER BY user_id ASC');
 $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
 
-$now      = time();
 $daySec   = 86400;
 $weekSec  = 7  * $daySec;
 $monthSec = 30 * $daySec;
@@ -52,6 +63,10 @@ $yearSec  = 365 * $daySec;
 
 $ticketStats = ['day' => 0, 'week' => 0, 'month' => 0, 'year' => 0, 'all' => 0];
 $profitStats = ['day' => 0.0, 'week' => 0.0, 'month' => 0.0, 'year' => 0.0, 'all' => 0.0];
+
+$utc = new DateTimeZone('UTC');
+$nowUtc = new DateTime('now', $utc);
+$now = $nowUtc->getTimestamp();
 
 foreach ($allTickets as $t) {
     if (strtolower($t['status'] ?? '') === 'cancelled') continue;
@@ -64,10 +79,16 @@ foreach ($allTickets as $t) {
     }
 
     $createdRaw = $t['created_at'] ?? '';
-    $created    = $createdRaw !== '' ? strtotime($createdRaw) : $now;
-    if ($created === false) $created = $now;
+    try {
+        $createdDt = $createdRaw !== ''
+            ? new DateTime($createdRaw, $utc)
+            : clone $nowUtc;
+    } catch (Exception $e) {
+        $createdDt = clone $nowUtc;
+    }
+    $createdDt->setTimezone($utc);
 
-    $age = $now - $created;
+    $age = $now - $createdDt->getTimestamp();
 
     $ticketStats['all']++;
     $profitStats['all'] += $price;
@@ -120,6 +141,36 @@ function statusBadge(string $status): string {
         default                => 'badge-other',
     };
     return "<span class=\"badge {$cls}\">" . htmlspecialchars(ucfirst($status)) . "</span>";
+}
+
+function flightDestination(array $f, array $airportLookup): string {
+
+    $code =
+        $f['departingTo']
+        ?? $f['landingAt']
+        ?? $f['destination']
+        ?? $f['arrivalCode']
+        ?? $f['arrival']
+        ?? '';
+
+    if (!$code) {
+        return '—';
+    }
+
+    $airport = $airportLookup[strtolower($code)] ?? null;
+
+    if ($airport) {
+        $city = $airport['city']
+             ?? $airport['cityName']
+             ?? $airport['location']
+             ?? '';
+
+        if ($city !== '') {
+            return $city . ' (' . strtoupper($code) . ')';
+        }
+    }
+
+    return strtoupper($code);
 }
 
 $updateMsg = null;
@@ -274,7 +325,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 $takenSeatsByFlight = [];
 foreach ($allFlights as $f) {
-    $fid = $f['flightId'] ?? $f['id'] ?? '';
+    $fid = $f['flight_id']
+        ?? $f['flightId']
+        ?? $f['id']
+        ?? '';
     if (!$fid) continue;
     $seats = [];
     foreach ($f['takenSeats'] ?? $f['taken_seats'] ?? [] as $ts) {
@@ -381,7 +435,7 @@ foreach ($allFlights as $f) {
     <div class="stat-card">
       <p class="text-gray-500 text-xs uppercase tracking-wider font-semibold">Gross Profit</p>
       <h2 class="text-3xl font-extrabold mt-3 tabular-nums text-emerald-400" id="stat-profit">—</h2>
-      <p class="text-gray-600 text-xs mt-2">Active tickets · valid prices only</p>
+      <p class="text-gray-600 text-xs mt-2">Active tickets</p>
     </div>
     <div class="stat-card">
       <p class="text-gray-500 text-xs uppercase tracking-wider font-semibold">Total Customers</p>
@@ -692,6 +746,8 @@ $filteredUsers = array_slice(
     $q = strtolower($ticketSearch);
     $filteredTickets = array_filter($allTickets, function($t) use ($q, $flightMap) {
       $f = $flightMap[$t['flight_id'] ?? ''] ?? [];
+      
+      
       return str_contains(strtolower(
         ($t['confirmation_code'] ?? '') . ' ' .
         ($t['name_last']   ?? '') . ' ' .
@@ -819,8 +875,10 @@ $filteredTickets = array_slice(
             'Confirmation' => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-blue-300">' . htmlspecialchars($lookupTicket['confirmation_code']) . '</code>',
             'Passenger'    => htmlspecialchars(trim(($lookupTicket['name_first'] ?? '') . ' ' . ($lookupTicket['name_last'] ?? '—'))),
             'Flight ID'    => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-xs text-gray-300">' . htmlspecialchars($lookupTicket['flight_id'] ?? '—') . '</code>',
-            'Route'        => $lf ? htmlspecialchars(($lf['origin'] ?? '?') . ' → ' . ($lf['destination'] ?? '?')) : '—',
-            'Departure' => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-xs text-gray-300">' . 'SMN' . '</code>',            'Seat'         => htmlspecialchars($lookupTicket['seat'] ?? '—'),
+          'Route' => $lf
+    ? htmlspecialchars('SMN → ' . flightDestination($lf, $airportLookup))
+    : '—',
+       'Departure' => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-xs text-gray-300">' . 'SMN' . '</code>',            'Seat'         => htmlspecialchars($lookupTicket['seat'] ?? '—'),
             'Price'        => '$' . number_format((float)($lookupTicket['price'] ?? 0), 2),
             'Status'       => statusBadge($lookupTicket['status'] ?? 'unknown'),
           ];
@@ -891,13 +949,9 @@ $filteredTickets = array_slice(
           $rawP  = $t['price'] ?? '0';
           $safeP = (is_numeric($rawP) && (float)$rawP >= 0 && (float)$rawP <= 100000)
                     ? '$' . number_format((float)$rawP, 2) : '—';
-         $route = 'SMN → ' . (
-         $f['departingTo']
-        ?? $f['landingAt']
-        ?? '—'
-      );
+        $route = 'SMN → ' . flightDestination($f, $airportLookup);
 
-      $dep = 'SMN';
+$dep = 'SMN';
         ?>
         <tr class="<?= $isCancelled ? 'cancelled-row' : '' ?>">
           <td class="px-4 py-3">
