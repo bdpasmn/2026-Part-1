@@ -4,6 +4,10 @@ require_once __DIR__ . '/../../api/api.php';
 require_once __DIR__ . '/../../database/db.php';
 require_once __DIR__ . '/../../components/config.php';
 
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
+
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
 $confirmation = $_GET['confirmation'] ?? null;
@@ -310,20 +314,20 @@ $statusClass = match ($status) {
  
                     <!-- key info pills -->
                     <div class="grid grid-cols-2 md:flex justify-center gap-4">
-                        <div class="flex-1 bg-slate-900 rounded-xl px-6 py-6 text-center">
+                       <div class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-6 py-6 text-center hover:shadow-xl hover:-translate-y-1 hover:border-blue-500 transition duration-300">
                             <p class="text-xs tracking-widest text-slate-500 uppercase mb-3">Seat</p>
                             <p class="text-4xl font-semibold text-blue-400"><?= htmlspecialchars($ticket['seat']) ?></p>
                         </div>
-                        <div class="flex-1 bg-slate-900 rounded-xl px-6 py-6 text-center">
+                        <div class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-6 py-6 text-center hover:shadow-xl hover:-translate-y-1 hover:border-blue-500 transition duration-300">
                             <p class="text-xs tracking-widest text-slate-500 uppercase mb-3">Gate</p>
                             <p id="gate" class="text-4xl font-semibold text-blue-400"><?= htmlspecialchars($ticket['gate']) ?></p>
                         </div>
-                        <div class="flex-1 bg-slate-900 rounded-xl px-6 py-6 text-center">
+                        <div class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-6 py-6 text-center hover:shadow-xl hover:-translate-y-1 hover:border-blue-500 transition duration-300">
                             <p class="text-xs tracking-widest text-slate-500 uppercase mb-3">Departs</p>
                             <p id="departure-time" class="text-2xl font-semibold text-blue-400 mt-1"><?= htmlspecialchars($ticket['departure_time']) ?></p>
                             <p id="departure-date" class="text-[10px] text-slate-600 uppercase tracking-tighter mt-1"></p>
                         </div>
-                        <div class="flex-1 bg-slate-900 rounded-xl px-6 py-6 text-center">
+                        <div class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-6 py-6 text-center hover:shadow-xl hover:-translate-y-1 hover:border-blue-500 transition duration-300">
                             <p class="text-xs tracking-widest text-slate-500 uppercase mb-3">Arrives</p>
                             <p id="arrival-time" class="text-2xl font-semibold text-blue-400 mt-1"><?= htmlspecialchars($ticket['arrival_time']) ?></p>
                             <p id="arrival-date" class="text-[10px] text-slate-600 uppercase tracking-tighter mt-1"></p>
@@ -381,6 +385,7 @@ $statusClass = match ($status) {
                         </button>
 
                         <a href="downloadTicket.php?confirmation=<?= urlencode($ticket['confirmation_number']) ?>"  
+                                data-skip-loader
                                class="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm rounded-xl transition duration-150">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
