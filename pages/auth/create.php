@@ -84,14 +84,11 @@
                 $_SESSION["email"] = $email;
                 $_SESSION["user"]= $title;
                 $_SESSION["name"] = $first;
-                $_SESSION["id"] = $userId;
+                $_SESSION["user_id"] = $userId;
                 $_SESSION["role"] = "customer";
                 unset($_SESSION['captcha_num1'], $_SESSION['captcha_num2']);
-                $message = "
-                    <p class='text-green-600 font-semibold text-center mb-2'> Account Created Successfully! Welcome aboard. </p>
-                    <p class='text-sm text-gray-300 text-center'> Redirecting to customer page in <span id='count'> 5 </span> second(s)... </p>
-                ";
-                $redirect = true;
+                header("Location: " . BASE_URL . "/pages/dashboard/customer/customer.php");
+                exit();
             } catch (Throwable $e) {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
@@ -117,21 +114,6 @@
         <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"> </script>
         <link rel="icon" href="<?= BASE_URL ?>/favicon.ico" type="image/x-icon">
     </head>
-    <?php if (!empty($redirect)): ?>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            let count = 5;
-            const el = document.getElementById('count');
-            const timer = setInterval(() => {
-                unt--;
-                if (el) el.textContent = count;
-                if (count <= 0) { 
-                    clearInterval(timer); window.location.href = '<?= BASE_URL ?>/pages/dashboard/customer/customer.php'; 
-                }
-            , 1000});
-        });
-    </script>
-    <?php endif; ?>
     <body class="bg-gray-900 min-h-screen text-white flex flex-col">
         <div class="w-full min-h-screen bg-gray-900">
             <?php include __DIR__ . '/../../components/nav.php'; ?>

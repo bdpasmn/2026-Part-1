@@ -3,7 +3,18 @@
     require_once "../../database/db.php";
     require_once __DIR__ . '/../../components/config.php';
     $message = '';
-    $attempts_left = 3;
+
+    function getDashboardUrl($role) {
+        switch ($role) {
+            case 'Admin':
+                return BASE_URL . '/pages/dashboard/admin/admin.php';
+            case 'Root':
+                return BASE_URL . '/pages/dashboard/root/root.php';
+            case 'Customer':
+            default:
+                return BASE_URL . '/pages/dashboard/customer/customer.php';
+        }
+    }
     if (!isset($_SESSION['id']) && isset($_COOKIE['remember_me'])) {
         [$cookieId, $cookieToken] = explode('|', $_COOKIE['remember_me'], 2);
         $expectedToken = hash_hmac('sha256', $cookieId, SECRET_KEY);
@@ -17,13 +28,13 @@
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($user) {
                 session_regenerate_id(true);
-                $_SESSION['id'] = $user['user_id'];
+                $_SESSION['user_id'] = $user['user_id'];
                 $_SESSION['email'] = $user['email'];
                 $_SESSION['user'] = $user['title'];
                 $_SESSION['name'] = $user['first_name'];
                 $_SESSION['role'] = $user['role'];
                 $_SESSION['remembered'] = true;
-                header("Location: " . BASE_URL . "/pages/dashboard/customer/customer.php");
+                header("Location: " . getDashboardUrl($user['role']));
                 exit();
             }
         }
@@ -82,14 +93,15 @@
                             time() + 60 * 60 * 24 * 30,
                             '/',
                             '',
-                            false,
+                            false, //change for production
                             true
                         );
                     } else {
                         $_SESSION['remembered'] = false;
                     }
-                header("Location: " . BASE_URL . "/pages/dashboard/customer/customer.php");
+                header("Location: " . getDashboardUrl($row['role']));
                 exit();
+                }
             }
         }
     }
@@ -108,11 +120,6 @@
                     <h1 class="text-2xl font-bold"> BDPA Airlines </h1>
                     <h2 class="text-blue-300 mt-2"> Please Login </h2>
                     <br>
-                    <h3 class="mb-3 text-red-100"> Attempts Remaining:
-                        <span id="incorrect"> 
-                            <?= htmlspecialchars($_SESSION['attempts_left'] ?? '3') ?>
-                        </span>
-                    </h3>
                     <?php if (!empty($message)): ?>
                     <div class="mb-4 text-red-300">
                         <?= htmlspecialchars($message) ?>
