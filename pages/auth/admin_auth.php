@@ -1,7 +1,7 @@
 <html>
     <head>
         <title> BDPA Airlines - Create Account </title>
-        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"> </script>
     </head>
     <body class="flex items-center justify-center min-h-screen m-0 font-sans bg-blue-900">
         <div class="bg-black shadow-xl rounded-xl p-8 w-full max-w-2xl">
@@ -97,7 +97,7 @@
         if (strlen($password) <= 10) {
             echo "<p class='text-red-500 font-semibold text-center mb-4'> Password is too short. Minimum 10 characters needed. </p>";
         }
-        elseif ($captcha != ($num1 + $num2)) {
+        else if ($captcha != ($num1 + $num2)) {
             echo "<p class='text-red-500 font-semibold text-center mb-4'> Wrong answer for captcha! </p>";
         }
         else {
