@@ -62,7 +62,7 @@
                 </div>
             </div>
 
-            <div class="sticky top-0 z-50 bg-gray-900 pt-6 pb-6">
+            <div class="sticky top-0 z-10 bg-gray-900 pt-6 pb-6">
                 <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 shadow-lg">
                     <div class="flex items-center justify-between">
                         <a href="#step-1" class="step-link flex items-center flex-1">
