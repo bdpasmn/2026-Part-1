@@ -17,6 +17,10 @@
         return $currentPath == $path;
     }
 
+    function isActive($needle) {
+        return str_contains($_SERVER['REQUEST_URI'], $needle);
+    }
+
     $isLoggedIn = isset($_SESSION['user_id']);
     $userFullName = "Guest";
     $role = $_SESSION['role'] ?? 'guest';
@@ -145,7 +149,7 @@
                 <span class="hidden sm:inline px-2 py-1 text-xs rounded bg-gray-700 border border-gray-600 text-gray-300"><?= strtoupper($role) ?></span>
                 <a href="<?= BASE_URL ?>/pages/auth/logout.php" data-loader="page" class="px-4 py-1.5 text-sm bg-red-600 rounded-lg hover:bg-red-700 transition">Logout</a>
             <?php else: ?>
-                <a href="<?= BASE_URL ?>/pages/auth/auth.php" data-loader="page"
+                <a href="<?= BASE_URL ?>/pages/auth/login.php" data-loader="page"
                    class="px-4 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition">
                     Login
                 </a>

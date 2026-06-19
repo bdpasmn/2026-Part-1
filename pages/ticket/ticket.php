@@ -12,6 +12,8 @@ $stmt = $pdo->prepare('SELECT * FROM "Tickets" WHERE confirmation_code = ? LIMIT
 $stmt->execute([$confirmation]);
 $ticketRow = $stmt->fetch();
 
+$isCancelled = $ticketRow && strtolower($ticketRow['status'] ?? '') === 'cancelled';
+
 $flightId = $ticketRow['flight_id'] ?? null;
 $ticket = null;
 $flight = null;
@@ -225,7 +227,7 @@ $statusClass = match ($status) {
  
         <?php if (!$ticketRow): ?>
  
-            <div class="bg-slate-800 border border-gray-700 rounded-xl p-16 flex flex-col items-center gap-4">
+            <div class="bg-slate-800 border border-yellow-700 rounded-xl p-16 flex flex-col items-center gap-4">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                 </svg>
@@ -238,8 +240,40 @@ $statusClass = match ($status) {
                     <?php endif; ?>
                 </p>
             </div>
+
+            <?php elseif ($isCancelled): ?>
+
+    <div class="bg-slate-800 border border-red-700 rounded-xl p-16 flex flex-col items-center gap-4">
+        <svg xmlns="http://www.w3.org/2000/svg"
+            class="w-16 h-16 text-red-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="1.5">
+            <path stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M18.364 5.636 5.636 18.364M5.636 5.636l12.728 12.728" />
+        </svg>
+
+        <p class="text-red-400 font-semibold text-2xl">
+            Ticket Cancelled
+        </p>
+
+<p class="text-slate-400 text-base text-center">
+    This ticket has been cancelled and is no longer valid for travel.
+    You can rebook a ticket at
+    <a href="<?= BASE_URL ?>/pages/booking/booking.php" class="text-blue-400 underline">
+        the booking page
+    </a>.
+</p>
+
+        <p class="font-mono text-slate-300">
+            <?= htmlspecialchars($confirmation) ?>
+        </p>
+    </div>
+
+<?php else: ?>
  
-        <?php else: ?>
  
             <!-- ticket card -->
             <div class="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
@@ -456,7 +490,8 @@ async function confirmDeleteTicket() {
         const data = await res.json();
 
         if (data.success) {
-            window.location.href = 'ticket.php';
+             location.reload();
+
         } else {
             alert("Error deleting ticket: " + data.error);
         }
