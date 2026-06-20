@@ -11,6 +11,11 @@ if (!$dbUser) {
     die("User not found.");
 }
 
+if (strtolower($dbUser['role'] ?? '') !== 'customer') {
+    header('Location: index.php');
+    exit;
+}
+
 $userId = $dbUser['user_id'];
 
 session_start();

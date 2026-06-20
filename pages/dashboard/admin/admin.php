@@ -7,14 +7,28 @@ require_once '../../../database/db.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 $sessionUserId = $_SESSION['user_id'] ?? null;
-if ($sessionUserId) {
-    $selfStmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
-    $selfStmt->execute([$sessionUserId]);
-    $selfUser = $selfStmt->fetch(PDO::FETCH_ASSOC);
-} else {
-    $selfUser = null;
+
+if (!$sessionUserId) {
+    header('Location: ../../index.php');
+    exit;
 }
-$selfName = $selfUser ? trim(($selfUser['first_name'] ?? '') . ' ' . ($selfUser['last_name'] ?? '')) : 'Admin';
+
+$selfStmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
+$selfStmt->execute([$sessionUserId]);
+$selfUser = $selfStmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$selfUser) {
+    header('Location: ../../index.php');
+    exit;
+}
+
+if (($selfUser['role'] ?? '') !== 'admin') {
+    header('Location: ../../index.php');
+    exit;
+}
+
+$selfName = trim(($selfUser['first_name'] ?? '') . ' ' . ($selfUser['last_name'] ?? ''));
+if ($selfName === '') $selfName = 'Admin';
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
@@ -1059,6 +1073,13 @@ function checkPw(val) {
     hint.classList.remove('hidden');
   }
 }
+
+
+
+
+
+
+
 
 const knownFlights  = <?= json_encode(array_keys($flightMap)) ?>;
 const takenSeats    = <?= json_encode($takenSeatsByFlight) ?>;

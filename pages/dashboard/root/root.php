@@ -2,6 +2,25 @@
 require_once '../../../api/key.php';
 require_once '../../../api/api.php';
 require_once '../../../database/db.php';
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$sessionUserId = 18;
+
+$selfStmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
+$selfStmt->execute([$sessionUserId]);
+$selfUser = $selfStmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$selfUser) {
+    header('Location: ../../index.php');
+    exit;
+}
+
+if (($selfUser['role'] ?? '') !== 'root') {
+    header('Location: ../../index.php');
+    exit;
+}
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
