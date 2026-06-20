@@ -858,7 +858,7 @@ $filteredTickets = array_slice(
           <input type="number" name="bags" min="0" max="10" placeholder="0" class="field">
         </div>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Customer User ID <span class="text-gray-600">(optional)</span></label>
+          <label class="block text-xs text-gray-400 mb-1">User ID (If Customer)<span class="text-gray-600">(optional)</span></label>
           <input type="text" name="user_id" placeholder="Leave blank for guest" class="field">
         </div>
 

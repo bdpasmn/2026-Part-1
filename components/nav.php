@@ -16,7 +16,6 @@
         global $currentPath;
         return $currentPath == $path;
     }
-
     function isActive($needle) {
         return str_contains($_SERVER['REQUEST_URI'], $needle);
     }
@@ -105,9 +104,7 @@
                     <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Book Flight</span>
                     <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
                 </a>
-            <?php endif; ?>
 
-            <?php if (!$isLoggedIn): ?>
                 <?php $active = isActivePath(BASE_URL . '/pages/ticket/viewTicket.php'); ?>
                 <a href="<?= BASE_URL ?>/pages/ticket/viewTicket.php" class="relative group">
                     <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">View Tickets</span>
@@ -200,9 +197,7 @@
             <?php if (!$isLoggedIn || $role == 'Customer'): ?>
                 <a class="px-6 py-3 hover:bg-gray-700"
                    href="<?= BASE_URL ?>/pages/booking/searchFlights.php">Book Flight</a>
-            <?php endif; ?>
 
-            <?php if (!$isLoggedIn): ?>
                 <a class="px-6 py-3 hover:bg-gray-700"
                    href="<?= BASE_URL ?>/pages/ticket/viewTicket.php">View Tickets</a>
             <?php endif; ?>

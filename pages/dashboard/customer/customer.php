@@ -5,9 +5,6 @@ require_once '../../../api/key.php';
 require_once '../../../api/api.php';
 require_once '../../../database/db.php';
 
-$stmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
-$stmt->execute([1]); 
-$dbUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$_SESSION['user_id']) {
   header('Location: ../../../index.php');
@@ -72,8 +69,9 @@ $flightMap  = [];
 if ($allFlightsData && isset($allFlightsData['flights'])) {
     $allFlights = $allFlightsData['flights'];
     foreach ($allFlights as $f) {
-        $fid = $f['flightId'] ?? $f['id'] ?? '';
-        if ($fid) $flightMap[$fid] = $f;
+      $f = normalizeFlight($f);
+      $fid = $f['flight_id'] ?? '';
+      if ($fid) $flightMap[$fid] = $f;
     }
 }
 
@@ -85,54 +83,99 @@ $ticketsStmt = $pdo->prepare('SELECT * FROM "Tickets" WHERE user_id = ?');
 $ticketsStmt->execute([$_SESSION['user_id']]);
 $userTickets = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-$ticketFlightIds = [];
-foreach ($userTickets as $t) {
-    $fid = $t['flight_id'] ?? '';
-    if ($fid && !in_array($fid, $ticketFlightIds)) {
-        $ticketFlightIds[] = $fid;
-    }
+function normalizeFlight(array $f): array {
+  return [
+      'flight_id'     => $f['flight_id'] ?? '',
+      'flightNumber'  => $f['flightNumber'] ?? '—',
+      'airline'       => $f['airline'] ?? '—',
+      'destination'   => $f['departingTo'] ?? '—',
+      'departureTime' => (int)($f['departFromSender'] ?? 0),
+      'arrivalTime'   => (int)($f['arriveAtReceiver'] ?? 0),
+      'status'        => $f['status'] ?? '—',
+      'gate'          => $f['gate'] ?? '—',
+      'bookable'      => $f['bookable'] ?? 0,
+      'seatPrice'     => $f['seatPrice'] ?? 0,
+  ];
+}
+
+function getFlightById(AirportsAPI $api, $flightId) {
+  if (!$flightId) return null;
+
+  $res = $api->searchFlights(
+      ['flight_id' => $flightId],
+      null,
+      'desc'
+  );
+
+  return $res['flights'][0] ?? null;
 }
 
 $now = time();
-$upcomingFlights = [];
-$pastFlights     = [];
 
-foreach ($ticketFlightIds as $fid) {
-    $f = $flightMap[$fid] ?? null;
-    if (!$f) {
-        $ticketForFlight = null;
-        foreach ($userTickets as $t) {
-            if (($t['flight_id'] ?? '') === $fid) { $ticketForFlight = $t; break; }
-        }
-        $upcomingFlights[] = [
-            'flightId'      => $fid,
-            'id'            => $fid,
-            'flightNumber'  => $fid,
-            'origin'        => '—',
-            'destination'   => '—',
-            'departureTime' => 0,
-            'arrivalTime'   => 0,
-            'airline'       => '',
-        ];
-        continue;
-    }
-    $depTs = (int)($f['departureTime'] ?? 0);
-    if ($depTs >= $now || $depTs === 0) {
-        $upcomingFlights[] = $f;
-    } else {
-        $pastFlights[] = $f;
-    }
+$upcomingFlights = [];
+$pastFlights = [];
+
+foreach ($userTickets as $ticket) {
+  if (strtolower($ticket['status'] ?? '') == 'cancelled') {
+    continue;
+  }
+  $fid = $ticket['flight_id'] ?? '';
+  $flightRaw = getFlightById($api, $fid);
+
+  if ($flightRaw) {
+      $flight = normalizeFlight($flightRaw);
+  } else {
+      $flight = [
+          'flight_id' => $fid,
+          'flightNumber' => $fid,
+          'destination' => '—',
+          'departureTime' => 0,
+          'arrivalTime' => 0,
+          'airline' => '—',
+          'status' => '—',
+      ];
+  }
+
+  $row = [
+      'ticket' => $ticket,
+      'flight' => $flight,
+  ];
+
+  $depTs = (int)($flight['departureTime'] ?? 0);
+
+  if ($depTs >= $now || $depTs === 0) {
+      $upcomingFlights[] = $row;
+  } else {
+      $pastFlights[] = $row;
+  }
 }
 
 $sortKey = $currentUser['flight_sort'];
-$sortFn = match($sortKey) {
-    'date_desc'   => fn($a, $b) => ($b['departureTime'] ?? 0) <=> ($a['departureTime'] ?? 0),
-    'flight_asc'  => fn($a, $b) => ($a['flightNumber'] ?? '') <=> ($b['flightNumber'] ?? ''),
-    'airline_asc' => fn($a, $b) => ($a['airline'] ?? '') <=> ($b['airline'] ?? ''),
-    default       => fn($a, $b) => ($a['departureTime'] ?? 0) <=> ($b['departureTime'] ?? 0),
-};
-usort($upcomingFlights, $sortFn);
-usort($pastFlights, fn($a, $b) => ($b['departureTime'] ?? 0) <=> ($a['departureTime'] ?? 0));
+
+usort($upcomingFlights, function ($a, $b) use ($sortKey) {
+
+  $fa = $a['flight'];
+  $fb = $b['flight'];
+
+  return match ($sortKey) {
+      'date_desc' =>
+          ($fb['departureTime'] ?? 0) <=> ($fa['departureTime'] ?? 0),
+
+      'flight_asc' =>
+          ($fa['flightNumber'] ?? '') <=> ($fb['flightNumber'] ?? ''),
+
+      'airline_asc' =>
+          ($fa['airline'] ?? '') <=> ($fb['airline'] ?? ''),
+
+      default =>
+          ($fa['departureTime'] ?? 0) <=> ($fb['departureTime'] ?? 0),
+  };
+});
+
+usort($pastFlights, function ($a, $b) {
+  return ($b['flight']['departureTime'] ?? 0)
+      <=> ($a['flight']['departureTime'] ?? 0);
+});
 
 $activeTab  = $_GET['tab'] ?? 'overview';
 $updateMsg  = $_SESSION['flash_msg']          ?? null;
@@ -226,19 +269,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             'INSERT INTO "Saved Cards" (user_id, card_number, expiration_date, cvc, billing_address, zip_code, card_name)
              VALUES (?,?,?,?,?,?,?)'
         );
-        $ins->execute([$userId, $masked, $expiry, $cvc, $billing, $zip, $cardName]);
+        $ins->execute([$_SESSION['user_id'], $masked, $expiry, $cvc, $billing, $zip, $cardName]);
         $_SESSION['flash_msg'] = 'Card saved.';
         header('Location: ?tab=payment');
         exit;
     }
 }
 
-function dashFormatTs(int $ts): string {
-    if ($ts === 0) return '—';
-    return date('Y-m-d H:i', $ts);
+function dashFormatTs($ts): string {
+  if (!$ts) return '—';
+
+  if ($ts > 1000000000000) {
+      $ts = (int)($ts / 1000);
+  }
+
+  return date('Y-m-d H:i', $ts);
 }
 
+function ticketPassengerName($ticket): string {
+  $first = $ticket['name_first'] ?? '';
+  $last  = $ticket['name_last'] ?? '';
 
+  $full = trim("$first $last");
+
+  return $full !== '' ? $full : ($ticket['passenger_name'] ?? '—');
+}
 
 function dashFlightAirline(array $flight, array $airlinesMap): string {
     $id = $flight['airline'] ?? $flight['airlineId'] ?? '';
@@ -316,7 +371,7 @@ body { font-family: 'Inter', sans-serif; }
 
   <?php if ($activeTab === 'overview'): ?>
 
-  <div class="grid xl:grid-cols-4 md:grid-cols-2 gap-4 mb-6">
+  <div class="grid xl:grid-cols-3 md:grid-cols-2 gap-4 mb-6">
     <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
       <p class="text-gray-400 text-sm">Upcoming Flights</p>
       <h2 class="text-4xl font-bold mt-2"><?= count($upcomingFlights) ?></h2>
@@ -324,10 +379,6 @@ body { font-family: 'Inter', sans-serif; }
     <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
       <p class="text-gray-400 text-sm">Past Flights</p>
       <h2 class="text-4xl font-bold mt-2"><?= count($pastFlights) ?></h2>
-    </div>
-    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
-      <p class="text-gray-400 text-sm">Total Flights in System</p>
-      <h2 class="text-4xl font-bold mt-2"><?= count($allFlights) ?></h2>
     </div>
     <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
       <p class="text-gray-400 text-sm">Saved Cards</p>
@@ -345,6 +396,7 @@ body { font-family: 'Inter', sans-serif; }
         <thead>
           <tr class="bg-gray-700/50 text-gray-400 text-sm">
             <th class="text-left px-5 py-3">Flight</th>
+            <th class="text-left px-5 py-3">Passenger</th>
             <th class="text-left px-5 py-3">Route</th>
             <th class="text-left px-5 py-3">Seat</th>
             <th class="text-left px-5 py-3">Confirmation</th>
@@ -352,30 +404,59 @@ body { font-family: 'Inter', sans-serif; }
           </tr>
         </thead>
         <tbody>
-        <?php foreach (array_slice($upcomingFlights, 0, 5) as $f):
-          $fid     = $f['flightId'] ?? $f['id'] ?? '';
-          $ticket  = getTicketForFlight($fid, $userTickets);
-        ?>
-        <tr class="border-t border-gray-700 hover:bg-gray-700/40 transition">
-          <td class="px-5 py-4 font-semibold"><?= htmlspecialchars($f['flightNumber'] ?? $fid ?: '—') ?></td>
-          <td class="px-5 py-4 text-gray-300">
-            <?= htmlspecialchars($f['origin'] ?? '—') ?> → <?= htmlspecialchars($f['destination'] ?? '—') ?>
-          </td>
-          <td class="px-5 py-4 text-gray-300">
+<?php if (!empty($upcomingFlights)): ?>
+
+    <?php foreach (array_slice($upcomingFlights, 0, 5) as $row):
+
+        $f = $row['flight'];
+        $ticket = $row['ticket'];
+        $fid = $f['flight_id'] ?? '';
+    ?>
+
+    <tr data-flight-id="<?= htmlspecialchars($fid) ?>"
+        class="border-t border-gray-700 hover:bg-gray-700/40 transition cursor-pointer"
+        onclick="window.location='../../ticket/ticket.php?confirmation=<?= urlencode($ticket['confirmation_code'] ?? '') ?>'">
+
+        <td class="px-5 py-4 font-semibold">
+            <?= htmlspecialchars($f['flightNumber'] ?? $fid ?: '—') ?>
+        </td>
+
+        <td class="px-5 py-4 text-gray-300">
+            <?= htmlspecialchars(ticketPassengerName($ticket)) ?>
+        </td>
+
+        <td class="px-5 py-4 text-gray-300">
+            <?= htmlspecialchars($f['destination'] ?? '—') ?>
+        </td>
+
+        <td class="px-5 py-4 text-gray-300">
             <?= htmlspecialchars($ticket['seat'] ?? '—') ?>
-          </td>
-          <td class="px-5 py-4">
-            <?php if ($ticket): ?>
-            <code class="text-xs bg-gray-700 px-2 py-1 rounded text-blue-300"><?= htmlspecialchars($ticket['confirmation_code'] ?? '—') ?></code>
-            <?php else: ?>—<?php endif; ?>
-          </td>
-          <td class="px-5 py-4 text-gray-300"><?= dashFormatTs((int)($f['departureTime'] ?? 0)) ?></td>
-        </tr>
-        <?php endforeach; ?>
-        <?php if (empty($upcomingFlights)): ?>
-        <tr><td colspan="6" class="px-5 py-8 text-center text-gray-500">No upcoming flights found.</td></tr>
-        <?php endif; ?>
-        </tbody>
+        </td>
+
+        <td class="px-5 py-4">
+            <code class="text-xs bg-gray-700 px-2 py-1 rounded text-blue-300">
+                <?= htmlspecialchars($ticket['confirmation_code'] ?? '—') ?>
+            </code>
+        </td>
+
+        <td class="px-5 py-4 text-gray-300">
+            <?= dashFormatTs((int)($f['departureTime'] ?? 0)) ?>
+        </td>
+
+    </tr>
+
+    <?php endforeach; ?>
+
+<?php else: ?>
+
+    <tr>
+        <td colspan="6" class="px-5 py-8 text-center text-gray-500">
+            No upcoming flights found.
+        </td>
+    </tr>
+
+<?php endif; ?>
+</tbody>
       </table>
     </div>
   </div>
@@ -392,7 +473,15 @@ body { font-family: 'Inter', sans-serif; }
   <?php endif; ?>
 
   <div class="bg-gray-800 border border-gray-700 rounded-lg p-5 mb-6">
-    <h3 class="font-semibold mb-4">Link a Booking by Confirmation Code</h3>
+  <h3 class="font-semibold mb-4 flex items-center gap-2">
+  Link a Booking by Confirmation Code
+
+  <div class="relative group cursor-help">
+    <span class="text-gray-400 hover:text-gray-200">?</span>
+
+    <div class="absolute left-1/2 -translate-x-1/2 top-6 w-72 bg-gray-900 border border-gray-700 text-xs text-gray-300 rounded-lg p-3 shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition z-50">If you have ever booked a flight as a guest, you can enter that confirmation number here. If your last name matches the ticket, the flight will be linked to your account as if it was purchased while logged in.</div>
+  </div>
+</h3>
     <form method="POST" class="flex flex-wrap gap-3">
       <input type="hidden" name="action" value="add_guest_flight">
       <input type="text" name="confirmation_number" placeholder="Confirmation code (e.g. E5920205)"
@@ -415,7 +504,7 @@ body { font-family: 'Inter', sans-serif; }
           <tr class="bg-gray-700/50 text-gray-400 text-sm">
             <th class="text-left px-5 py-3">Flight</th>
             <th class="text-left px-5 py-3">Airline</th>
-            <th class="text-left px-5 py-3">Origin</th>
+            <th class="text-left px-5 py-3">Passenger</th>
             <th class="text-left px-5 py-3">Destination</th>
             <th class="text-left px-5 py-3">Seat</th>
             <th class="text-left px-5 py-3">Confirmation</th>
@@ -423,31 +512,68 @@ body { font-family: 'Inter', sans-serif; }
             <th class="text-left px-5 py-3">Arrival</th>
           </tr>
         </thead>
-        <tbody id="upcoming-tbody">
-        <?php foreach ($upcomingFlights as $f):
-          $fid    = $f['flightId'] ?? $f['id'] ?? '';
-          $ticket = getTicketForFlight($fid, $userTickets);
-        ?>
-        <tr class="border-t border-gray-700 hover:bg-gray-700/40 transition"
-            data-flight-id="<?= htmlspecialchars($fid) ?>">
-          <td class="px-5 py-4 font-semibold"><?= htmlspecialchars($f['flightNumber'] ?? $fid ?: '—') ?></td>
-          <td class="px-5 py-4 text-gray-300"><?= dashFlightAirline($f, $airlinesMap) ?></td>
-          <td class="px-5 py-4 font-semibold"><?= htmlspecialchars($f['origin'] ?? '—') ?></td>
-          <td class="px-5 py-4 font-semibold"><?= htmlspecialchars($f['destination'] ?? '—') ?></td>
-          <td class="px-5 py-4 text-gray-300"><?= htmlspecialchars($ticket['seat'] ?? '—') ?></td>
-          <td class="px-5 py-4">
-            <?php if ($ticket): ?>
-            <code class="text-xs bg-gray-700 px-2 py-1 rounded text-blue-300"><?= htmlspecialchars($ticket['confirmation_code'] ?? '—') ?></code>
-            <?php else: ?>—<?php endif; ?>
-          </td>
-          <td class="px-5 py-4 text-gray-300 cell-dep"><?= dashFormatTs((int)($f['departureTime'] ?? 0)) ?></td>
-          <td class="px-5 py-4 text-gray-300 cell-arr"><?= dashFormatTs((int)($f['arrivalTime'] ?? 0)) ?></td>
-        </tr>
-        <?php endforeach; ?>
-        <?php if (empty($upcomingFlights)): ?>
-        <tr><td colspan="9" class="px-5 py-8 text-center text-gray-500">No upcoming flights found.</td></tr>
-        <?php endif; ?>
-        </tbody>
+        <tbody>
+<?php if (!empty($upcomingFlights)): ?>
+
+    <?php foreach (array_slice($upcomingFlights, 0, 5) as $row):
+
+        $f = $row['flight'];
+        $ticket = $row['ticket'];
+        $fid = $f['flight_id'] ?? '';
+    ?>
+    
+    <tr data-flight-id="<?= htmlspecialchars($fid) ?>"
+    class="border-t border-gray-700 hover:bg-gray-700/40 transition cursor-pointer"
+    onclick="window.location='../../ticket/ticket.php?confirmation=<?= urlencode($ticket['confirmation_code'] ?? '') ?>'">
+
+  <td class="px-5 py-4 font-semibold">
+    <?= htmlspecialchars($f['flightNumber'] ?? $fid ?: '—') ?>
+  </td>
+
+  <td class="px-5 py-4 text-gray-300">
+    <?= dashFlightAirline($f, $airlinesMap) ?>
+  </td>
+
+  <td class="px-5 py-4 text-gray-300">
+    <?= htmlspecialchars(ticketPassengerName($ticket)) ?>
+  </td>
+
+  <td class="px-5 py-4 text-gray-300">
+    <?= htmlspecialchars($f['destination'] ?? '—') ?>
+  </td>
+
+  <td class="px-5 py-4 text-gray-300">
+    <?= htmlspecialchars($ticket['seat'] ?? '—') ?>
+  </td>
+
+  <td class="px-5 py-4">
+    <code class="text-xs bg-gray-700 px-2 py-1 rounded text-blue-300">
+      <?= htmlspecialchars($ticket['confirmation_code'] ?? '—') ?>
+    </code>
+  </td>
+
+  <td class="px-5 py-4 text-gray-300 cell-dep">
+    <?= dashFormatTs((int)($f['departureTime'] ?? 0)) ?>
+  </td>
+
+  <td class="px-5 py-4 text-gray-300 cell-arr">
+    <?= dashFormatTs((int)($f['arrivalTime'] ?? 0)) ?>
+  </td>
+
+</tr>
+
+    <?php endforeach; ?>
+
+<?php else: ?>
+
+    <tr>
+      <td colspan="6" class="px-5 py-8 text-center text-gray-500">
+        No upcoming flights found.
+      </td>
+    </tr>
+
+<?php endif; ?>
+</tbody>
       </table>
     </div>
   </div>
@@ -462,7 +588,7 @@ body { font-family: 'Inter', sans-serif; }
           <tr class="bg-gray-700/50 text-gray-400 text-sm">
             <th class="text-left px-5 py-3">Flight</th>
             <th class="text-left px-5 py-3">Airline</th>
-            <th class="text-left px-5 py-3">Origin</th>
+            <th class="text-left px-5 py-3">Passenger</th>
             <th class="text-left px-5 py-3">Destination</th>
             <th class="text-left px-5 py-3">Seat</th>
             <th class="text-left px-5 py-3">Confirmation</th>
@@ -471,24 +597,51 @@ body { font-family: 'Inter', sans-serif; }
           </tr>
         </thead>
         <tbody>
-        <?php foreach ($pastFlights as $f):
-          $fid    = $f['flightId'] ?? $f['id'] ?? '';
-          $ticket = getTicketForFlight($fid, $userTickets);
+        <?php foreach ($pastFlights as $row):
+
+        $f = $row['flight'];
+        $ticket = $row['ticket'];
+        $fid = $f['flight_id'] ?? '';
         ?>
-        <tr class="border-t border-gray-700 hover:bg-gray-700/40 transition">
-          <td class="px-5 py-4 font-semibold"><?= htmlspecialchars($f['flightNumber'] ?? $fid ?: '—') ?></td>
-          <td class="px-5 py-4 text-gray-300"><?= dashFlightAirline($f, $airlinesMap) ?></td>
-          <td class="px-5 py-4 font-semibold"><?= htmlspecialchars($f['origin'] ?? '—') ?></td>
-          <td class="px-5 py-4 font-semibold"><?= htmlspecialchars($f['destination'] ?? '—') ?></td>
-          <td class="px-5 py-4 text-gray-300"><?= htmlspecialchars($ticket['seat'] ?? '—') ?></td>
-          <td class="px-5 py-4">
-            <?php if ($ticket): ?>
-            <code class="text-xs bg-gray-700 px-2 py-1 rounded text-blue-300"><?= htmlspecialchars($ticket['confirmation_code'] ?? '—') ?></code>
-            <?php else: ?>—<?php endif; ?>
-          </td>
-          <td class="px-5 py-4 text-gray-300"><?= dashFormatTs((int)($f['departureTime'] ?? 0)) ?></td>
-          <td class="px-5 py-4 text-gray-300"><?= dashFormatTs((int)($f['arrivalTime'] ?? 0)) ?></td>
-        </tr>
+        <tr data-flight-id="<?= htmlspecialchars($fid) ?>"
+    class="border-t border-gray-700 hover:bg-gray-700/40 transition cursor-pointer"
+    onclick="window.location='../../ticket/ticket.php?confirmation=<?= urlencode($ticket['confirmation_code'] ?? '') ?>'">
+
+  <td class="px-5 py-4 font-semibold">
+    <?= htmlspecialchars($f['flightNumber'] ?? $fid ?: '—') ?>
+  </td>
+
+  <td class="px-5 py-4 text-gray-300">
+    <?= dashFlightAirline($f, $airlinesMap) ?>
+  </td>
+
+  <td class="px-5 py-4 text-gray-300">
+    <?= htmlspecialchars(ticketPassengerName($ticket)) ?>
+  </td>
+
+  <td class="px-5 py-4 text-gray-300">
+    <?= htmlspecialchars($f['destination'] ?? '—') ?>
+  </td>
+
+  <td class="px-5 py-4 text-gray-300">
+    <?= htmlspecialchars($ticket['seat'] ?? '—') ?>
+  </td>
+
+  <td class="px-5 py-4">
+    <code class="text-xs bg-gray-700 px-2 py-1 rounded text-blue-300">
+      <?= htmlspecialchars($ticket['confirmation_code'] ?? '—') ?>
+    </code>
+  </td>
+
+  <td class="px-5 py-4 text-gray-300 cell-dep">
+    <?= dashFormatTs((int)($f['departureTime'] ?? 0)) ?>
+  </td>
+
+  <td class="px-5 py-4 text-gray-300 cell-arr">
+    <?= dashFormatTs((int)($f['arrivalTime'] ?? 0)) ?>
+  </td>
+
+</tr>
         <?php endforeach; ?>
         <?php if (empty($pastFlights)): ?>
         <tr><td colspan="9" class="px-5 py-8 text-center text-gray-500">No past flights found.</td></tr>
@@ -499,14 +652,25 @@ body { font-family: 'Inter', sans-serif; }
   </div>
 
   <script>
-  const upcomingIds = <?= json_encode(array_values(array_map(fn($f) => $f['flightId'] ?? $f['id'] ?? '', $upcomingFlights))) ?>;
+    const upcomingIds = <?= json_encode(
+      array_values(
+          array_unique(
+              array_map(
+                  fn($row) => $row['flight']['flight_id'] ?? '',
+                  $upcomingFlights
+              )
+          )
+      )
+  ) ?>;
 
   
-  function fmtTs(ts) {
-    if (!ts) return '—';
-    const d = new Date(ts * 1000);
-    return d.toISOString().slice(0, 16).replace('T', ' ');
-  }
+function fmtTs(ts) {
+  if (!ts) return '—';
+
+  const d = new Date(ts > 1e12 ? ts : ts * 1000);
+
+  return d.toISOString().slice(0, 16).replace('T', ' ');
+}
 
   async function pollUpcoming() {
     if (!upcomingIds.length) return;
@@ -516,7 +680,7 @@ body { font-family: 'Inter', sans-serif; }
       const data = await res.json();
       if (!data || !data.flights) return;
       for (const flight of data.flights) {
-        const fid = flight.flightId || flight.id;
+        const fid = flight.flight_id;
         const row = document.querySelector(`tr[data-flight-id="${fid}"]`);
         if (!row) continue;
         const dep = row.querySelector('.cell-dep');

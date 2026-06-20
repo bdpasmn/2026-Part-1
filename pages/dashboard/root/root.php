@@ -22,7 +22,7 @@ if (!$selfUser) {
     exit;
 }
 
-if (($selfUser['role'] ?? '') !== 'Root') {
+if (($_SESSION['role'] ?? '') !== 'Root') {
     header('Location: ../../../index.php');
     exit;
 }
@@ -103,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
         $usersStmt = $pdo->query('SELECT * FROM "Users"');
         $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
-        $admins    = array_values(array_filter($allUsers, fn($u) => in_array(strtolower($u['role'] ?? ''), ['admin', 'root'])));
+        $admins    = array_values(array_filter($allUsers, fn($u) => in_array(strtolower($u['role'] ?? ''), ['admin', 'Root'])));
         $activeTab = 'admins';
     }
 
@@ -112,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $check = $pdo->prepare('SELECT role FROM "Users" WHERE user_id = ?');
         $check->execute([$uid]);
         $row = $check->fetch(PDO::FETCH_ASSOC);
-        if ($row && strtolower($row['role'] ?? '') === 'root') {
+        if ($row && strtolower($row['role'] ?? '') === 'Root') {
             $errorMsg = 'The root account cannot be deleted.';
         } elseif ($uid) {
             $del = $pdo->prepare('DELETE FROM "Users" WHERE user_id = ? AND LOWER(role) = \'admin\'');
