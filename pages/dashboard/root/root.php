@@ -1,7 +1,31 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) session_start();
+
 require_once '../../../api/key.php';
 require_once '../../../api/api.php';
 require_once '../../../database/db.php';
+
+
+$sessionUserId = $_SESSION['user_id'] ?? null;
+
+if (!$sessionUserId) {
+    header('Location: ../../../index.php');
+    exit;
+}
+
+$selfStmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
+$selfStmt->execute([$sessionUserId]);
+$selfUser = $selfStmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$selfUser) {
+    header('Location: ../../../index.php');
+    exit;
+}
+
+if (($selfUser['role'] ?? '') !== 'Root') {
+    header('Location: ../../../index.php');
+    exit;
+}
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
@@ -147,7 +171,7 @@ function roleBadge(string $role): string {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Root Dashboard — BDPA Airports</title>
+<title>Root Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -179,7 +203,7 @@ tbody tr:hover { background: rgba(55,65,81,.45); }
 </head>
 <body class="min-h-screen">
 
-
+<?php include_once __DIR__ . '/../../../components/nav.php'; ?>
 
 <main class="max-w-7xl mx-auto p-4 sm:p-6 space-y-5">
 

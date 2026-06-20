@@ -1,4 +1,6 @@
 <?php
+session_start();
+
 require_once '../../../api/key.php';
 require_once '../../../api/api.php';
 require_once '../../../database/db.php';
@@ -7,20 +9,31 @@ $stmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
 $stmt->execute([1]); 
 $dbUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
+if (!$_SESSION['user_id']) {
+  header('Location: ../../../index.php');
+  exit;
+}
+
+$stmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
+$stmt->execute([$_SESSION['user_id']]);
+$dbUser = $stmt->fetch(PDO::FETCH_ASSOC);
+
 if (!$dbUser) {
     die("User not found.");
 }
 
-$userId = $dbUser['user_id'];
+if (strtolower($_SESSION['role'] ?? '') !== 'customer') {
+    header('Location: ../../../index.php');
+    exit;
+}
 
-session_start();
 if (!isset($_SESSION['last_login_ip'])) {
     $_SESSION['last_login_ip']       = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
     $_SESSION['last_login_datetime'] = date('Y-m-d H:i:s');
 }
 
 $currentUser = [
-    'id'                  => $userId,
+    'id'                  => $_SESSION['user_id'],
     'name'                => trim(($dbUser['first_name'] ?? '') . ' ' . ($dbUser['last_name'] ?? '')),
     'first_name'          => $dbUser['first_name'] ?? '',
     'last_name'           => $dbUser['last_name']  ?? '',
@@ -28,8 +41,8 @@ $currentUser = [
     'phone'               => $dbUser['phone']       ?? '',
     'last_login_ip'       => $_SESSION['last_login_ip'],
     'last_login_datetime' => $_SESSION['last_login_datetime'],
-    'auto_logout'         => $_SESSION['auto_logout_' . $userId]  ?? '15',
-    'flight_sort'         => $_SESSION['flight_sort_' . $userId]  ?? 'date_asc',
+    'auto_logout'         => $_SESSION['auto_logout_' . $_SESSION['user_id']]  ?? '15',
+    'flight_sort'         => $_SESSION['flight_sort_' . $_SESSION['user_id']]  ?? 'date_asc',
 ];
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
@@ -65,11 +78,11 @@ if ($allFlightsData && isset($allFlightsData['flights'])) {
 }
 
 $cardsStmt = $pdo->prepare('SELECT * FROM "Saved Cards" WHERE user_id = ?');
-$cardsStmt->execute([$userId]);
+$cardsStmt->execute([$_SESSION['user_id']]);
 $savedCards = $cardsStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $ticketsStmt = $pdo->prepare('SELECT * FROM "Tickets" WHERE user_id = ?');
-$ticketsStmt->execute([$userId]);
+$ticketsStmt->execute([$_SESSION['user_id']]);
 $userTickets = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $ticketFlightIds = [];
@@ -139,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $upd = $pdo->prepare(
             'UPDATE "Users" SET email=?, phone=?, street_address=?, city=?, state=?, zip_code=? WHERE user_id=?'
         );
-        $upd->execute([$email, $phone, $street, $city, $state, $zip, $userId]);
+        $upd->execute([$email, $phone, $street, $city, $state, $zip, $_SESSION['user_id']]);
         $_SESSION['flash_msg'] = 'Profile updated successfully.';
         header('Location: ?tab=profile');
         exit;
@@ -147,11 +160,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     if ($_POST['action'] === 'update_preferences') {
         if (in_array($_POST['auto_logout'] ?? '', ['5', '15', '60'])) {
-            $_SESSION['auto_logout_' . $userId] = $_POST['auto_logout'];
+            $_SESSION['auto_logout_' . $_SESSION['user_id']] = $_POST['auto_logout'];
         }
         $sortOpts = ['date_asc', 'date_desc', 'flight_asc', 'airline_asc'];
         if (in_array($_POST['flight_sort'] ?? '', $sortOpts)) {
-            $_SESSION['flight_sort_' . $userId] = $_POST['flight_sort'];
+            $_SESSION['flight_sort_' . $_SESSION['user_id']] = $_POST['flight_sort'];
         }
         $_SESSION['flash_msg'] = 'Preferences saved.';
         header('Location: ?tab=preferences');
@@ -174,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             if ($foundTicket) {
                 $upd = $pdo->prepare('UPDATE "Tickets" SET user_id = ? WHERE ticket_id = ? AND (user_id IS NULL OR user_id = ?)');
-                $upd->execute([$userId, $foundTicket['ticket_id'], $userId]);
+                $upd->execute([$_SESSION['user_id'], $foundTicket['ticket_id'], $_SESSION['user_id']]);
                 $_SESSION['flash_guest_msg'] = "Booking {$conf} has been linked to your account.";
             } else {
                 $_SESSION['flash_guest_error'] = "No booking found with confirmation code \"{$conf}\".";
@@ -187,7 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'remove_card') {
         $removeId = $_POST['card_id'] ?? '';
         $del = $pdo->prepare('DELETE FROM "Saved Cards" WHERE card_id = ? AND user_id = ?');
-        $del->execute([$removeId, $userId]);
+        $del->execute([$removeId, $_SESSION['user_id']]);
         $_SESSION['flash_msg'] = 'Card removed.';
         header('Location: ?tab=payment');
         exit;
@@ -244,7 +257,7 @@ function getTicketForFlight(string $fid, array $userTickets): ?array {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard — <?= htmlspecialchars($currentUser['name']) ?></title>
+<title>Customer Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -257,13 +270,8 @@ body { font-family: 'Inter', sans-serif; }
 </head>
 <body class="bg-gray-900 min-h-screen text-white">
 
-<header class="h-16 bg-gray-800 border-b border-gray-700 flex items-center px-8 justify-between sticky top-0 z-40">
-  <h1 class="text-xl font-bold">Customer Dashboard</h1>
-  <div class="flex items-center gap-3 text-sm text-gray-400">
-    <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
-    <?= htmlspecialchars($currentUser['name']) ?>
-  </div>
-</header>
+<?php include_once __DIR__ . '/../../../components/nav.php'; ?>
+
 
 <main class="max-w-7xl mx-auto p-6">
 

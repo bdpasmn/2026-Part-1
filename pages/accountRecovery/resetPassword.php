@@ -29,7 +29,7 @@
                 $stmt->execute([":password" => $hashedPassword, ":email" => $email]);
 
                 if ($stmt->rowCount() > 0) {
-                    header("Location: ../auth/auth.php");
+                    header("Location: ../auth/login.php");
                     exit;
                 } else {
                     $message = "Account wasn't found. Try again?";

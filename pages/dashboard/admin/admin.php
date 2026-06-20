@@ -1,20 +1,34 @@
 <?php
-require_once '../../../components/nav.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
+
 require_once '../../../api/key.php';
 require_once '../../../api/api.php';
 require_once '../../../database/db.php';
 
-if (session_status() === PHP_SESSION_NONE) session_start();
 
 $sessionUserId = $_SESSION['user_id'] ?? null;
-if ($sessionUserId) {
-    $selfStmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
-    $selfStmt->execute([$sessionUserId]);
-    $selfUser = $selfStmt->fetch(PDO::FETCH_ASSOC);
-} else {
-    $selfUser = null;
+
+if (!$sessionUserId) {
+    header('Location: ../../../index.php');
+    exit;
 }
-$selfName = $selfUser ? trim(($selfUser['first_name'] ?? '') . ' ' . ($selfUser['last_name'] ?? '')) : 'Admin';
+
+$selfStmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
+$selfStmt->execute([$sessionUserId]);
+$selfUser = $selfStmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$selfUser) {
+    header('Location: ../../../index.php');
+    exit;
+}
+
+if (($selfUser['role'] ?? '') !== 'Admin') {
+    header('Location: ../../../index.php');
+    exit;
+}
+
+$selfName = trim(($selfUser['first_name'] ?? '') . ' ' . ($selfUser['last_name'] ?? ''));
+if ($selfName === '') $selfName = 'Admin';
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
@@ -343,7 +357,7 @@ foreach ($allFlights as $f) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Dashboard — BDPA Airports</title>
+<title>Admin Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -383,7 +397,7 @@ foreach ($allFlights as $f) {
 </style>
 </head>
 <body class="min-h-screen">
-
+<?php include_once __DIR__ . '/../../../components/nav.php'; ?>
 <main class="max-w-7xl mx-auto p-4 sm:p-6 space-y-5">
 
   <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
@@ -1059,6 +1073,13 @@ function checkPw(val) {
     hint.classList.remove('hidden');
   }
 }
+
+
+
+
+
+
+
 
 const knownFlights  = <?= json_encode(array_keys($flightMap)) ?>;
 const takenSeats    = <?= json_encode($takenSeatsByFlight) ?>;

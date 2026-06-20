@@ -38,9 +38,9 @@
 
     $dashboardLink = BASE_URL . "/pages/dashboard/customer/customer.php";
 
-    if ($role == "admin") {
+    if ($role == "Admin") {
         $dashboardLink = BASE_URL . "/pages/dashboard/admin/admin.php";
-    } elseif ($role == "root") {
+    } elseif ($role == "Root") {
         $dashboardLink = BASE_URL . "/pages/dashboard/root/root.php";
     }
 ?>
@@ -115,7 +115,7 @@
                 </a>
             <?php endif; ?>
 
-            <?php if ($role == 'root'): ?>
+            <?php if ($role == 'Root'): ?>
                 <?php $active = $currentTab == 'admins'; ?>
                 <a href="<?= BASE_URL ?>/pages/dashboard/root/root.php?tab=admins" class="relative group">
                     <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Administrators</span>
@@ -123,7 +123,7 @@
                 </a>
             <?php endif; ?>
 
-            <?php if ($role == 'admin' || $role == 'root'): ?>
+            <?php if ($role == 'Admin' || $role == 'Root'): ?>
                 <?php $active = $currentTab == 'customers'; ?>
                 <a href="<?= BASE_URL ?>/pages/dashboard/<?= $role ?>/<?= $role ?>.php?tab=customers" class="relative group">
                     <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Customers</span>
@@ -207,12 +207,12 @@
                    href="<?= BASE_URL ?>/pages/ticket/viewTicket.php">View Tickets</a>
             <?php endif; ?>
 
-            <?php if ($role == 'root'): ?>
+            <?php if ($role == 'Root'): ?>
                 <a class="px-6 py-3 hover:bg-gray-700"
                    href="<?= BASE_URL ?>/pages/dashboard/root/root.php?tab=admins">Administrators</a>
             <?php endif; ?>
 
-            <?php if ($role == 'admin' || $role == 'root'): ?>
+            <?php if ($role == 'Admin' || $role == 'Root'): ?>
                 <a class="px-6 py-3 hover:bg-gray-700"
                    href="<?= BASE_URL ?>/pages/dashboard/<?= $role ?>/<?= $role ?>.php?tab=customers">Customers</a>
 

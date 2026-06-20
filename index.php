@@ -10,7 +10,6 @@
     $totalCustomers = $stmt->fetchColumn();
 
     $role = $_SESSION['role'] ?? 'Guest';
-    session_destroy();
 ?>
 <html>
     <head>
