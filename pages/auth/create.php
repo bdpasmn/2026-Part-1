@@ -183,7 +183,7 @@
                                     <option value="male" <?= $gender === 'male' ? 'selected' : '' ?>> Male </option>
                                     <option value="female" <?= $gender === 'female' ? 'selected' : '' ?>> Female </option>
                                     <option value="other" <?= $gender === 'other' ? 'selected' : '' ?>> Other </option>
-                                    <option value="prefer not to say" <?= $gender === 'prefer not to say' ? 'selected' : '' ?>> Prefer Not To Say< /option>
+                                    <option value="prefer not to say" <?= $gender === 'prefer not to say' ? 'selected' : '' ?>> Prefer Not To Say</option>
                                 </select>
                             </div>
                             <div class="md:col-span-2">

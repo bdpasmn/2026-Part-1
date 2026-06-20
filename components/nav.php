@@ -279,6 +279,8 @@ document.addEventListener('click', (e) => {
 
     if (link.target == '_blank') return;
 
+    if (link.hasAttribute('data-skip-loader')) return;
+
     Loader.show();
 });
 
@@ -301,8 +303,16 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 
 <?php if ($isLoggedIn): ?>
+
+<script>
+window.__autoLogoutMinutes = <?= (int)($_SESSION['auto_logout'] ?? 0) ?>;
+window.__remembered = <?= !empty($_SESSION['remembered']) ? 'true' : 'false' ?>;
+</script>
+
 <script>
 (function () {
+    if (window.__remembered) return;
+
     const minutes = window.__autoLogoutMinutes;
     if (!minutes || isNaN(minutes)) return;
 

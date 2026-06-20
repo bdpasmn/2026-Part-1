@@ -1,148 +1,186 @@
 <?php
-require_once __DIR__ . '/../../api/key.php';
-require_once __DIR__ . '/../../api/api.php';
-require_once __DIR__ . '/../../database/db.php';
-require_once __DIR__ . '/../../components/config.php';
-
+require_once __DIR__ . "/../../api/key.php";
+require_once __DIR__ . "/../../api/api.php";
+require_once __DIR__ . "/../../database/db.php";
+require_once __DIR__ . "/../../components/config.php";
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
-$confirmation = $_GET['confirmation'] ?? null;
+$confirmation = $_GET["confirmation"] ?? null;
 
-$stmt = $pdo->prepare('SELECT * FROM "Tickets" WHERE confirmation_code = ? LIMIT 1');
+$stmt = $pdo->prepare(
+    'SELECT * FROM "Tickets" WHERE confirmation_code = ? LIMIT 1'
+);
 $stmt->execute([$confirmation]);
 $ticketRow = $stmt->fetch();
 
-$isCancelled = $ticketRow && strtolower($ticketRow['status'] ?? '') === 'cancelled';
+$isCancelled =
+    $ticketRow && strtolower($ticketRow["status"] ?? "") === "cancelled";
 
-$flightId = $ticketRow['flight_id'] ?? null;
+$flightId = $ticketRow["flight_id"] ?? null;
 $ticket = null;
 $flight = null;
 
-//  implemented AJAX request for flight status updates
-if (isset($_GET['xhr']) && $_GET['xhr'] === 'flight-status') {
-    header('Content-Type: application/json');
+$flightNotFound = false;
+$flightIsPast = false;
+$pageError = null;
+
+if (isset($_GET["xhr"]) && $_GET["xhr"] === "flight-status") {
+    header("Content-Type: application/json");
 
     if (!$flightId) {
         http_response_code(400);
-        echo json_encode(['error' => 'missing flight_id']);
-        exit;
+        echo json_encode(["error" => "missing flight_id"]);
+        exit();
     }
 
     $flightsResponse = $api->searchFlights(
-        ['flight_id' => $flightId],
+        ["flight_id" => $flightId],
         null,
-        'desc'
+        "desc"
     );
 
-    $flight = $flightsResponse['flights'][0] ?? null;
+    $flight = $flightsResponse["flights"][0] ?? null;
 
     if (!$flight) {
         http_response_code(404);
-        echo json_encode(['error' => 'flight not found']);
-        exit;
+        echo json_encode(["error" => "flight not found"]);
+        exit();
     }
 
     echo json_encode([
-        'departure' => $flight['departFromSender'] ?? null,
-        'arrival' => $flight['arriveAtReceiver'] ?? null,
-        'gate' => (strtolower($flight['status'] ?? '') === 'past') ? 'N/A' : strtoupper($flight['gate'] ?? 'TBD'),
-        'status' => isset($flight['status']) ? ucwords(strtolower($flight['status'])) : 'Unknown'
+        "departure" => $flight["departFromSender"] ?? null,
+        "arrival" => $flight["arriveAtReceiver"] ?? null,
+        "gate" =>
+            strtolower($flight["status"] ?? "") === "past"
+                ? "N/A"
+                : strtoupper($flight["gate"] ?? "TBD"),
+        "status" => isset($flight["status"])
+            ? ucwords(strtolower($flight["status"]))
+            : "Unknown",
     ]);
-    exit;
+    exit();
 }
 
-//ticket deletion handler
-if (isset($_GET['xhr']) && $_GET['xhr'] === 'delete-ticket') {
-    header('Content-Type: application/json');
-    $confirmation = $_GET['confirmation'] ?? null;
+if (isset($_GET["xhr"]) && $_GET["xhr"] === "delete-ticket") {
+    header("Content-Type: application/json");
+    $confirmation = $_GET["confirmation"] ?? null;
 
     if (!$confirmation) {
         http_response_code(400);
-        echo json_encode(['error' => 'Missing confirmation code']);
-        exit;
+        echo json_encode(["error" => "Missing confirmation code"]);
+        exit();
     }
 
     try {
         $pdo->beginTransaction();
 
-        // get flight_id and the specific seat assigned to this ticket
-        $stmtGet = $pdo->prepare('SELECT flight_id, seat FROM "Tickets" WHERE confirmation_code = ? LIMIT 1');
+        $stmtGet = $pdo->prepare(
+            'SELECT flight_id, seat FROM "Tickets" WHERE confirmation_code = ? LIMIT 1'
+        );
         $stmtGet->execute([$confirmation]);
         $ticketData = $stmtGet->fetch();
 
         if ($ticketData) {
-            $fId = $ticketData['flight_id'];
-            $seatToRemove = $ticketData['seat'];
-            //select seat and remove
-$stmtFlight = $pdo->prepare('
-    UPDATE "Flights"
-    SET taken_seats = taken_seats - :seat::text
-    WHERE flight_id = :fid
-');
+            $fId = $ticketData["flight_id"];
+            $seatToRemove = $ticketData["seat"];
 
-$stmtFlight->execute([
-    ':seat' => $seatToRemove,
-    ':fid' => $fId
-]);
+            $stmtFlight = $pdo->prepare('
+                UPDATE "Flights"
+                SET taken_seats = taken_seats - :seat::text
+                WHERE flight_id = :fid
+            ');
+
+            $stmtFlight->execute([
+                ":seat" => $seatToRemove,
+                ":fid" => $fId,
+            ]);
         }
 
-        $stmtUpdate = $pdo->prepare('UPDATE "Tickets" SET status = ? WHERE confirmation_code = ?');
-        $stmtUpdate->execute(['cancelled', $confirmation]);
-        
+        $stmtUpdate = $pdo->prepare(
+            'UPDATE "Tickets" SET status = ? WHERE confirmation_code = ?'
+        );
+        $stmtUpdate->execute(["cancelled", $confirmation]);
+
         $pdo->commit();
-        echo json_encode(['success' => true]);
+        echo json_encode(["success" => true]);
     } catch (Exception $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
         http_response_code(500);
-        echo json_encode(['error' => $e->getMessage()]);
+        echo json_encode(["error" => $e->getMessage()]);
     }
-    exit;
+    exit();
 }
 
 if ($ticketRow) {
     $flightsResponse = $api->searchFlights(
-        ['flight_id' => $flightId],
+        ["flight_id" => $flightId],
         null,
-        'desc'
+        "desc"
     );
 
-    $flight = $flightsResponse['flights'][0] ?? null;
+    $flight = $flightsResponse["flights"][0] ?? null;
 
-    $passengerName = trim(
-        ($ticketRow['name_first'] ?? '') . ' ' .
-        ($ticketRow['name_middle'] ?? '') . ' ' .
-        ($ticketRow['name_last'] ?? '')
-    );
-    if ($passengerName === '') {
-        $passengerName = 'Unknown Passenger';
+    if (!$flight) {
+        $flightNotFound = true;
+    } elseif (strtolower($flight["status"] ?? "") === "past") {
+        $flightIsPast = true;
     }
 
-    date_default_timezone_set('America/New_York');
+    if ($flightNotFound) {
+        $pageError = "flight_not_found";
+    }
 
-    if ($flight) {
+    if ($flightIsPast) {
+        $pageError = "flight_past";
+    }
 
-        $dest_airport_name = '';
-        $dest_airport_code = '';
-        $dest_city = '';
-        $dest_state = '';
-        $dest_country = '';
+    $passengerName = trim(
+        ($ticketRow["name_first"] ?? "") .
+        " " .
+        ($ticketRow["name_middle"] ?? "") .
+        " " .
+        ($ticketRow["name_last"] ?? "")
+    );
 
-        $dest_airport_code = $flight['departingTo'] ?? ($flight['landingAt'] ?? '');
+    if ($passengerName === "") {
+        $passengerName = "Unknown Passenger";
+    }
+
+    date_default_timezone_set("America/New_York");
+
+    if ($flight && !$pageError) {
+
+        $dest_airport_name = "";
+        $dest_airport_code = "";
+        $dest_city = "";
+        $dest_state = "";
+        $dest_country = "";
+
+        $dest_airport_code =
+            $flight["departingTo"] ?? ($flight["landingAt"] ?? "");
 
         if (!empty($dest_airport_code)) {
             $airportsResp = $api->getAirports();
-            if (isset($airportsResp['airports']) && is_array($airportsResp['airports'])) {
-                foreach ($airportsResp['airports'] as $ap) {
-                    $shortA = $ap['shortName'] ?? ($ap['short_name'] ?? '');
-                    if ($shortA !== '' && strcasecmp($shortA, $dest_airport_code) === 0) {
-                        $dest_airport_name = $ap['name'] ?? '';
+
+            if (
+                isset($airportsResp["airports"]) &&
+                is_array($airportsResp["airports"])
+            ) {
+                foreach ($airportsResp["airports"] as $ap) {
+                    $shortA = $ap["shortName"] ?? ($ap["short_name"] ?? "");
+
+                    if (
+                        $shortA !== "" &&
+                        strcasecmp($shortA, $dest_airport_code) === 0
+                    ) {
+                        $dest_airport_name = $ap["name"] ?? "";
                         $dest_airport_code = $shortA;
-                        $dest_city = $ap['city'] ?? '';
-                        $dest_state = $ap['state'] ?? '';
-                        $dest_country = $ap['country'] ?? '';
+                        $dest_city = $ap["city"] ?? "";
+                        $dest_state = $ap["state"] ?? "";
+                        $dest_country = $ap["country"] ?? "";
                         break;
                     }
                 }
@@ -150,63 +188,67 @@ if ($ticketRow) {
         }
 
         $ticket = [
-            'flight_id' => $flight['flight_id'],
-            'departure_airport' => $flight['type'] === 'arrival' ? $flight['comingFrom'] : $flight['landingAt'],
-            'ticket_id' => $ticketRow['ticket_id'],
-            'confirmation_number' => $ticketRow['confirmation_code'] ?? '',
-            'flight_type' => ucfirst($flight['type']),
-            'airline' => $flight['airline'],
-            'seat' => $ticketRow['seat'] ?? 'TBD',
-            'flight_number' => $flight['flightNumber'],
-            'destination_airport' => $dest_airport_code,
-            'destination_airport_name' => $dest_airport_name,
-            'destination_airport_code' => $dest_airport_code,
-            'destination_city' => $dest_city,
-            'destination_state' => $dest_state,
-            'destination_country' => $dest_country,
-            'departure_time' => $flight['departFromSender']
-                ? date('h:i A', $flight['departFromSender'] / 1000)
-                : 'TBD',
-            'departure_time_raw' => $flight['departFromSender'] ?? null,
-            'arrival_time' => $flight['arriveAtReceiver']
-                ? date('h:i A', $flight['arriveAtReceiver'] / 1000)
-                : 'TBD',
-            'arrival_time_raw' => $flight['arriveAtReceiver'] ?? null,
-            'passenger_name' => $passengerName,
-            'status' => isset($flight['status']) ? ucwords(strtolower($flight['status'])) : 'Unknown',
-            'gate' => (strtolower($flight['status'] ?? '') === 'past') ? 'N/A' : strtoupper($flight['gate'] ?? 'TBD')
+            "flight_id" => $flight["flight_id"],
+            "departure_airport" =>
+                $flight["type"] === "arrival"
+                    ? $flight["comingFrom"]
+                    : $flight["landingAt"],
+            "ticket_id" => $ticketRow["ticket_id"],
+            "confirmation_number" => $ticketRow["confirmation_code"] ?? "",
+            "flight_type" => ucfirst($flight["type"]),
+            "airline" => $flight["airline"],
+            "seat" => $ticketRow["seat"] ?? "TBD",
+            "flight_number" => $flight["flightNumber"],
+            "destination_airport" => $dest_airport_code,
+            "destination_airport_name" => $dest_airport_name,
+            "destination_airport_code" => $dest_airport_code,
+            "destination_city" => $dest_city,
+            "destination_state" => $dest_state,
+            "destination_country" => $dest_country,
+            "departure_time" => $flight["departFromSender"]
+                ? date("h:i A", $flight["departFromSender"] / 1000)
+                : "TBD",
+            "departure_time_raw" => $flight["departFromSender"] ?? null,
+            "arrival_time" => $flight["arriveAtReceiver"]
+                ? date("h:i A", $flight["arriveAtReceiver"] / 1000)
+                : "TBD",
+            "arrival_time_raw" => $flight["arriveAtReceiver"] ?? null,
+            "passenger_name" => $passengerName,
+            "status" => isset($flight["status"])
+                ? ucwords(strtolower($flight["status"]))
+                : "Unknown",
+            "gate" =>
+                strtolower($flight["status"] ?? "") === "past"
+                    ? "N/A"
+                    : strtoupper($flight["gate"] ?? "TBD"),
         ];
 
         $destinationParts = array_filter([
-            $ticket['destination_city'] ?? '',
-            $ticket['destination_state'] ?? '',
-            $ticket['destination_country'] ?? ''
+            $ticket["destination_city"] ?? "",
+            $ticket["destination_state"] ?? "",
+            $ticket["destination_country"] ?? "",
         ]);
-        $ticket['destination_display'] = $destinationParts ? implode(', ', $destinationParts) : '';
-    } else {
-        echo '<pre style="color:red;background:#1e1e1e;padding:1rem;">';
-        echo 'Flight not found for confirmation: ' . htmlspecialchars($confirmation) . "\n\n";
-        echo print_r($flightsResponse, true);
-        echo '</pre>';
-        exit;
+
+        $ticket["destination_display"] = $destinationParts
+            ? implode(", ", $destinationParts)
+            : "";
     }
 }
 
-$status = $ticket ? strtolower($ticket['status']) : '';
+$status = $ticket ? strtolower($ticket["status"]) : "";
 
 $statusClass = match ($status) {
-    'past'      => 'bg-slate-700 text-slate-200',
-    'scheduled' => 'bg-blue-900 text-blue-300',
-    'cancelled' => 'bg-red-900 text-red-300',
-    'delayed'   => 'bg-amber-900 text-amber-300',
-    'on time'   => 'bg-emerald-900 text-emerald-300',
-    'landed'    => 'bg-indigo-900 text-indigo-300',
-    'arrived'   => 'bg-teal-900 text-teal-300',
-    'boarding'  => 'bg-sky-900 text-sky-300',
-    'departed'  => 'bg-violet-900 text-violet-300',
-    default     => 'bg-gray-700 text-gray-300'
+    "past" => "bg-slate-700 text-slate-200",
+    "scheduled" => "bg-blue-900 text-blue-300",
+    "cancelled" => "bg-red-900 text-red-300",
+    "delayed" => "bg-amber-900 text-amber-300",
+    "on time" => "bg-emerald-900 text-emerald-300",
+    "landed" => "bg-indigo-900 text-indigo-300",
+    "arrived" => "bg-teal-900 text-teal-300",
+    "boarding" => "bg-sky-900 text-sky-300",
+    "departed" => "bg-violet-900 text-violet-300",
+    default => "bg-gray-700 text-gray-300",
 };
-
 ?>
 
 
@@ -222,59 +264,161 @@ $statusClass = match ($status) {
  
 <body class="bg-gray-900 min-h-screen text-white">
 <div class="w-full min-h-screen bg-gray-900">
-    <?php include __DIR__ . '/../../components/nav.php'; ?>
+    <?php include __DIR__ . "/../../components/nav.php"; ?>
  
-    <main class="w-full p-6">
+    <main class="w-full p-10">
  
-        <?php if (!$ticketRow): ?>
- 
-            <div class="bg-slate-800 border border-yellow-700 rounded-xl p-16 flex flex-col items-center gap-4">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+<?php if (!$ticketRow): ?>
+
+<div class="max-w-lg mx-auto">
+    <div class="bg-gray-800 border border-gray-700 rounded-xl p-8 text-center">
+
+        <div class="flex justify-center mb-4">
+            <div class="w-16 h-16 rounded-full bg-gray-900 border border-yellow-700 flex items-center justify-center">
+                <svg class="w-8 h-8 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                 </svg>
-                <p class="text-yellow-400 font-semibold text-2xl">No Ticket Detected</p>
-                <p class="text-slate-400 text-base">
-                    <?php if ($confirmation): ?>
-                        No ticket was found for confirmation code <span class="font-mono text-slate-300"><?= htmlspecialchars($confirmation) ?></span>
-                    <?php else: ?>
-                        No confirmation code was provided.
-                    <?php endif; ?>
-                </p>
             </div>
+        </div>
 
-            <?php elseif ($isCancelled): ?>
+        <p class="text-xs tracking-[0.2em] uppercase text-yellow-300 mb-2">Ticket Status</p>
+        <h1 class="text-2xl font-bold text-white mb-3">Ticket Not Found</h1>
 
-    <div class="bg-slate-800 border border-red-700 rounded-xl p-16 flex flex-col items-center gap-4">
-        <svg xmlns="http://www.w3.org/2000/svg"
-            class="w-16 h-16 text-red-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="1.5">
-            <path stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M18.364 5.636 5.636 18.364M5.636 5.636l12.728 12.728" />
-        </svg>
-
-        <p class="text-red-400 font-semibold text-2xl">
-            Ticket Cancelled
+        <p class="text-gray-300 text-sm mb-6">
+            <?= $confirmation ? "No ticket matches the provided confirmation code." : "A confirmation code is required to retrieve ticket information." ?>
         </p>
 
-<p class="text-slate-400 text-base text-center">
-    This ticket has been cancelled and is no longer valid for travel.
-    You can rebook a ticket at
-    <a href="<?= BASE_URI ?>/pages/booking/booking.php" class="text-blue-400 underline">
-        the booking page
-    </a>.
-</p>
+        <?php if ($confirmation): ?>
+        <div class="inline-flex items-center bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 mb-6">
+            <span class="font-mono text-sm text-white"><?= htmlspecialchars($confirmation) ?></span>
+        </div>
+        <?php endif; ?>
 
-        <p class="font-mono text-slate-300">
-            <?= htmlspecialchars($confirmation) ?>
-        </p>
+        <div class="bg-gray-900 border border-gray-700 rounded-lg p-4 text-left mb-6">
+            <p class="text-sm text-gray-300">
+                <span class="font-semibold text-white">Need help?</span><br>
+                Ticket information can only be accessed using a valid confirmation code from your booking.
+            </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3">
+            <a href="viewTicket.php" class="flex-1 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg">
+                Search Again
+            </a>
+            <a href="<?= BASE_URI ?>" class="flex-1 px-5 py-2.5 bg-gray-900 border border-gray-700 hover:bg-gray-700 rounded-lg">
+                Home
+            </a>
+        </div>
+
     </div>
+</div>
+
+<?php elseif ($pageError === "flight_not_found"): ?>
+
+<div class="max-w-lg mx-auto">
+    <div class="bg-gray-800 border border-gray-700 rounded-xl p-8 text-center">
+
+        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-900 border border-red-700 flex items-center justify-center">
+            <svg class="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M12 9v3.75m0 3.75h.01" />
+            </svg>
+        </div>
+
+        <p class="text-xs tracking-[0.2em] uppercase text-red-300 mb-2">Ticket Status</p>
+        <h1 class="text-2xl font-bold text-white mb-3">Flight Not Found</h1>
+
+        <p class="text-gray-300 text-sm mb-6">
+            This ticket exists, but the associated flight could not be found.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-3">
+            <a href="viewTicket.php" class="flex-1 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg">
+                Search Again
+            </a>
+            <a href="<?= BASE_URI ?>" class="flex-1 px-5 py-2.5 bg-gray-900 border border-gray-700 hover:bg-gray-700 rounded-lg">
+                Home
+            </a>
+        </div>
+
+    </div>
+</div>
+
+<?php elseif ($pageError === "flight_past"): ?>
+
+<div class="max-w-lg mx-auto">
+    <div class="bg-gray-800 border border-gray-700 rounded-xl p-8 text-center">
+
+        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-900 border border-amber-700 flex items-center justify-center">
+            <svg class="w-8 h-8 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M12 6v6l4 2" />
+            </svg>
+        </div>
+
+        <p class="text-xs tracking-[0.2em] uppercase text-amber-300 mb-2">Ticket Status</p>
+        <h1 class="text-2xl font-bold text-white mb-3">Flight Completed</h1>
+
+        <p class="text-gray-300 text-sm mb-6">
+            This flight has already departed and ticket details are no longer available.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-3">
+            <a href="<?= BASE_URI ?>/pages/booking/booking.php"
+               class="flex-1 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg">
+                Book Flight
+            </a>
+            <a href="<?= BASE_URI ?>"
+               class="flex-1 px-5 py-2.5 bg-gray-900 border border-gray-700 hover:bg-gray-700 rounded-lg">
+                Home
+            </a>
+        </div>
+
+    </div>
+</div>
+
+<?php elseif ($isCancelled): ?>
+
+<div class="max-w-lg mx-auto">
+    <div class="bg-gray-800 border border-gray-700 rounded-xl p-8 text-center">
+
+        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-900 border border-red-700 flex items-center justify-center">
+            <svg class="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M18.364 5.636 5.636 18.364M5.636 5.636l12.728 12.728" />
+            </svg>
+        </div>
+
+        <p class="text-xs tracking-[0.2em] uppercase text-red-300 mb-2">Ticket Status</p>
+        <h1 class="text-2xl font-bold text-white mb-3">Ticket Cancelled</h1>
+
+        <p class="text-gray-300 text-sm mb-4">
+            This ticket has been cancelled and is no longer valid for travel.
+        </p>
+
+        <div class="inline-flex items-center bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 mb-6">
+            <span class="font-mono text-sm text-white">
+                <?= htmlspecialchars($confirmation) ?>
+            </span>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3">
+            <a href="<?= BASE_URI ?>/pages/booking/booking.php"
+               class="flex-1 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg">
+                Book New Flight
+            </a>
+            <a href="<?= BASE_URI ?>"
+               class="flex-1 px-5 py-2.5 bg-gray-900 border border-gray-700 hover:bg-gray-700 rounded-lg">
+                Home
+            </a>
+        </div>
+
+    </div>
+</div>
 
 <?php else: ?>
- 
+
  
             <!-- ticket card -->
             <div class="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
@@ -289,23 +433,32 @@ $statusClass = match ($status) {
                             <p id="local-clock" class="text-xs text-slate-500 font-mono"></p>
                         </div>
                         <span id="flight-status" class="px-6 py-2 rounded-full text-xl font-semibold <?= $statusClass ?>">
-                            <?= htmlspecialchars($ticket['status']) ?>
+                            <?= htmlspecialchars($ticket["status"]) ?>
                         </span>
                     </div>
  
                     <!-- route -->
                     <div class="flex items-center gap-6 mb-10">
                         <div>
-                            <p class="text-5xl md:text-7xl font-semibold text-white leading-none"><?= htmlspecialchars($ticket['departure_airport']) ?></p>
-                            <p class="text-base text-slate-500 mt-2"><?= htmlspecialchars($ticket['departure_airport']) ?></p>
+                            <p class="text-5xl md:text-7xl font-semibold text-white leading-none"><?= htmlspecialchars(
+                                $ticket["departure_airport"]
+                            ) ?></p>
+                            <p class="text-base text-slate-500 mt-2"><?= htmlspecialchars(
+                                $ticket["departure_airport"]
+                            ) ?></p>
                         </div>
                         <div class="flex-1 flex flex-col items-center gap-3">
                             <div class="w-full h-px bg-slate-700"></div>
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="48" height="48" overflow="hidden"><g transform="translate(320, 320) rotate(0) scale(1, 1) translate(-320, -320)"><path fill="#60A5FA" d="M552 264c30.9 0 56 25.1 56 56s-25.1 56-56 56H424.7L265.5 549.6c-6.1 6.6-14.6 10.4-23.6 10.4h-43.7c-10.9 0-18.6-10.7-15.2-21.1L237.3 376h-99.7l-52.8 66c-3 3.8-7.6 6-12.5 6H52.5c-10.4 0-18-9.8-15.5-19.9L64 320L37 211.9c-2.6-10.1 5.1-19.9 15.5-19.9h19.8c4.9 0 9.5 2.2 12.5 6l52.8 66h99.7L183 101.1c-3.4-10.4 4.3-21.1 15.2-21.1h43.7c9 0 17.5 3.8 23.6 10.4L424.7 264z"/></g></svg>
                         </div>
                         <div class="text-right">
-                            <p class="text-5xl md:text-7xl font-semibold text-white leading-none"><?= htmlspecialchars($ticket['destination_airport_code']) ?></p>
-                            <p class="text-base text-slate-500 mt-2"><?= htmlspecialchars($ticket['destination_display'] ?: $ticket['destination_airport_code']) ?></p>
+                            <p class="text-5xl md:text-7xl font-semibold text-white leading-none"><?= htmlspecialchars(
+                                $ticket["destination_airport_code"]
+                            ) ?></p>
+                            <p class="text-base text-slate-500 mt-2"><?= htmlspecialchars(
+                                $ticket["destination_display"] ?:
+                                $ticket["destination_airport_code"]
+                            ) ?></p>
                         </div>
                     </div>
  
@@ -313,20 +466,28 @@ $statusClass = match ($status) {
                     <div class="grid grid-cols-2 md:flex justify-center gap-4">
                        <div class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-6 py-6 text-center hover:shadow-xl hover:-translate-y-1 hover:border-blue-500 transition duration-300">
                             <p class="text-xs tracking-widest text-slate-500 uppercase mb-3">Seat</p>
-                            <p class="text-4xl font-semibold text-blue-400"><?= htmlspecialchars($ticket['seat']) ?></p>
+                            <p class="text-4xl font-semibold text-blue-400"><?= htmlspecialchars(
+                                $ticket["seat"]
+                            ) ?></p>
                         </div>
                         <div class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-6 py-6 text-center hover:shadow-xl hover:-translate-y-1 hover:border-blue-500 transition duration-300">
                             <p class="text-xs tracking-widest text-slate-500 uppercase mb-3">Gate</p>
-                            <p id="gate" class="text-4xl font-semibold text-blue-400"><?= htmlspecialchars($ticket['gate']) ?></p>
+                            <p id="gate" class="text-4xl font-semibold text-blue-400"><?= htmlspecialchars(
+                                $ticket["gate"]
+                            ) ?></p>
                         </div>
                         <div class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-6 py-6 text-center hover:shadow-xl hover:-translate-y-1 hover:border-blue-500 transition duration-300">
                             <p class="text-xs tracking-widest text-slate-500 uppercase mb-3">Departs</p>
-                            <p id="departure-time" class="text-2xl font-semibold text-blue-400 mt-1"><?= htmlspecialchars($ticket['departure_time']) ?></p>
+                            <p id="departure-time" class="text-2xl font-semibold text-blue-400 mt-1"><?= htmlspecialchars(
+                                $ticket["departure_time"]
+                            ) ?></p>
                             <p id="departure-date" class="text-[10px] text-slate-600 uppercase tracking-tighter mt-1"></p>
                         </div>
                         <div class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-6 py-6 text-center hover:shadow-xl hover:-translate-y-1 hover:border-blue-500 transition duration-300">
                             <p class="text-xs tracking-widest text-slate-500 uppercase mb-3">Arrives</p>
-                            <p id="arrival-time" class="text-2xl font-semibold text-blue-400 mt-1"><?= htmlspecialchars($ticket['arrival_time']) ?></p>
+                            <p id="arrival-time" class="text-2xl font-semibold text-blue-400 mt-1"><?= htmlspecialchars(
+                                $ticket["arrival_time"]
+                            ) ?></p>
                             <p id="arrival-date" class="text-[10px] text-slate-600 uppercase tracking-tighter mt-1"></p>
                         </div>
                     </div>
@@ -344,28 +505,50 @@ $statusClass = match ($status) {
  
                     <!-- Passenger -->
                     <p class="text-xs tracking-widest text-slate-500 uppercase mb-2">Passenger</p>
-                    <p class="text-2xl font-semibold text-white mb-6"><?= htmlspecialchars($ticket['passenger_name']) ?></p>
+                    <p class="text-2xl font-semibold text-white mb-6"><?= htmlspecialchars(
+                        $ticket["passenger_name"]
+                    ) ?></p>
  
                     <!-- Detail rows -->
                     <div>
                         <div class="flex justify-between py-3 border-b border-slate-700/50">
                             <span class="text-sm text-slate-500">Airline / Flight</span>
-                            <span class="text-sm text-slate-300"><?= htmlspecialchars($ticket['airline']) ?> <?= htmlspecialchars($ticket['flight_number']) ?></span>
+                            <span class="text-sm text-slate-300"><?= htmlspecialchars(
+                                $ticket["airline"]
+                            ) ?> <?= htmlspecialchars(
+     $ticket["flight_number"]
+ ) ?></span>
                         </div>
                         <div class="flex justify-between items-start py-3 border-b border-slate-700/50">
                             <span class="text-sm text-slate-500">Destination</span>
                             <span class="text-sm text-right">
-                                <div class="text-slate-300 font-semibold"><?= htmlspecialchars($ticket['destination_airport_name']) ?></div>
-                                <div class="text-slate-500 mt-0.5"><?= htmlspecialchars(implode(', ', array_filter([$ticket['destination_city'] ?? '', $ticket['destination_state'] ?? '', $ticket['destination_country'] ?? '']))) ?></div>
+                                <div class="text-slate-300 font-semibold"><?= htmlspecialchars(
+                                    $ticket["destination_airport_name"]
+                                ) ?></div>
+                                <div class="text-slate-500 mt-0.5"><?= htmlspecialchars(
+                                    implode(
+                                        ", ",
+                                        array_filter([
+                                            $ticket["destination_city"] ?? "",
+                                            $ticket["destination_state"] ?? "",
+                                            $ticket["destination_country"] ??
+                                            "",
+                                        ])
+                                    )
+                                ) ?></div>
                             </span>
                         </div>
                         <div class="flex justify-between py-3 border-b border-slate-700/50">
                             <span class="text-sm text-slate-500">Ticket ID</span>
-                            <span class="text-sm font-mono text-slate-400"><?= htmlspecialchars($ticket['ticket_id']) ?></span>
+                            <span class="text-sm font-mono text-slate-400"><?= htmlspecialchars(
+                                $ticket["ticket_id"]
+                            ) ?></span>
                         </div>
                         <div class="flex justify-between py-3">
                             <span class="text-sm text-slate-500">Flight type</span>
-                            <span class="text-sm text-slate-300"><?= htmlspecialchars($ticket['flight_type']) ?></span>
+                            <span class="text-sm text-slate-300"><?= htmlspecialchars(
+                                $ticket["flight_type"]
+                            ) ?></span>
                         </div>
                     </div>
  
@@ -373,7 +556,9 @@ $statusClass = match ($status) {
                     <div class="flex justify-between items-center mt-8 pt-6 border-t border-slate-700">
                         <div>
                             <p class="text-xs tracking-widest text-slate-500 uppercase mb-2">Confirmation</p>
-                            <p class="font-mono text-blue-400 text-2xl tracking-widest"><?= htmlspecialchars($ticket['confirmation_number']) ?></p>
+                            <p class="font-mono text-blue-400 text-2xl tracking-widest"><?= htmlspecialchars(
+                                $ticket["confirmation_number"]
+                            ) ?></p>
                         </div>
                         
                         <button onclick="confirmDeleteTicket()" 
@@ -381,7 +566,9 @@ $statusClass = match ($status) {
                             Delete Ticket
                         </button>
 
-                        <a href="downloadTicket.php?confirmation=<?= urlencode($ticket['confirmation_number']) ?>"  
+                        <a href="downloadTicket.php?confirmation=<?= urlencode(
+                            $ticket["confirmation_number"]
+                        ) ?>"  
                                 data-skip-loader
                                class="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm rounded-xl transition duration-150">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -474,7 +661,7 @@ async function refreshTicketFlightStatus() {
 
 //ticket deletion
 async function confirmDeleteTicket() {
-    const confirmation = "<?= $ticket['confirmation_number'] ?? '' ?>";
+    const confirmation = "<?= $ticket["confirmation_number"] ?? "" ?>";
     if (!confirmation) return;
 
     if (!confirm("Are you sure you want to delete this ticket? This action cannot be undone.")) {
