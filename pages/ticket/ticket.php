@@ -4,9 +4,6 @@ require_once __DIR__ . '/../../api/api.php';
 require_once __DIR__ . '/../../database/db.php';
 require_once __DIR__ . '/../../components/config.php';
 
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
@@ -220,7 +217,7 @@ $statusClass = match ($status) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Flight Ticket</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="icon" href="<?= BASE_URL ?>/favicon.ico" type="image/x-icon">
+<link rel="icon" href="<?= BASE_URI ?>/favicon.ico" type="image/x-icon">
 </head>
  
 <body class="bg-gray-900 min-h-screen text-white">
@@ -266,7 +263,7 @@ $statusClass = match ($status) {
 <p class="text-slate-400 text-base text-center">
     This ticket has been cancelled and is no longer valid for travel.
     You can rebook a ticket at
-    <a href="<?= BASE_URL ?>/pages/booking/booking.php" class="text-blue-400 underline">
+    <a href="<?= BASE_URI ?>/pages/booking/booking.php" class="text-blue-400 underline">
         the booking page
     </a>.
 </p>

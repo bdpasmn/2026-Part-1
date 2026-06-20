@@ -3,9 +3,6 @@
     require_once __DIR__ . '/../../database/db.php';
     require_once __DIR__ . '/../../components/config.php';
 
-    ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
 
     if (empty($_SESSION['captcha_num1']) || empty($_SESSION['captcha_num2']) || $_SERVER['REQUEST_METHOD'] === 'GET') {
         $_SESSION['captcha_num1'] = rand(1, 10);
@@ -92,7 +89,7 @@ error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
                 $_SESSION["user_id"] = $userId;
                 $_SESSION["role"] = "Customer";
                 unset($_SESSION['captcha_num1'], $_SESSION['captcha_num2']);
-                header("Location: " . BASE_URL . "/pages/dashboard/customer/customer.php");
+                header("Location: " . BASE_URI . "/pages/dashboard/customer/customer.php");
                 exit();
             } catch (Throwable $e) {
                 if ($pdo->inTransaction()) {
@@ -117,7 +114,7 @@ error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
     <head>
         <title> Create Account </title>
         <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"> </script>
-        <link rel="icon" href="<?= BASE_URL ?>/favicon.ico" type="image/x-icon">
+        <link rel="icon" href="<?= BASE_URI ?>/favicon.ico" type="image/x-icon">
     </head>
     <body class="bg-gray-900 min-h-screen text-white flex flex-col">
         <div class="w-full min-h-screen bg-gray-900">

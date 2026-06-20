@@ -3,24 +3,20 @@
     require_once "../../database/db.php";
     require_once __DIR__ . '/../../components/config.php';
 
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
-
     $message = '';
 
     function getDashboardUrl($role) {
         switch ($role) {
             case 'Admin':
-                return BASE_URL . '/pages/dashboard/admin/admin.php';
+                return BASE_URI . '/pages/dashboard/admin/admin.php';
             case 'Root':
-                return BASE_URL . '/pages/dashboard/root/root.php';
+                return BASE_URI . '/pages/dashboard/root/root.php';
             case 'Customer':
             default:
-                return BASE_URL . '/pages/dashboard/customer/customer.php';
+                return BASE_URI . '/pages/dashboard/customer/customer.php';
         }
     }
-    if (!isset($_SESSION['id']) && isset($_COOKIE['remember_me'])) {
+    if (!isset($_SESSION['user_id']) && isset($_COOKIE['remember_me'])) {
         [$cookieId, $cookieToken] = explode('|', $_COOKIE['remember_me'], 2);
         $expectedToken = hash_hmac('sha256', $cookieId, SECRET_KEY);
         if (hash_equals($expectedToken, $cookieToken)) {
@@ -40,7 +36,7 @@ error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
                 $_SESSION['role'] = $user['role'];
                 $_SESSION['remembered'] = true;
                 header("Location: " . getDashboardUrl($user['role']));
-                exit();
+                 exit();
             }
         }
         setcookie('remember_me', '', time() - 3600, '/');
@@ -83,7 +79,7 @@ error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
                     $_SESSION['email'] = $row['email'];
                     $_SESSION['user'] = $row['title'];
                     $_SESSION['name'] = $row['first_name'];
-                    $_SESSION['id'] = $row['user_id'];
+                    $_SESSION['user_id'] = $row['user_id'];
                     $_SESSION['role'] = $row['role'];
                     $pdo->prepare('
                         UPDATE "Users" SET failed_attempts = 0, last_failed_at = NULL
@@ -122,8 +118,9 @@ error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
 </head>
 
     <body class="bg-gray-900 min-h-screen text-white flex flex-col">
-        <div class="w-full min-h-screen bg-gray-900">
+        
             <?php include __DIR__ . '/../../components/nav.php'; ?>
+        <div class="w-full min-h-screen bg-gray-900">
             <main class="flex-grow flex items-center justify-center p-6">
                 <div class="w-full max-w-3xl space-y-6">
 <div class="bg-gray-800 border border-gray-700 rounded-xl p-10 text-center relative overflow-hidden">
@@ -211,7 +208,7 @@ error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
                         Remember me
                     </label>
 
-                    <a href="<?= BASE_URL ?>/pages/accountRecovery/recovery.php"
+                    <a href="<?= BASE_URI ?>/pages/accountRecovery/recovery.php"
                         class="text-blue-400 hover:text-blue-300">
                         Forgot password?
                     </a>

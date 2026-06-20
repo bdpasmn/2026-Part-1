@@ -24,7 +24,7 @@
     $isLoggedIn = isset($_SESSION['user_id']);
     $userFullName = "Guest";
     $role = $_SESSION['role'] ?? 'guest';
-
+    
     if ($isLoggedIn) {
         $stmt = $pdo->prepare('SELECT first_name, last_name FROM "Users" WHERE user_id = ?');
         $stmt->execute([$_SESSION['user_id']]);
