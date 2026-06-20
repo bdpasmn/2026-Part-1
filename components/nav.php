@@ -299,3 +299,28 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 </script>
+
+<?php if ($isLoggedIn): ?>
+<script>
+(function () {
+    const minutes = window.__autoLogoutMinutes;
+    if (!minutes || isNaN(minutes)) return;
+
+    const timeoutMs = minutes * 60 * 1000;
+    let timer = setTimeout(doLogout, timeoutMs);
+
+    function doLogout() {
+        window.location.href = "<?= BASE_URL ?>/pages/auth/logout.php";
+    }
+
+    function resetTimer() {
+        clearTimeout(timer);
+        timer = setTimeout(doLogout, timeoutMs);
+    }
+
+    ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evt => {
+        document.addEventListener(evt, resetTimer, { passive: true });
+    });
+})();
+</script>
+<?php endif; ?>

@@ -12,6 +12,49 @@
     $flightId = $_POST['flight_id'];
     $seat = $_POST['seat'];
 
+        $cardNumber = preg_replace('/\D/', '', $_POST['card_number'] ?? '');
+        $expirationDate = trim($_POST['expiration_date'] ?? '');
+        $cvc = preg_replace('/\D/', '', $_POST['cvc'] ?? '');
+        $zipCode = trim($_POST['zip_code'] ?? '');
+
+        $phone = preg_replace('/\D/', '', $_POST['phone'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            header("Location: bookingFailed.php?" . http_build_query([
+                'message' => 'Please enter a valid email address.'
+            ]));
+            exit;
+        }
+
+        if (strlen($cardNumber) < 13 || strlen($cardNumber) > 19) {
+            header("Location: bookingFailed.php?" . http_build_query([
+                'message' => 'Please enter a valid card number.'
+            ]));
+            exit;
+        }
+
+        if (!preg_match('/^(0[1-9]|1[0-2])\/\d{2}$/', $expirationDate)) {
+            header("Location: bookingFailed.php?" . http_build_query([
+                'message' => 'Please enter a valid expiration date (MM/YY).'
+            ]));
+            exit;
+        }
+
+        if (!preg_match('/^\d{3,4}$/', $cvc)) {
+            header("Location: bookingFailed.php?" . http_build_query([
+                'message' => 'Please enter a valid CVC.'
+            ]));
+            exit;
+        }
+
+        if (!preg_match('/^\d{5}(-\d{4})?$/', $zipCode)) {
+            header("Location: bookingFailed.php?" . http_build_query([
+                'message' => 'Please enter a valid ZIP code.'
+            ]));
+            exit;
+        }
+
     $first = strtolower(trim($_POST['first_name'] ?? ''));
     $middle = strtolower(trim($_POST['middle_name'] ?? ''));
     $last = strtolower(trim($_POST['last_name'] ?? ''));
@@ -117,8 +160,8 @@
         $_POST['sex'],
         $_POST['dob'],
     
-        $_POST['phone'],
-        $_POST['email'],
+        $phone,
+        $email,
     
         intval($_POST['bags_carried']),
         intval($_POST['bags_checked']),

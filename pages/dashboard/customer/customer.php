@@ -1,12 +1,25 @@
 <?php
-session_start();
+//session_start();
 
 require_once '../../../api/key.php';
 require_once '../../../api/api.php';
 require_once '../../../database/db.php';
+session_start();
 
+$stmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
+$stmt->execute([$_SESSION['user_id']]);
+$dbUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if (!$_SESSION['user_id']) {
+if (!$dbUser) {
+    die("User not found.");
+}
+
+if (strtolower($_SESSION['role'] ?? '') !== 'customer') {
+    header('Location: ../../../index.php');
+    exit;
+}
+
+ if (!$_SESSION['user_id']) {
   header('Location: ../../../index.php');
   exit;
 }
@@ -22,12 +35,25 @@ if (!$dbUser) {
 if (strtolower($_SESSION['role'] ?? '') !== 'customer') {
     header('Location: ../../../index.php');
     exit;
-}
+} 
 
 if (!isset($_SESSION['last_login_ip'])) {
     $_SESSION['last_login_ip']       = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
     $_SESSION['last_login_datetime'] = date('Y-m-d H:i:s');
 }
+
+function decodePrefs($raw): array {
+    $defaults = [
+        'flight_sort'  => 'time_asc',
+        'auto_logout'  => '15',
+    ];
+    if (!$raw) return $defaults;
+    $decoded = json_decode($raw, true);
+    if (!is_array($decoded)) return $defaults;
+    return array_merge($defaults, $decoded);
+}
+
+$prefs = decodePrefs($dbUser['sort_preference'] ?? null);
 
 $currentUser = [
     'id'                  => $_SESSION['user_id'],
@@ -38,15 +64,37 @@ $currentUser = [
     'phone'               => $dbUser['phone']       ?? '',
     'last_login_ip'       => $_SESSION['last_login_ip'],
     'last_login_datetime' => $_SESSION['last_login_datetime'],
-    'auto_logout'         => $_SESSION['auto_logout_' . $_SESSION['user_id']]  ?? '15',
-    'flight_sort'         => $_SESSION['flight_sort_' . $_SESSION['user_id']]  ?? 'date_asc',
+    'auto_logout'         => $prefs['auto_logout'],
+    'flight_sort'         => $prefs['flight_sort'],
 ];
+
+// ---- Force-complete-profile check ----
+$requiredProfileFields = [
+    'email'          => $dbUser['email']          ?? '',
+    'phone'          => $dbUser['phone']           ?? '',
+    'street_address' => $dbUser['street_address']  ?? '',
+    'city'           => $dbUser['city']            ?? '',
+    'state'          => $dbUser['state']           ?? '',
+    'zip_code'       => $dbUser['zip_code']         ?? '',
+    'date_birth'     => $dbUser['date_birth']       ?? ($dbUser['date_of_birth'] ?? ''),
+];
+$missingProfileFields = [];
+foreach ($requiredProfileFields as $key => $val) {
+    if (trim((string)$val) === '') {
+        $missingProfileFields[] = $key;
+    }
+}
+$missingPassword = trim((string)($dbUser['password'] ?? '')) === '';
+$profileIncomplete = !empty($missingProfileFields) || $missingPassword;
+
+$activeTab = $_GET['tab'] ?? 'overview';
+$needsFlightDetails = in_array($activeTab, ['overview', 'flights'], true);
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
 $airlinesData   = $api->getAirlines();
 $airportsData   = $api->getAirports();
-$allFlightsData = $api->getAllFlights();
+$allFlightsData = $needsFlightDetails ? $api->getAllFlights() : null;
 
 $airlinesMap = [];
 if ($airlinesData && isset($airlinesData['airlines'])) {
@@ -114,70 +162,98 @@ $now = time();
 
 $upcomingFlights = [];
 $pastFlights = [];
+$linkedFlightIds = [];
 
-foreach ($userTickets as $ticket) {
-  if (strtolower($ticket['status'] ?? '') == 'cancelled') {
-    continue;
-  }
-  $fid = $ticket['flight_id'] ?? '';
-  $flightRaw = getFlightById($api, $fid);
+if ($needsFlightDetails) {
+    foreach ($userTickets as $ticket) {
+      if (strtolower($ticket['status'] ?? '') == 'cancelled') {
+        continue;
+      }
+      $fid = $ticket['flight_id'] ?? '';
+      if ($fid) $linkedFlightIds[] = $fid;
+      $flightRaw = getFlightById($api, $fid);
 
-  if ($flightRaw) {
-      $flight = normalizeFlight($flightRaw);
-  } else {
-      $flight = [
-          'flight_id' => $fid,
-          'flightNumber' => $fid,
-          'destination' => '—',
-          'departureTime' => 0,
-          'arrivalTime' => 0,
-          'airline' => '—',
-          'status' => '—',
+      if ($flightRaw) {
+          $flight = normalizeFlight($flightRaw);
+      } else {
+          $flight = [
+              'flight_id' => $fid,
+              'flightNumber' => $fid,
+              'destination' => '—',
+              'departureTime' => 0,
+              'arrivalTime' => 0,
+              'airline' => '—',
+              'status' => '—',
+          ];
+      }
+
+      $row = [
+          'ticket' => $ticket,
+          'flight' => $flight,
       ];
-  }
 
-  $row = [
-      'ticket' => $ticket,
-      'flight' => $flight,
-  ];
+      $depTs = (int)($flight['departureTime'] ?? 0);
 
-  $depTs = (int)($flight['departureTime'] ?? 0);
-
-  if ($depTs >= $now || $depTs === 0) {
-      $upcomingFlights[] = $row;
-  } else {
-      $pastFlights[] = $row;
-  }
+      if ($depTs >= $now || $depTs === 0) {
+          $upcomingFlights[] = $row;
+      } else {
+          $pastFlights[] = $row;
+      }
+    }
+} else {
+    foreach ($userTickets as $ticket) {
+        if (strtolower($ticket['status'] ?? '') == 'cancelled') continue;
+        $fid = $ticket['flight_id'] ?? '';
+        if ($fid) $linkedFlightIds[] = $fid;
+    }
 }
 
 $sortKey = $currentUser['flight_sort'];
 
-usort($upcomingFlights, function ($a, $b) use ($sortKey) {
+function sortFlightRows(array $rows, string $sortKey): array {
+    usort($rows, function ($a, $b) use ($sortKey) {
+        $fa = $a['flight'];
+        $fb = $b['flight'];
 
-  $fa = $a['flight'];
-  $fb = $b['flight'];
+        return match ($sortKey) {
+            'time_asc' =>
+                ($fa['departureTime'] ?? 0) <=> ($fb['departureTime'] ?? 0),
 
-  return match ($sortKey) {
-      'date_desc' =>
-          ($fb['departureTime'] ?? 0) <=> ($fa['departureTime'] ?? 0),
+            'time_desc' =>
+                ($fb['departureTime'] ?? 0) <=> ($fa['departureTime'] ?? 0),
 
-      'flight_asc' =>
-          ($fa['flightNumber'] ?? '') <=> ($fb['flightNumber'] ?? ''),
+            'airline_asc' =>
+                ($fa['airline'] ?? '') <=> ($fb['airline'] ?? ''),
 
-      'airline_asc' =>
-          ($fa['airline'] ?? '') <=> ($fb['airline'] ?? ''),
+            'airline_desc' =>
+                ($fb['airline'] ?? '') <=> ($fa['airline'] ?? ''),
 
-      default =>
-          ($fa['departureTime'] ?? 0) <=> ($fb['departureTime'] ?? 0),
-  };
-});
+            'gate_asc' =>
+                ($fa['gate'] ?? '') <=> ($fb['gate'] ?? ''),
+
+            'gate_desc' =>
+                ($fb['gate'] ?? '') <=> ($fa['gate'] ?? ''),
+
+            default =>
+                ($fa['departureTime'] ?? 0) <=> ($fb['departureTime'] ?? 0),
+        };
+    });
+    return $rows;
+}
+
+$upcomingFlights = sortFlightRows($upcomingFlights, $sortKey);
 
 usort($pastFlights, function ($a, $b) {
   return ($b['flight']['departureTime'] ?? 0)
       <=> ($a['flight']['departureTime'] ?? 0);
 });
 
-$activeTab  = $_GET['tab'] ?? 'overview';
+// Force incomplete profiles onto the profile tab
+if ($profileIncomplete && $activeTab !== 'profile') {
+    header('Location: ?tab=profile');
+    exit;
+}
+
 $updateMsg  = $_SESSION['flash_msg']          ?? null;
 $guestMsg   = $_SESSION['flash_guest_msg']    ?? null;
 $guestError = $_SESSION['flash_guest_error']  ?? null;
@@ -186,54 +262,97 @@ unset($_SESSION['flash_msg'], $_SESSION['flash_guest_msg'], $_SESSION['flash_gue
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     if ($_POST['action'] === 'update_profile') {
-        $email  = trim($_POST['email']  ?? '');
-        $phone  = trim($_POST['phone']  ?? '');
-        $street = trim($_POST['street'] ?? '');
-        $city   = trim($_POST['city']   ?? '');
-        $state  = trim($_POST['state']  ?? '');
-        $zip    = trim($_POST['zip']    ?? '');
-        $upd = $pdo->prepare(
-            'UPDATE "Users" SET email=?, phone=?, street_address=?, city=?, state=?, zip_code=? WHERE user_id=?'
-        );
-        $upd->execute([$email, $phone, $street, $city, $state, $zip, $_SESSION['user_id']]);
+        $email      = trim($_POST['email']      ?? '');
+        $phone      = trim($_POST['phone']       ?? '');
+        $street     = trim($_POST['street']      ?? '');
+        $city       = trim($_POST['city']        ?? '');
+        $state      = trim($_POST['state']       ?? '');
+        $zip        = trim($_POST['zip']         ?? '');
+        $dob        = trim($_POST['date_birth']  ?? '');
+        $newPass    = trim($_POST['new_password']     ?? '');
+        $confirmPass = trim($_POST['confirm_password'] ?? '');
+
+        $errors = [];
+        if ($email === '')  $errors[] = 'Email is required.';
+        if ($phone === '')  $errors[] = 'Phone is required.';
+        if ($street === '') $errors[] = 'Street address is required.';
+        if ($city === '')   $errors[] = 'City is required.';
+        if ($state === '')  $errors[] = 'State is required.';
+        if ($zip === '')    $errors[] = 'ZIP code is required.';
+        if ($dob === '')    $errors[] = 'Date of birth is required.';
+
+        if ($missingPassword) {
+            if ($newPass === '' || $confirmPass === '') {
+                $errors[] = 'Password is required.';
+            } elseif ($newPass !== $confirmPass) {
+                $errors[] = 'Passwords do not match.';
+            } elseif (strlen($newPass) < 8) {
+                $errors[] = 'Password must be at least 8 characters.';
+            }
+        }
+
+        if (!empty($errors)) {
+            $_SESSION['flash_profile_error'] = implode(' ', $errors);
+            header('Location: ?tab=profile');
+            exit;
+        }
+
+        if ($missingPassword && $newPass !== '') {
+            $upd = $pdo->prepare(
+                'UPDATE "Users" SET email=?, phone=?, street_address=?, city=?, state=?, zip_code=?, date_birth=?, password=? WHERE user_id=?'
+            );
+            $upd->execute([$email, $phone, $street, $city, $state, $zip, $dob, $newPass, $_SESSION['user_id']]);
+        } else {
+            $upd = $pdo->prepare(
+                'UPDATE "Users" SET email=?, phone=?, street_address=?, city=?, state=?, zip_code=?, date_birth=? WHERE user_id=?'
+            );
+            $upd->execute([$email, $phone, $street, $city, $state, $zip, $dob, $_SESSION['user_id']]);
+        }
+
         $_SESSION['flash_msg'] = 'Profile updated successfully.';
         header('Location: ?tab=profile');
         exit;
     }
 
     if ($_POST['action'] === 'update_preferences') {
+        $newPrefs = $prefs;
+
         if (in_array($_POST['auto_logout'] ?? '', ['5', '15', '60'])) {
-            $_SESSION['auto_logout_' . $_SESSION['user_id']] = $_POST['auto_logout'];
+            $newPrefs['auto_logout'] = $_POST['auto_logout'];
         }
-        $sortOpts = ['date_asc', 'date_desc', 'flight_asc', 'airline_asc'];
+        $sortOpts = ['time_asc', 'time_desc', 'airline_asc', 'airline_desc', 'gate_asc', 'gate_desc'];
         if (in_array($_POST['flight_sort'] ?? '', $sortOpts)) {
-            $_SESSION['flight_sort_' . $_SESSION['user_id']] = $_POST['flight_sort'];
+            $newPrefs['flight_sort'] = $_POST['flight_sort'];
         }
+
+        $upd = $pdo->prepare('UPDATE "Users" SET sort_preference = ? WHERE user_id = ?');
+        $upd->execute([json_encode($newPrefs), $_SESSION['user_id']]);
+
         $_SESSION['flash_msg'] = 'Preferences saved.';
         header('Location: ?tab=preferences');
         exit;
     }
 
     if ($_POST['action'] === 'add_guest_flight') {
-        $conf     = trim($_POST['confirmation_number'] ?? '');
-        $lastName = strtolower(trim($_POST['last_name'] ?? ''));
-        $userLast = strtolower($dbUser['last_name'] ?? '');
+        $conf = trim($_POST['confirmation_number'] ?? '');
 
-        if ($conf === '' || $lastName === '') {
-            $_SESSION['flash_guest_error'] = 'Please fill in both fields.';
-        } elseif ($lastName !== $userLast) {
-            $_SESSION['flash_guest_error'] = 'Last name does not match the name on the ticket.';
+        if ($conf === '') {
+            $_SESSION['flash_guest_error'] = 'Please enter a confirmation code.';
         } else {
             $tStmt = $pdo->prepare('SELECT * FROM "Tickets" WHERE UPPER(confirmation_code) = UPPER(?) LIMIT 1');
             $tStmt->execute([$conf]);
             $foundTicket = $tStmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($foundTicket) {
-                $upd = $pdo->prepare('UPDATE "Tickets" SET user_id = ? WHERE ticket_id = ? AND (user_id IS NULL OR user_id = ?)');
-                $upd->execute([$_SESSION['user_id'], $foundTicket['ticket_id'], $_SESSION['user_id']]);
-                $_SESSION['flash_guest_msg'] = "Booking {$conf} has been linked to your account.";
-            } else {
+            if (!$foundTicket) {
                 $_SESSION['flash_guest_error'] = "No booking found with confirmation code \"{$conf}\".";
+            } elseif ((int)($foundTicket['user_id'] ?? 0) === (int)$_SESSION['user_id']) {
+                $_SESSION['flash_guest_error'] = 'This booking is already linked to your account.';
+            } elseif (!empty($foundTicket['user_id'])) {
+                $_SESSION['flash_guest_error'] = 'This booking is already linked to another account.';
+            } else {
+                $upd = $pdo->prepare('UPDATE "Tickets" SET user_id = ? WHERE ticket_id = ? AND user_id IS NULL');
+                $upd->execute([$_SESSION['user_id'], $foundTicket['ticket_id']]);
+                $_SESSION['flash_guest_msg'] = "Booking {$conf} has been linked to your account.";
             }
         }
         header('Location: ?tab=flights');
@@ -274,7 +393,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         header('Location: ?tab=payment');
         exit;
     }
+
+    if ($_POST['action'] === 'delete_account') {
+        $uid = $_SESSION['user_id'];
+
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare('DELETE FROM "Saved Cards" WHERE user_id = ?')->execute([$uid]);
+            $pdo->prepare('DELETE FROM "Tickets" WHERE user_id = ?')->execute([$uid]);
+            $pdo->prepare('DELETE FROM "Users" WHERE user_id = ?')->execute([$uid]);
+            $pdo->commit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $_SESSION['flash_msg'] = 'Could not delete account. Please try again.';
+            header('Location: ?tab=preferences');
+            exit;
+        }
+
+        session_unset();
+        session_destroy();
+        header('Location: ../../../index.php');
+        exit;
+    }
 }
+
+$profileError = $_SESSION['flash_profile_error'] ?? null;
+unset($_SESSION['flash_profile_error']);
 
 function dashFormatTs($ts): string {
   if (!$ts) return '—';
@@ -321,9 +465,14 @@ body { font-family: 'Inter', sans-serif; }
 .tab-active   { background: rgb(37 99 235); color: white; }
 .tab-inactive { color: rgb(156 163 175); }
 .tab-inactive:hover { color: white; background: rgb(55 65 81); }
+.tab-disabled { color: rgb(75 85 99); pointer-events: none; cursor: not-allowed; }
 </style>
 </head>
 <body class="bg-gray-900 min-h-screen text-white">
+
+<script>
+window.__autoLogoutMinutes = <?= (int)$currentUser['auto_logout'] ?>;
+</script>
 
 <?php include_once __DIR__ . '/../../../components/nav.php'; ?>
 
@@ -345,6 +494,12 @@ body { font-family: 'Inter', sans-serif; }
     </div>
   </div>
 
+  <?php if ($profileIncomplete): ?>
+  <div class="mb-4 bg-amber-900/30 border border-amber-700 rounded-lg px-5 py-3 text-amber-400 text-sm">
+    ⚠ Please complete your profile<?= $missingPassword ? ' and set a password' : '' ?> before continuing.
+  </div>
+  <?php endif; ?>
+
   <?php if ($updateMsg): ?>
   <div class="mb-4 bg-emerald-900/30 border border-emerald-700 rounded-lg px-5 py-3 text-emerald-400 text-sm">
     ✓ <?= htmlspecialchars($updateMsg) ?>
@@ -361,9 +516,10 @@ body { font-family: 'Inter', sans-serif; }
       'preferences' => 'Preferences',
     ];
     foreach ($tabs as $key => $label):
-      $cls = ($activeTab === $key) ? 'tab-active' : 'tab-inactive';
+      $isLocked = $profileIncomplete && $key !== 'profile';
+      $cls = $isLocked ? 'tab-disabled' : (($activeTab === $key) ? 'tab-active' : 'tab-inactive');
     ?>
-    <a href="?tab=<?= $key ?>" class="px-4 py-2 rounded-md text-sm font-medium transition <?= $cls ?>">
+    <a href="<?= $isLocked ? '#' : '?tab=' . $key ?>" class="px-4 py-2 rounded-md text-sm font-medium transition <?= $cls ?>">
       <?= $label ?>
     </a>
     <?php endforeach; ?>
@@ -403,7 +559,7 @@ body { font-family: 'Inter', sans-serif; }
             <th class="text-left px-5 py-3">Departure</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="overview-flights-body">
 <?php if (!empty($upcomingFlights)): ?>
 
     <?php foreach (array_slice($upcomingFlights, 0, 5) as $row):
@@ -411,11 +567,12 @@ body { font-family: 'Inter', sans-serif; }
         $f = $row['flight'];
         $ticket = $row['ticket'];
         $fid = $f['flight_id'] ?? '';
+        $isPast = (int)($f['departureTime'] ?? 0) > 0 && (int)$f['departureTime'] < $now;
     ?>
 
     <tr data-flight-id="<?= htmlspecialchars($fid) ?>"
-        class="border-t border-gray-700 hover:bg-gray-700/40 transition cursor-pointer"
-        onclick="window.location='../../ticket/ticket.php?confirmation=<?= urlencode($ticket['confirmation_code'] ?? '') ?>'">
+        class="border-t border-gray-700 hover:bg-gray-700/40 transition <?= $isPast ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer' ?>"
+        <?php if (!$isPast): ?>onclick="window.location='../../ticket/ticket.php?confirmation=<?= urlencode($ticket['confirmation_code'] ?? '') ?>'"<?php endif; ?>>
 
         <td class="px-5 py-4 font-semibold">
             <?= htmlspecialchars($f['flightNumber'] ?? $fid ?: '—') ?>
@@ -479,19 +636,18 @@ body { font-family: 'Inter', sans-serif; }
   <div class="relative group cursor-help">
     <span class="text-gray-400 hover:text-gray-200">?</span>
 
-    <div class="absolute left-1/2 -translate-x-1/2 top-6 w-72 bg-gray-900 border border-gray-700 text-xs text-gray-300 rounded-lg p-3 shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition z-50">If you have ever booked a flight as a guest, you can enter that confirmation number here. If your last name matches the ticket, the flight will be linked to your account as if it was purchased while logged in.</div>
+    <div class="absolute left-1/2 -translate-x-1/2 top-6 w-72 bg-gray-900 border border-gray-700 text-xs text-gray-300 rounded-lg p-3 shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition z-50">If you have ever booked a flight as a guest, you can enter that confirmation number here and the flight will be linked to your account as if it was purchased while logged in.</div>
   </div>
 </h3>
-    <form method="POST" class="flex flex-wrap gap-3">
+    <form method="POST" id="guest-flight-form" class="flex flex-wrap gap-3">
       <input type="hidden" name="action" value="add_guest_flight">
-      <input type="text" name="confirmation_number" placeholder="Confirmation code (e.g. E5920205)"
+      <input type="text" name="confirmation_number" placeholder="Confirmation code (e.g. E5920205)" required
         class="flex-1 min-w-[180px] h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
-      <input type="text" name="last_name" placeholder="Last name on ticket"
-        class="flex-1 min-w-[160px] h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
       <button type="submit" class="h-10 px-5 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition">
         Link Booking
       </button>
     </form>
+    <p id="guest-flight-msg" class="mt-3 text-sm hidden"></p>
   </div>
 
   <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden mb-6">
@@ -512,19 +668,20 @@ body { font-family: 'Inter', sans-serif; }
             <th class="text-left px-5 py-3">Arrival</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="upcoming-flights-body">
 <?php if (!empty($upcomingFlights)): ?>
 
-    <?php foreach (array_slice($upcomingFlights, 0, 5) as $row):
+    <?php foreach ($upcomingFlights as $row):
 
         $f = $row['flight'];
         $ticket = $row['ticket'];
         $fid = $f['flight_id'] ?? '';
+        $isPast = (int)($f['departureTime'] ?? 0) > 0 && (int)$f['departureTime'] < $now;
     ?>
     
     <tr data-flight-id="<?= htmlspecialchars($fid) ?>"
-    class="border-t border-gray-700 hover:bg-gray-700/40 transition cursor-pointer"
-    onclick="window.location='../../ticket/ticket.php?confirmation=<?= urlencode($ticket['confirmation_code'] ?? '') ?>'">
+    class="border-t border-gray-700 hover:bg-gray-700/40 transition <?= $isPast ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer' ?>"
+    <?php if (!$isPast): ?>onclick="window.location='../../ticket/ticket.php?confirmation=<?= urlencode($ticket['confirmation_code'] ?? '') ?>'"<?php endif; ?>>
 
   <td class="px-5 py-4 font-semibold">
     <?= htmlspecialchars($f['flightNumber'] ?? $fid ?: '—') ?>
@@ -567,7 +724,7 @@ body { font-family: 'Inter', sans-serif; }
 <?php else: ?>
 
     <tr>
-      <td colspan="6" class="px-5 py-8 text-center text-gray-500">
+      <td colspan="8" class="px-5 py-8 text-center text-gray-500">
         No upcoming flights found.
       </td>
     </tr>
@@ -576,6 +733,7 @@ body { font-family: 'Inter', sans-serif; }
 </tbody>
       </table>
     </div>
+    <div id="upcoming-flights-pagination" class="flex items-center justify-between px-5 py-3 border-t border-gray-700 text-sm text-gray-400"></div>
   </div>
 
   <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden mb-6">
@@ -596,7 +754,7 @@ body { font-family: 'Inter', sans-serif; }
             <th class="text-left px-5 py-3">Arrival</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="past-flights-body">
         <?php foreach ($pastFlights as $row):
 
         $f = $row['flight'];
@@ -604,8 +762,8 @@ body { font-family: 'Inter', sans-serif; }
         $fid = $f['flight_id'] ?? '';
         ?>
         <tr data-flight-id="<?= htmlspecialchars($fid) ?>"
-    class="border-t border-gray-700 hover:bg-gray-700/40 transition cursor-pointer"
-    onclick="window.location='../../ticket/ticket.php?confirmation=<?= urlencode($ticket['confirmation_code'] ?? '') ?>'">
+    class="border-t border-gray-700 hover:bg-gray-700/40 transition opacity-50 cursor-not-allowed"
+    title="This flight has already departed">
 
   <td class="px-5 py-4 font-semibold">
     <?= htmlspecialchars($f['flightNumber'] ?? $fid ?: '—') ?>
@@ -644,11 +802,12 @@ body { font-family: 'Inter', sans-serif; }
 </tr>
         <?php endforeach; ?>
         <?php if (empty($pastFlights)): ?>
-        <tr><td colspan="9" class="px-5 py-8 text-center text-gray-500">No past flights found.</td></tr>
+        <tr><td colspan="8" class="px-5 py-8 text-center text-gray-500">No past flights found.</td></tr>
         <?php endif; ?>
         </tbody>
       </table>
     </div>
+    <div id="past-flights-pagination" class="flex items-center justify-between px-5 py-3 border-t border-gray-700 text-sm text-gray-400"></div>
   </div>
 
   <script>
@@ -692,16 +851,86 @@ function fmtTs(ts) {
   }
 
   setInterval(pollUpcoming, 30000);
+
+  // Client-side pagination
+  function paginateTable(tbodyId, paginationId, perPage = 10) {
+      const tbody = document.getElementById(tbodyId);
+      const pager = document.getElementById(paginationId);
+      if (!tbody || !pager) return;
+
+      const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => !r.querySelector('td[colspan]'));
+      if (rows.length <= perPage) {
+          pager.innerHTML = '';
+          return;
+      }
+
+      let currentPage = 1;
+      const totalPages = Math.ceil(rows.length / perPage);
+
+      function render() {
+          rows.forEach((row, i) => {
+              const page = Math.floor(i / perPage) + 1;
+              row.style.display = (page === currentPage) ? '' : 'none';
+          });
+
+          pager.innerHTML = `
+            <span>Page ${currentPage} of ${totalPages}</span>
+            <div class="flex gap-2">
+              <button type="button" data-dir="-1" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed" ${currentPage === 1 ? 'disabled' : ''}>Prev</button>
+              <button type="button" data-dir="1" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed" ${currentPage === totalPages ? 'disabled' : ''}>Next</button>
+            </div>
+          `;
+
+          pager.querySelectorAll('button').forEach(btn => {
+              btn.addEventListener('click', () => {
+                  currentPage += parseInt(btn.dataset.dir, 10);
+                  currentPage = Math.max(1, Math.min(totalPages, currentPage));
+                  render();
+              });
+          });
+      }
+
+      render();
+  }
+
+  paginateTable('upcoming-flights-body', 'upcoming-flights-pagination', 10);
+  paginateTable('past-flights-body', 'past-flights-pagination', 10);
+
+  // AJAX guest flight linking
+  const guestForm = document.getElementById('guest-flight-form');
+  const guestMsgEl = document.getElementById('guest-flight-msg');
+  guestForm?.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const formData = new FormData(guestForm);
+      guestMsgEl.classList.add('hidden');
+      try {
+          const res = await fetch(window.location.pathname + '?tab=flights', {
+              method: 'POST',
+              body: formData,
+              headers: { 'X-Requested-With': 'XMLHttpRequest' },
+              redirect: 'manual'
+          });
+          // Server still redirects via header(); reload to pick up flash message reliably.
+          window.location.href = '?tab=flights';
+      } catch (err) {
+          guestMsgEl.textContent = 'Something went wrong. Please try again.';
+          guestMsgEl.className = 'mt-3 text-sm text-red-400';
+      }
+  });
   </script>
 
   <?php endif; ?>
 
   <?php if ($activeTab === 'profile'): ?>
 
+  <?php if ($profileError): ?>
+  <div class="mb-4 bg-red-900/30 border border-red-700 rounded-lg px-5 py-3 text-red-400 text-sm">⚠ <?= htmlspecialchars($profileError) ?></div>
+  <?php endif; ?>
+
   <div class="grid lg:grid-cols-2 gap-6">
     <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
       <h2 class="text-lg font-bold mb-5">Personal Information</h2>
-      <form method="POST" class="space-y-4">
+      <form method="POST" id="profile-form" class="space-y-4" novalidate>
         <input type="hidden" name="action" value="update_profile">
         <div>
           <label class="block text-sm text-gray-400 mb-1">Full Name</label>
@@ -709,37 +938,61 @@ function fmtTs(ts) {
             class="w-full h-10 bg-gray-700/50 border border-gray-600 rounded-lg px-4 text-gray-400 text-sm cursor-not-allowed">
         </div>
         <div>
-          <label class="block text-sm text-gray-400 mb-1">Email</label>
-          <input type="email" name="email" value="<?= htmlspecialchars($currentUser['email']) ?>"
+          <label class="block text-sm text-gray-400 mb-1">Email <span class="text-red-400">*</span></label>
+          <input type="email" name="email" required value="<?= htmlspecialchars($currentUser['email']) ?>"
             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div>
-          <label class="block text-sm text-gray-400 mb-1">Phone</label>
-          <input type="text" name="phone" value="<?= htmlspecialchars($currentUser['phone']) ?>"
+          <label class="block text-sm text-gray-400 mb-1">Phone <span class="text-red-400">*</span></label>
+          <input type="text" name="phone" required value="<?= htmlspecialchars($currentUser['phone']) ?>"
             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div>
-          <label class="block text-sm text-gray-400 mb-1">Street Address</label>
-          <input type="text" name="street" value="<?= htmlspecialchars($dbUser['street_address'] ?? '') ?>"
+          <label class="block text-sm text-gray-400 mb-1">Date of Birth <span class="text-red-400">*</span></label>
+          <input type="date" name="date_birth" required value="<?= htmlspecialchars($dbUser['date_birth'] ?? $dbUser['date_of_birth'] ?? '') ?>"
+            class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm text-gray-400 mb-1">Street Address <span class="text-red-400">*</span></label>
+          <input type="text" name="street" required value="<?= htmlspecialchars($dbUser['street_address'] ?? '') ?>"
             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div class="grid grid-cols-3 gap-3">
           <div>
-            <label class="block text-sm text-gray-400 mb-1">City</label>
-            <input type="text" name="city" value="<?= htmlspecialchars($dbUser['city'] ?? '') ?>"
+            <label class="block text-sm text-gray-400 mb-1">City <span class="text-red-400">*</span></label>
+            <input type="text" name="city" required value="<?= htmlspecialchars($dbUser['city'] ?? '') ?>"
               class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
           <div>
-            <label class="block text-sm text-gray-400 mb-1">State</label>
-            <input type="text" name="state" value="<?= htmlspecialchars($dbUser['state'] ?? '') ?>"
+            <label class="block text-sm text-gray-400 mb-1">State <span class="text-red-400">*</span></label>
+            <input type="text" name="state" required value="<?= htmlspecialchars($dbUser['state'] ?? '') ?>"
               class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
           <div>
-            <label class="block text-sm text-gray-400 mb-1">ZIP</label>
-            <input type="text" name="zip" value="<?= htmlspecialchars($dbUser['zip_code'] ?? '') ?>"
+            <label class="block text-sm text-gray-400 mb-1">ZIP <span class="text-red-400">*</span></label>
+            <input type="text" name="zip" required value="<?= htmlspecialchars($dbUser['zip_code'] ?? '') ?>"
               class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
         </div>
+
+        <?php if ($missingPassword): ?>
+        <div class="border-t border-gray-700 pt-4 mt-2">
+          <p class="text-sm text-amber-400 mb-3">A password is required for your account.</p>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">New Password <span class="text-red-400">*</span></label>
+              <input type="password" name="new_password" required minlength="8"
+                class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Confirm Password <span class="text-red-400">*</span></label>
+              <input type="password" name="confirm_password" required minlength="8"
+                class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+          </div>
+        </div>
+        <?php endif; ?>
+
         <button type="submit" class="w-full h-10 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition">
           Save Changes
         </button>
@@ -770,15 +1023,41 @@ function fmtTs(ts) {
     </div>
   </div>
 
+  <script>
+  const profileForm = document.getElementById('profile-form');
+  profileForm?.addEventListener('submit', function (e) {
+      const required = profileForm.querySelectorAll('[required]');
+      let firstInvalid = null;
+      for (const field of required) {
+          if (!field.value || !field.value.trim()) {
+              if (!firstInvalid) firstInvalid = field;
+          }
+      }
+      const newPass = profileForm.querySelector('[name="new_password"]');
+      const confirmPass = profileForm.querySelector('[name="confirm_password"]');
+      if (newPass && confirmPass && newPass.value !== confirmPass.value) {
+          e.preventDefault();
+          alert('Passwords do not match.');
+          confirmPass.focus();
+          return;
+      }
+      if (firstInvalid) {
+          e.preventDefault();
+          firstInvalid.focus();
+          firstInvalid.classList.add('ring-2', 'ring-red-500');
+      }
+  });
+  </script>
+
   <?php endif; ?>
 
   <?php if ($activeTab === 'payment'): ?>
 
   <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-6">
     <h2 class="text-lg font-bold mb-5">Saved Cards</h2>
-    <div class="space-y-3 mb-6">
+    <div class="space-y-3 mb-6" id="saved-cards-list">
       <?php foreach ($savedCards as $card): ?>
-      <div class="flex items-center justify-between bg-gray-700/50 border border-gray-600 rounded-lg px-5 py-4">
+      <div class="flex items-center justify-between bg-gray-700/50 border border-gray-600 rounded-lg px-5 py-4 saved-card-item">
         <div class="flex items-center gap-4">
           <div class="w-10 h-7 bg-gray-600 rounded flex items-center justify-center text-xs font-bold text-gray-300">
             💳
@@ -802,6 +1081,7 @@ function fmtTs(ts) {
       <p class="text-gray-500 text-sm">No saved cards.</p>
       <?php endif; ?>
     </div>
+    <div id="saved-cards-pagination" class="flex items-center justify-between text-sm text-gray-400 mb-2"></div>
 
     <div class="border-t border-gray-700 pt-5">
       <h3 class="font-semibold mb-4 text-sm text-gray-300">Add New Card</h3>
@@ -848,6 +1128,46 @@ function fmtTs(ts) {
     </div>
   </div>
 
+  <script>
+  (function () {
+      const perPage = 10;
+      const list = document.getElementById('saved-cards-list');
+      const pager = document.getElementById('saved-cards-pagination');
+      if (!list || !pager) return;
+
+      const items = Array.from(list.querySelectorAll('.saved-card-item'));
+      if (items.length <= perPage) return;
+
+      let currentPage = 1;
+      const totalPages = Math.ceil(items.length / perPage);
+
+      function render() {
+          items.forEach((item, i) => {
+              const page = Math.floor(i / perPage) + 1;
+              item.style.display = (page === currentPage) ? '' : 'none';
+          });
+
+          pager.innerHTML = `
+            <span>Page ${currentPage} of ${totalPages}</span>
+            <div class="flex gap-2">
+              <button type="button" data-dir="-1" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed" ${currentPage === 1 ? 'disabled' : ''}>Prev</button>
+              <button type="button" data-dir="1" class="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed" ${currentPage === totalPages ? 'disabled' : ''}>Next</button>
+            </div>
+          `;
+
+          pager.querySelectorAll('button').forEach(btn => {
+              btn.addEventListener('click', () => {
+                  currentPage += parseInt(btn.dataset.dir, 10);
+                  currentPage = Math.max(1, Math.min(totalPages, currentPage));
+                  render();
+              });
+          });
+      }
+
+      render();
+  })();
+  </script>
+
   <?php endif; ?>
 
   <?php if ($activeTab === 'preferences'): ?>
@@ -861,10 +1181,12 @@ function fmtTs(ts) {
         <div class="space-y-2">
           <?php
           $sortOptions = [
-            'date_asc'    => 'Date (Earliest first)',
-            'date_desc'   => 'Date (Latest first)',
-            'flight_asc'  => 'Flight Number (A–Z)',
-            'airline_asc' => 'Airline (A–Z)',
+            'time_asc'    => 'Time ↑ (Earliest First)',
+            'time_desc'   => 'Time ↓ (Latest First)',
+            'airline_asc' => 'Airline A → Z',
+            'airline_desc'=> 'Airline Z → A',
+            'gate_asc'    => 'Gate A → Z',
+            'gate_desc'   => 'Gate Z → A',
           ];
           foreach ($sortOptions as $val => $label):
             $checked = $currentUser['flight_sort'] === $val ? 'checked' : '';
@@ -897,8 +1219,28 @@ function fmtTs(ts) {
     </form>
   </div>
 
+  <div class="bg-gray-800 border border-red-900 rounded-lg p-6 max-w-lg mt-6">
+    <h2 class="text-lg font-bold mb-2 text-red-400">Delete Account</h2>
+    <p class="text-sm text-gray-400 mb-5">This will permanently delete your account, all saved cards, and all tickets. This cannot be undone.</p>
+    <form method="POST" id="delete-account-form">
+      <input type="hidden" name="action" value="delete_account">
+      <button type="submit" class="w-full h-10 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold transition">
+        Delete My Account
+      </button>
+    </form>
+  </div>
+
+  <script>
+  document.getElementById('delete-account-form')?.addEventListener('submit', function (e) {
+      if (!confirm('Are you sure you want to permanently delete your account? This cannot be undone.')) {
+          e.preventDefault();
+      }
+  });
+  </script>
+
   <?php endif; ?>
 
 </main>
+
 </body>
 </html>

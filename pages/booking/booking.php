@@ -24,9 +24,21 @@
 
     $flightId = $_GET['flight_id'] ?? null;
     $flight = null;
-
-    if ($flightId) {
-        $flight = $api->getFlightById($flightId);
+    
+    if (!$flightId) {
+        header("Location: bookingFailed.php?" . http_build_query([
+            'message' => 'No flight was selected.'
+        ]));
+        exit;
+    }
+    
+    $flight = $api->getFlightById($flightId);
+    
+    if (!$flight || empty($flight['flightNumber'])) {
+        header("Location: bookingFailed.php?" . http_build_query([
+            'message' => 'The selected flight does not exist or is no longer available.'
+        ]));
+        exit;
     }
 ?>
 
