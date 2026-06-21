@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 require_once '../../../api/key.php';
 require_once '../../../api/api.php';
 require_once '../../../database/db.php';
+/** 
 $_SESSION['user_id'] = 25;
 $_SESSION['role'] = 'customer';
 
@@ -19,7 +20,7 @@ if (strtolower($_SESSION['role'] ?? '') !== 'customer') {
     header('Location: ../../../index.php');
     exit;
 }
-/** 
+*/
 $sessionUserId = $_SESSION['user_id'] ?? null;
 
 if (!$sessionUserId) {
@@ -40,7 +41,6 @@ if (($selfUser['role'] ?? '') !== 'Admin') {
     header('Location: ../../../index.php');
     exit;
 }
-**/
 $selfName = trim(($selfUser['first_name'] ?? '') . ' ' . ($selfUser['last_name'] ?? ''));
 if ($selfName === '') $selfName = 'Admin';
 
