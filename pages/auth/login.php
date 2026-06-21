@@ -2,20 +2,21 @@
     session_start();
     require_once "../../database/db.php";
     require_once __DIR__ . '/../../components/config.php';
+
     $message = '';
 
     function getDashboardUrl($role) {
         switch ($role) {
             case 'Admin':
-                return BASE_URL . '/pages/dashboard/admin/admin.php';
+                return BASE_URI . '/pages/dashboard/admin/admin.php';
             case 'Root':
-                return BASE_URL . '/pages/dashboard/root/root.php';
+                return BASE_URI . '/pages/dashboard/root/root.php';
             case 'Customer':
             default:
-                return BASE_URL . '/pages/dashboard/customer/customer.php';
+                return BASE_URI . '/pages/dashboard/customer/customer.php';
         }
     }
-    if (!isset($_SESSION['id']) && isset($_COOKIE['remember_me'])) {
+    if (!isset($_SESSION['user_id']) && isset($_COOKIE['remember_me'])) {
         [$cookieId, $cookieToken] = explode('|', $_COOKIE['remember_me'], 2);
         $expectedToken = hash_hmac('sha256', $cookieId, SECRET_KEY);
         if (hash_equals($expectedToken, $cookieToken)) {
@@ -35,7 +36,7 @@
                 $_SESSION['role'] = $user['role'];
                 $_SESSION['remembered'] = true;
                 header("Location: " . getDashboardUrl($user['role']));
-                exit();
+                 exit();
             }
         }
         setcookie('remember_me', '', time() - 3600, '/');
@@ -78,7 +79,7 @@
                     $_SESSION['email'] = $row['email'];
                     $_SESSION['user'] = $row['title'];
                     $_SESSION['name'] = $row['first_name'];
-                    $_SESSION['id'] = $row['user_id'];
+                    $_SESSION['user_id'] = $row['user_id'];
                     $_SESSION['role'] = $row['role'];
                     $pdo->prepare('
                         UPDATE "Users" SET failed_attempts = 0, last_failed_at = NULL
@@ -107,54 +108,125 @@
     }
 ?>
 <!DOCTYPE html>
-<html>
-    <head>
-        <title> Login </title>
-        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"> </script>
-    </head>
-    <body class="flex flex-col min-h-screen bg-gray-900 text-white">
-        <?php require_once "../../components/nav.php"; ?>
-        <main class="flex flex-grow items-center justify-center bg-gradient-to-r from-slate-900 to-slate-800 p-6">
-            <div class="w-full max-w-3xl space-y-6">
-                <div class="text-center bg-gray-800 border border-gray-700 rounded-xl p-8 shadow-lg">
-                    <h1 class="text-2xl font-bold"> BDPA Airlines </h1>
-                    <h2 class="text-blue-300 mt-2"> Please Login </h2>
-                    <br>
-                    <?php if (!empty($message)): ?>
-                    <div class="mb-4 text-red-300">
-                        <?= htmlspecialchars($message) ?>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Sign In</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"> </script>
+</head>
+
+    <body class="bg-gray-900 min-h-screen text-white flex flex-col">
+        
+            <?php include __DIR__ . '/../../components/nav.php'; ?>
+        <div class="w-full min-h-screen bg-gray-900">
+            <main class="flex-grow flex items-center justify-center p-6">
+                <div class="w-full max-w-3xl space-y-6">
+<div class="bg-gray-800 border border-gray-700 rounded-xl p-10 text-center relative overflow-hidden">
+
+
+    <div class="relative z-10 space-y-4">
+
+        <p class="tracking-[0.25em] text-xs text-blue-300">
+            BDPA AIRPORTS
+        </p>
+
+        <h1 class="text-4xl md:text-5xl font-bold leading-tight">
+            Sign In
+        </h1>
+
+        <p class="text-gray-300 text-sm md:text-base max-w-2xl mx-auto">
+            Access your account to manage bookings, view flights, and continue your journey.
+        </p>
+
+
+    </div>
+</div>
+        <!-- FORM CARD (LARGER) -->
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-10">
+
+            <?php if (!empty($message)): ?>
+                <div class="mb-6 bg-gray-900 border border-red-700 text-red-300 p-4 rounded-lg text-sm">
+                    <?= htmlspecialchars($message) ?>
+                </div>
+            <?php endif; ?>
+
+            <form method="POST" class="space-y-6">
+
+                <!-- EMAIL -->
+                <div>
+                    <label class="text-xs text-gray-400">Email</label>
+                    <input type="email" name="email" required
+                        class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white
+                        placeholder-gray-500 shadow-sm
+                        hover:border-blue-500
+                        focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20
+                        transition">
+                </div>
+
+                <!-- FIRST + LAST NAME -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    <div>
+                        <label class="text-xs text-gray-400">First Name</label>
+                        <input type="text" name="first" required
+                            class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white
+                            placeholder-gray-500 shadow-sm
+                            hover:border-blue-500
+                            focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20
+                            transition">
                     </div>
-                    <?php endif; ?>
-                    <a class="mb-3 text-red-100 hover:text-red-300" href="<?= BASE_URL ?>/pages/accountRecovery/recovery.php"> Forgot Your Password? </a>
+
+                    <div>
+                        <label class="text-xs text-gray-400">Last Name</label>
+                        <input type="text" name="last" required
+                            class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white
+                            placeholder-gray-500 shadow-sm
+                            hover:border-blue-500
+                            focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20
+                            transition">
+                    </div>
+
                 </div>
-                <div class="text-center bg-gray-800 border border-gray-700 rounded-xl p-8 shadow-lg">
-                    <form method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="email" class="text-xs text-gray-400"> Email </label>
-                            <input class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm" type="email" name="email" required>
-                        </div>
-                        <div>
-                            <label class="text-xs text-gray-400"> First Name </label>
-                            <input class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm" type="text" name="first" required>
-                        </div>
-                        <div>
-                            <label class="text-xs text-gray-400"> Last Name </label>
-                            <input class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm" type="text" name="last" required>
-                        </div>
-                        <div>
-                            <label class="text-xs text-gray-400"> Password </label>
-                            <input class="w-full mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 text-sm" type="password" name="password" required>
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="flex justify-center text-xs text-gray-400"> Remember Me? </label>
-                            <input class="mt-1 h-10 bg-gray-700 border border-gray-600 rounded-lg px-3 scale-150" type="checkbox" name="remember" value="yes">
-                        </div>
-                        <div class="text-center md:col-span-2 mt-4">
-                            <input class="bg-blue-600 text-white px-6 py-2 rounded transition duration-200 hover:bg-blue-700 hover:shadow-md active:scale-95" type="submit" value="Login">
-                        </div>
-                    </form>
+
+                <!-- PASSWORD -->
+                <div>
+                    <label class="text-xs text-gray-400">Password</label>
+                    <input type="password" name="password" required
+                        class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white
+                        placeholder-gray-500 shadow-sm
+                        hover:border-blue-500
+                        focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20
+                        transition">
                 </div>
-            </div>
-        </main>
-    </body>
+
+                <!-- OPTIONS -->
+                <div class="flex justify-between items-center text-sm text-gray-400 pt-2">
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" name="remember" class="accent-blue-500">
+                        Remember me
+                    </label>
+
+                    <a href="<?= BASE_URI ?>/pages/accountRecovery/recovery.php"
+                        class="text-blue-400 hover:text-blue-300">
+                        Forgot password?
+                    </a>
+                </div>
+
+                <!-- BUTTON -->
+                <button type="submit"
+                    class="w-full h-12 bg-blue-600 hover:bg-blue-700 border border-blue-600 rounded-lg transition">
+                    Login
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</main>
+
+</body>
 </html>

@@ -2,6 +2,8 @@
     session_start();
     require_once __DIR__ . '/../../database/db.php';
     require_once __DIR__ . '/../../components/config.php';
+
+
     if (empty($_SESSION['captcha_num1']) || empty($_SESSION['captcha_num2']) || $_SERVER['REQUEST_METHOD'] === 'GET') {
         $_SESSION['captcha_num1'] = rand(1, 10);
         $_SESSION['captcha_num2'] = rand(1, 10);
@@ -85,9 +87,9 @@
                 $_SESSION["user"]= $title;
                 $_SESSION["name"] = $first;
                 $_SESSION["user_id"] = $userId;
-                $_SESSION["role"] = "customer";
+                $_SESSION["role"] = "Customer";
                 unset($_SESSION['captcha_num1'], $_SESSION['captcha_num2']);
-                header("Location: " . BASE_URL . "/pages/dashboard/customer/customer.php");
+                header("Location: " . BASE_URI . "/pages/dashboard/customer/customer.php");
                 exit();
             } catch (Throwable $e) {
                 if ($pdo->inTransaction()) {
@@ -112,18 +114,36 @@
     <head>
         <title> Create Account </title>
         <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"> </script>
-        <link rel="icon" href="<?= BASE_URL ?>/favicon.ico" type="image/x-icon">
+        <link rel="icon" href="<?= BASE_URI ?>/favicon.ico" type="image/x-icon">
     </head>
     <body class="bg-gray-900 min-h-screen text-white flex flex-col">
         <div class="w-full min-h-screen bg-gray-900">
             <?php include __DIR__ . '/../../components/nav.php'; ?>
-            <main class="flex-grow flex items-center justify-center bg-gradient-to-r from-slate-900 to-slate-800 p-6">
+            <main class="flex-grow flex items-center justify-center p-6">
                 <div class="w-full max-w-3xl space-y-6">
-                    <div class="bg-gray-800 border border-gray-700 rounded-xl p-8 shadow-lg text-center">
-                        <h1 class="text-2xl font-bold"> Create Account </h1>
-                        <p class="text-blue-300 mt-2"> Please fill in your details </p>
-                        <p class="text-red-300 mt-3 text-sm"> * Required fields </p>
-                    </div>
+<div class="bg-gray-800 border border-gray-700 rounded-xl p-10 text-center relative overflow-hidden">
+
+
+    <div class="relative z-10 space-y-4">
+
+        <p class="tracking-[0.25em] text-xs text-blue-300">
+            BDPA AIRPORTS
+        </p>
+
+        <h1 class="text-4xl md:text-5xl font-bold leading-tight">
+            Create Account
+        </h1>
+
+        <p class="text-gray-300 text-sm md:text-base max-w-2xl mx-auto">
+            Create an account to manage bookings and flights.
+        </p>
+
+        <div class="mt-3 inline-flex items-center px-3 py-1 rounded-full bg-gray-900 border border-red-700 text-red-300 text-xs">
+    * Required fields
+        </div>
+
+    </div>
+</div>
                     <div class="bg-gray-800 border border-gray-700 rounded-xl p-8 shadow-lg">
                         <?php if ($message): ?>
                         <div class="mb-6"> <?= $message ?> </div>

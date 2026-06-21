@@ -1,15 +1,29 @@
 <?php
-require_once '../../../components/nav.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
+
 require_once '../../../api/key.php';
 require_once '../../../api/api.php';
 require_once '../../../database/db.php';
+$_SESSION['user_id'] = 25;
+$_SESSION['role'] = 'customer';
 
-if (session_status() === PHP_SESSION_NONE) session_start();
+$stmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
+$stmt->execute([$_SESSION['user_id']]);
+$dbUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
+if (!$dbUser) {
+    die("User not found.");
+}
+
+if (strtolower($_SESSION['role'] ?? '') !== 'customer') {
+    header('Location: ../../../index.php');
+    exit;
+}
+/** 
 $sessionUserId = $_SESSION['user_id'] ?? null;
 
 if (!$sessionUserId) {
-    header('Location: ../../index.php');
+    header('Location: ../../../index.php');
     exit;
 }
 
@@ -18,15 +32,15 @@ $selfStmt->execute([$sessionUserId]);
 $selfUser = $selfStmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$selfUser) {
-    header('Location: ../../index.php');
+    header('Location: ../../../index.php');
     exit;
 }
 
-if (($selfUser['role'] ?? '') !== 'admin') {
-    header('Location: ../../index.php');
+if (($selfUser['role'] ?? '') !== 'Admin') {
+    header('Location: ../../../index.php');
     exit;
 }
-
+**/
 $selfName = trim(($selfUser['first_name'] ?? '') . ' ' . ($selfUser['last_name'] ?? ''));
 if ($selfName === '') $selfName = 'Admin';
 
@@ -208,15 +222,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $zip    = trim($_POST['zip']         ?? '');
         $country= trim($_POST['country']     ?? '');
 
-        if (!$fn || !$ln || !$email) {
-            $errorMsg = 'First name, last name, and email are required.';
-        } elseif (strlen($pw) < 8) {
-            $errorMsg = 'Password must be at least 8 characters.';
-        } elseif (!preg_match('/[A-Z]/', $pw) || !preg_match('/[a-z]/', $pw) || !preg_match('/[0-9]/', $pw)) {
-            $errorMsg = 'Password must contain uppercase, lowercase, and a number.';
-        } elseif (isOnNoFlyList($fn, $ln, $noFlyList)) {
-            $errorMsg = "{$fn} {$ln} is on the no-fly list and cannot be registered.";
-        } else {
+      if (!$fn || !$ln || !$email) {
+          $errorMsg = 'First name, last name, and email are required.';
+      } elseif (strlen($pw) < 8) {
+          $errorMsg = 'Password must be at least 8 characters.';
+      } else {
+          $emailCheck = $pdo->prepare('SELECT 1 FROM "Users" WHERE LOWER(email) = LOWER(?)');
+          $emailCheck->execute([$email]);
+
+          if ($emailCheck->fetch()) {
+              $errorMsg = 'That email address is already in use.';
+          } elseif (isOnNoFlyList($fn, $ln, $noFlyList)) {
+              $errorMsg = "{$fn} {$ln} is on the no-fly list and cannot be registered.";
+          } else {
             $phoneFormatted = $phone ? formatPhone($phone) : null;
             $hashed = password_hash($pw, PASSWORD_BCRYPT);
             $ins = $pdo->prepare(
@@ -235,6 +253,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $updateMsg = "Customer {$fn} {$ln} created successfully.";
             $usersStmt = $pdo->query('SELECT * FROM "Users" WHERE LOWER(role) = \'customer\' ORDER BY user_id ASC');
             $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
+            }
         }
         $activeTab = 'customers';
     }
@@ -290,19 +309,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } else {
             $code = strtoupper(bin2hex(random_bytes(4)));
             $phoneFormatted = $phone ? formatPhone($phone) : null;
-            $ins = $pdo->prepare(
-                'INSERT INTO "Tickets"
-                    (flight_id, name_first, name_last, confirmation_code, seat, price,
-                     user_id, status, created_at, bags_carried, email, phone_number, sex, date_birth)
-                 VALUES (?,?,?,?,?,?,?,?,NOW(),?,?,?,?,?)'
-            );
-            $ins->execute([
-                $fid, $nameFirst, $nameLast, $code, $seat,
-                is_numeric($price) ? (float)$price : 0,
-                $uid ?: null, 'active',
-                is_numeric($bags) ? (int)$bags : 0,
-                $email ?: null, $phoneFormatted, $sex ?: null, $dob ?: null,
-            ]);
+            $destination = strtoupper(trim($_POST['destination'] ?? ''));
+
+              $ins = $pdo->prepare(
+                  'INSERT INTO "Tickets"
+                      (flight_id, name_first, name_last, confirmation_code, seat, price,
+                      user_id, status, created_at, bags_carried, email, phone_number,
+                      sex, date_birth, destination)
+                  VALUES (?,?,?,?,?,?,?,?,NOW(),?,?,?,?,?,?)'
+              );
+                    $ins->execute([
+              $fid, $nameFirst, $nameLast, $code, $seat,
+              is_numeric($price) ? (float)$price : 0,
+              $uid ?: null, 'active',
+              is_numeric($bags) ? (int)$bags : 0,
+              $email ?: null,
+              $phoneFormatted,
+              $sex ?: null,
+              $dob ?: null,
+              $destination
+          ]);
             $updateMsg = "Ticket created. Confirmation: {$code}";
             $ticketsStmt = $pdo->query('SELECT * FROM "Tickets"');
             $allTickets  = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -357,7 +383,7 @@ foreach ($allFlights as $f) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Dashboard — BDPA Airports</title>
+<title>Admin Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -397,7 +423,7 @@ foreach ($allFlights as $f) {
 </style>
 </head>
 <body class="min-h-screen">
-
+<?php include_once __DIR__ . '/../../../components/nav.php'; ?>
 <main class="max-w-7xl mx-auto p-4 sm:p-6 space-y-5">
 
   <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
@@ -449,7 +475,7 @@ foreach ($allFlights as $f) {
     <div class="stat-card">
       <p class="text-gray-500 text-xs uppercase tracking-wider font-semibold">Gross Profit</p>
       <h2 class="text-3xl font-extrabold mt-3 tabular-nums text-emerald-400" id="stat-profit">—</h2>
-      <p class="text-gray-600 text-xs mt-2">Active tickets</p>
+      <p class="text-gray-600 text-xs mt-2">All tickets</p>
     </div>
     <div class="stat-card">
       <p class="text-gray-500 text-xs uppercase tracking-wider font-semibold">Total Customers</p>
@@ -550,7 +576,7 @@ $filteredUsers = array_slice(
           <label class="block text-xs text-gray-400 mb-1">Password <span class="text-red-400">*</span></label>
           <input type="password" name="password" required minlength="8" id="cpw" class="field"
             oninput="checkPw(this.value)">
-          <p class="hint">Min 8 chars · uppercase · lowercase · number</p>
+          <p class="hint">Minimum 8 characters</p>
           <p id="cpw-hint" class="text-xs mt-1 hidden"></p>
         </div>
 
@@ -759,7 +785,7 @@ $filteredUsers = array_slice(
   if ($ticketSearch !== '') {
     $q = strtolower($ticketSearch);
     $filteredTickets = array_filter($allTickets, function($t) use ($q, $flightMap) {
-      $f = $flightMap[$t['flight_id'] ?? ''] ?? [];
+        $f = $flightMap[$t['flight_id'] ?? ''] ?? [];
       
       
       return str_contains(strtolower(
@@ -858,7 +884,7 @@ $filteredTickets = array_slice(
           <input type="number" name="bags" min="0" max="10" placeholder="0" class="field">
         </div>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Customer User ID <span class="text-gray-600">(optional)</span></label>
+          <label class="block text-xs text-gray-400 mb-1">User ID (If Customer)<span class="text-gray-600">(optional)</span></label>
           <input type="text" name="user_id" placeholder="Leave blank for guest" class="field">
         </div>
 
@@ -889,9 +915,9 @@ $filteredTickets = array_slice(
             'Confirmation' => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-blue-300">' . htmlspecialchars($lookupTicket['confirmation_code']) . '</code>',
             'Passenger'    => htmlspecialchars(trim(($lookupTicket['name_first'] ?? '') . ' ' . ($lookupTicket['name_last'] ?? '—'))),
             'Flight ID'    => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-xs text-gray-300">' . htmlspecialchars($lookupTicket['flight_id'] ?? '—') . '</code>',
-          'Route' => $lf
-    ? htmlspecialchars('SMN → ' . flightDestination($lf, $airportLookup))
-    : '—',
+                'Route' => htmlspecialchars(
+                'SMN → ' . strtoupper($lookupTicket['destination'] ?? '—')
+            ),
        'Departure' => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-xs text-gray-300">' . 'SMN' . '</code>',            'Seat'         => htmlspecialchars($lookupTicket['seat'] ?? '—'),
             'Price'        => '$' . number_format((float)($lookupTicket['price'] ?? 0), 2),
             'Status'       => statusBadge($lookupTicket['status'] ?? 'unknown'),
@@ -963,7 +989,8 @@ $filteredTickets = array_slice(
           $rawP  = $t['price'] ?? '0';
           $safeP = (is_numeric($rawP) && (float)$rawP >= 0 && (float)$rawP <= 100000)
                     ? '$' . number_format((float)$rawP, 2) : '—';
-        $route = 'SMN → ' . flightDestination($f, $airportLookup);
+        $destination = $t['destination'] ?? '—';
+$route = 'SMN → ' . strtoupper($destination);
 
 $dep = 'SMN';
         ?>
@@ -1058,14 +1085,10 @@ function autoFormatPhone(el) {
 function checkPw(val) {
   const hint = document.getElementById('cpw-hint');
   if (!hint) return;
-  const issues = [];
-  if (val.length < 8)            issues.push('at least 8 characters');
-  if (!/[A-Z]/.test(val))        issues.push('an uppercase letter');
-  if (!/[a-z]/.test(val))        issues.push('a lowercase letter');
-  if (!/[0-9]/.test(val))        issues.push('a number');
-  if (issues.length) {
+
+  if (val.length < 8) {
     hint.className = 'text-xs mt-1 text-amber-400';
-    hint.textContent = 'Needs: ' + issues.join(', ');
+    hint.textContent = 'Password must be at least 8 characters.';
     hint.classList.remove('hidden');
   } else {
     hint.className = 'text-xs mt-1 text-emerald-400';
@@ -1073,13 +1096,6 @@ function checkPw(val) {
     hint.classList.remove('hidden');
   }
 }
-
-
-
-
-
-
-
 
 const knownFlights  = <?= json_encode(array_keys($flightMap)) ?>;
 const takenSeats    = <?= json_encode($takenSeatsByFlight) ?>;

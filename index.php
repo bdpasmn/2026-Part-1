@@ -8,7 +8,7 @@
 
     $stmt = $pdo->query("SELECT COUNT(*) FROM \"Users\" WHERE role = 'Customer'");
     $totalCustomers = $stmt->fetchColumn();
-
+    
     $role = $_SESSION['role'] ?? 'Guest';
 ?>
 <html>
@@ -45,9 +45,7 @@
                                     <a href="./pages/booking/searchFlights.php" class="px-8 py-4 bg-gray-700 border border-gray-600 rounded-lg font-medium hover:bg-gray-600 transition">
                                         Book Your Next Trip
                                     </a>
-                                <?php endif; ?>
 
-                                <?php if ($role == 'guest'): ?>
                                     <a href="./pages/ticket/viewTicket.php" class="px-8 py-4 bg-gray-700 border border-gray-600 rounded-lg font-medium hover:bg-gray-600 transition">
                                         View Your Tickets
                                     </a>

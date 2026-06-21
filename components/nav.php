@@ -16,7 +16,6 @@
         global $currentPath;
         return $currentPath == $path;
     }
-
     function isActive($needle) {
         return str_contains($_SERVER['REQUEST_URI'], $needle);
     }
@@ -24,7 +23,7 @@
     $isLoggedIn = isset($_SESSION['user_id']);
     $userFullName = "Guest";
     $role = $_SESSION['role'] ?? 'guest';
-
+    
     if ($isLoggedIn) {
         $stmt = $pdo->prepare('SELECT first_name, last_name FROM "Users" WHERE user_id = ?');
         $stmt->execute([$_SESSION['user_id']]);
@@ -38,14 +37,14 @@
 
     $dashboardLink = BASE_URL . "/pages/dashboard/customer/customer.php";
 
-    if ($role == "admin") {
+    if ($role == "Admin") {
         $dashboardLink = BASE_URL . "/pages/dashboard/admin/admin.php";
-    } elseif ($role == "root") {
+    } elseif ($role == "Root") {
         $dashboardLink = BASE_URL . "/pages/dashboard/root/root.php";
     }
 ?>
 <!-- loading overlay -->
-<div id="loading-overlay" class="fixed inset-0 z-50 hidden bg-gray-900/70 backdrop-blur-sm flex items-center justify-center">
+<div id="loading-overlay" class="fixed inset-0 z-50 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center">
     <div class="flex flex-col items-center gap-4">
         <div class="w-12 h-12 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
 
@@ -70,70 +69,66 @@
             <?php if (!$isLoggedIn): ?>
                 <?php $active = isActivePath(BASE_URL . '/pages/auth/create.php'); ?>
                 <a href="<?= BASE_URL ?>/pages/auth/create.php" class="relative group">
-                    <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>"data-loader="page">Create Account</span>
+                    <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Create Account</span>
                     <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
                 </a>
             <?php else: ?>
                 <?php $active = str_contains($currentPath, '/dashboard/'); ?>
                 <a href="<?= $dashboardLink ?>" class="relative group">
-                    <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>" data-loader="page">Dashboard</span>
+                    <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Dashboard</span>
                     <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
                 </a>
             <?php endif; ?>
 
             <?php if ($role == 'Customer'): ?>
-                <?php $active = (
-                    str_contains($currentPath, '/customer/customer.php')
-                    && $currentTab == 'flights'
-                ); ?>
+                <?php $active = str_contains($currentPath, '/customer/customer.php') && $currentTab === 'flights';?>
 
-                <a href="<?= BASE_URL ?>/pages/dashboard/customer/customer.php?tab=flights" class="relative group">
-                <?php $active = isActive('flights'); ?>
-                <a href="<?= BASE_URL ?>/pages/dashboard/customer/customer.php?tab=flights" class="relative group" data-loader="page">
-                    <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">My Flights</span>
+                <a href="<?= BASE_URL ?>/pages/dashboard/customer/customer.php?tab=flights"
+                class="relative group">
+                    <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">
+                        My Flights
+                    </span>
                     <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
                 </a>
             <?php endif; ?>
 
             <?php $active = isActivePath(BASE_URL . '/pages/flights/flights.php'); ?>
-            <a href="<?= BASE_URL ?>/pages/flights/flights.php" class="relative group" data-loader="page">
+            <a href="<?= BASE_URL ?>/pages/flights/flights.php" class="relative group">
                 <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Browse Flights</span>
                 <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
             </a>
 
             <?php if (!$isLoggedIn || $role == 'Customer'): ?>
                 <?php $active = str_contains($currentPath, '/booking/searchFlights.php'); ?>
-                <a href="<?= BASE_URL ?>/pages/booking/searchFlights.php" class="relative group" data-loader="page">
+                <a href="<?= BASE_URL ?>/pages/booking/searchFlights.php" class="relative group">
                     <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Book Flight</span>
                     <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
                 </a>
-            <?php endif; ?>
 
-            <?php if (!$isLoggedIn): ?>
                 <?php $active = isActivePath(BASE_URL . '/pages/ticket/viewTicket.php'); ?>
-                <a href="<?= BASE_URL ?>/pages/ticket/viewTicket.php" class="relative group" data-loader="page">
+                <a href="<?= BASE_URL ?>/pages/ticket/viewTicket.php" class="relative group">
                     <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">View Tickets</span>
                     <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
                 </a>
             <?php endif; ?>
 
-            <?php if ($role == 'root'): ?>
+            <?php if ($role == 'Root'): ?>
                 <?php $active = $currentTab == 'admins'; ?>
-                <a href="<?= BASE_URL ?>/pages/dashboard/root/root.php?tab=admins" class="relative group" data-loader="page">
+                <a href="<?= BASE_URL ?>/pages/dashboard/root/root.php?tab=admins" class="relative group">
                     <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Administrators</span>
                     <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
                 </a>
             <?php endif; ?>
 
-            <?php if ($role == 'admin' || $role == 'root'): ?>
+            <?php if ($role == 'Admin' || $role == 'Root'): ?>
                 <?php $active = $currentTab == 'customers'; ?>
-                <a href="<?= BASE_URL ?>/pages/dashboard/<?= $role ?>/<?= $role ?>.php?tab=customers" class="relative group" data-loader="page">
+                <a href="<?= BASE_URL ?>/pages/dashboard/<?= $role ?>/<?= $role ?>.php?tab=customers" class="relative group">
                     <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Customers</span>
                     <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
                 </a>
 
                 <?php $active = $currentTab == 'tickets'; ?>
-                <a href="<?= BASE_URL ?>/pages/dashboard/<?= $role ?>/<?= $role ?>.php?tab=tickets" class="relative group" data-loader="page">
+                <a href="<?= BASE_URL ?>/pages/dashboard/<?= $role ?>/<?= $role ?>.php?tab=tickets" class="relative group">
                     <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Tickets</span>
                     <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
                 </a>
@@ -147,14 +142,14 @@
             <?php if ($isLoggedIn): ?>
                 <div class="hidden sm:block text-gray-300 text-sm">Welcome, <span class="text-white font-medium"><?= htmlspecialchars($userFullName) ?></span></div>
                 <span class="hidden sm:inline px-2 py-1 text-xs rounded bg-gray-700 border border-gray-600 text-gray-300"><?= strtoupper($role) ?></span>
-                <a href="<?= BASE_URL ?>/pages/auth/logout.php" data-loader="page" class="px-4 py-1.5 text-sm bg-red-600 rounded-lg hover:bg-red-700 transition">Logout</a>
+                <a href="<?= BASE_URL ?>/pages/auth/logout.php" class="px-4 py-1.5 text-sm bg-red-600 rounded-lg hover:bg-red-700 transition">Logout</a>
             <?php else: ?>
-                <a href="<?= BASE_URL ?>/pages/auth/login.php" data-loader="page"
+                <a href="<?= BASE_URL ?>/pages/auth/login.php" 
                    class="px-4 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition">
                     Login
                 </a>
 
-                <a href="<?= BASE_URL ?>/pages/auth/create.php" data-loader="page"
+                <a href="<?= BASE_URL ?>/pages/auth/create.php" 
                    class="px-4 py-1.5 text-sm bg-blue-600 rounded-lg hover:bg-blue-700 transition">
                     Register
                 </a>
@@ -202,19 +197,17 @@
             <?php if (!$isLoggedIn || $role == 'Customer'): ?>
                 <a class="px-6 py-3 hover:bg-gray-700"
                    href="<?= BASE_URL ?>/pages/booking/searchFlights.php">Book Flight</a>
-            <?php endif; ?>
 
-            <?php if (!$isLoggedIn): ?>
                 <a class="px-6 py-3 hover:bg-gray-700"
                    href="<?= BASE_URL ?>/pages/ticket/viewTicket.php">View Tickets</a>
             <?php endif; ?>
 
-            <?php if ($role == 'root'): ?>
+            <?php if ($role == 'Root'): ?>
                 <a class="px-6 py-3 hover:bg-gray-700"
                    href="<?= BASE_URL ?>/pages/dashboard/root/root.php?tab=admins">Administrators</a>
             <?php endif; ?>
 
-            <?php if ($role == 'admin' || $role == 'root'): ?>
+            <?php if ($role == 'Admin' || $role == 'Root'): ?>
                 <a class="px-6 py-3 hover:bg-gray-700"
                    href="<?= BASE_URL ?>/pages/dashboard/<?= $role ?>/<?= $role ?>.php?tab=customers">Customers</a>
 
@@ -247,11 +240,10 @@ const Loader = {
         if (text) text.textContent = message;
 
         overlay.classList.remove('hidden');
-        //slow time detection
         this.slowTimer = setTimeout(() => {
             const t = this.text;
             if (t) t.textContent = "Hmm... this is taking longer than usual";
-        }, 5000);
+        }, 10000);
     },
 
     hide() {
@@ -268,8 +260,15 @@ const Loader = {
     }
 };
 
-window.addEventListener('pageshow', () => Loader.hide());
-window.addEventListener('pagehide', () => Loader.hide());
+window.addEventListener('load', () => {
+    Loader.hide();
+});
+
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        Loader.hide();
+    }
+});
 
 document.addEventListener('click', (e) => {
     const link = e.target.closest('a');
@@ -278,11 +277,15 @@ document.addEventListener('click', (e) => {
     const href = link.getAttribute('href');
     if (!href || href.startsWith('#')) return;
 
-    if (link.target === '_blank') return;
+    if (link.target == '_blank') return;
 
-    if (link.dataset.loader === "page") {
+    Loader.show();
+});
+
+document.querySelectorAll('form').forEach(form => {
+    form.addEventListener('submit', () => {
         Loader.show();
-    }
+    });
 });
 </script>
 
@@ -296,3 +299,28 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 </script>
+
+<?php if ($isLoggedIn): ?>
+<script>
+(function () {
+    const minutes = window.__autoLogoutMinutes;
+    if (!minutes || isNaN(minutes)) return;
+
+    const timeoutMs = minutes * 60 * 1000;
+    let timer = setTimeout(doLogout, timeoutMs);
+
+    function doLogout() {
+        window.location.href = "<?= BASE_URL ?>/pages/auth/logout.php";
+    }
+
+    function resetTimer() {
+        clearTimeout(timer);
+        timer = setTimeout(doLogout, timeoutMs);
+    }
+
+    ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evt => {
+        document.addEventListener(evt, resetTimer, { passive: true });
+    });
+})();
+</script>
+<?php endif; ?>
