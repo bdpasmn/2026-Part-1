@@ -56,16 +56,21 @@ $airportLookup = [];
 foreach ($airports as $airport) {
     $airportLookup[strtolower($airport['shortName'])] = $airport;}
 
-// ---------------- INPUTS ----------------
-$statusTab = $_GET['status'] ?? 'all';   // ✅ ADDED (TABS)
+$statusTab = $_GET['status'] ?? 'all';   
 $mode   = $_GET['mode'] ?? 'all';
 $search = trim($_GET['search'] ?? '');
-$sort   = $_GET['sort'] ?? 'time_asc';
-$page   = max(1, (int)($_GET['page'] ?? 1));
+
+$stmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
+$stmt->execute([$_SESSION['user_id']]);
+$dbUser = $stmt->fetch(PDO::FETCH_ASSOC);
+
+$preferences = json_decode($dbUser['sort_preference'] ?? '{}', true);
+$sort = $_GET['sort'] ?? ($preferences['flight_sort'] ?? 'time_asc');
+
+$page = max(1, (int)($_GET['page'] ?? 1));
 
 $perPage = 10;
 
-// ---------------- SAFE API CURSOR FETCH ----------------
 function fetchAllFlights(AirportsAPI $api) {
 
     $after = null;
@@ -462,12 +467,12 @@ $pageFlights = array_slice($flights, $start, $perPage);
                    transition duration-200
                    focus:outline-none focus:ring-1 focus:ring-white focus:border-white"
         >
-            <option value="airline_asc" <?= $sort === 'airline_asc' ? 'selected' : '' ?>>Airline A → Z</option>
-            <option value="airline_desc" <?= $sort === 'airline_desc' ? 'selected' : '' ?>>Airline Z → A</option>
-            <option value="time_asc" <?= $sort === 'time_asc' ? 'selected' : '' ?>>Time ↑ (Earliest First)</option>
-            <option value="time_desc" <?= $sort === 'time_desc' ? 'selected' : '' ?>>Time ↓ (Latest First)</option>
-            <option value="gate_asc" <?= $sort === 'gate_asc' ? 'selected' : '' ?>>Gate A → Z</option>
-            <option value="gate_desc" <?= $sort === 'gate_desc' ? 'selected' : '' ?>>Gate Z → A</option>
+            <option value="airline_asc" <?= $sort == 'airline_asc' ? 'selected' : '' ?>>Airline A → Z</option>
+            <option value="airline_desc" <?= $sort == 'airline_desc' ? 'selected' : '' ?>>Airline Z → A</option>
+            <option value="time_asc" <?= $sort == 'time_asc' ? 'selected' : '' ?>>Time ↑ (Earliest First)</option>
+            <option value="time_desc" <?= $sort == 'time_desc' ? 'selected' : '' ?>>Time ↓ (Latest First)</option>
+            <option value="gate_asc" <?= $sort == 'gate_asc' ? 'selected' : '' ?>>Gate A → Z</option>
+            <option value="gate_desc" <?= $sort == 'gate_desc' ? 'selected' : '' ?>>Gate Z → A</option>
         </select>
 
         <!-- SORT APPLY BUTTON -->

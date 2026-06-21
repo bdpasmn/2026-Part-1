@@ -2,7 +2,7 @@
     session_start();
     require_once "../../database/db.php";
 
-    if ($_SESSION['role'] == 'Admin' || $_SESSION['role'] == 'Root') {
+    if (isset($_SESSION['role']) && ($_SESSION['role'] == 'Admin' || $_SESSION['role'] == 'Root')) {
         header("Location: ../../index.php");
         exit;
     }

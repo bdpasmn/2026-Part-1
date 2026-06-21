@@ -36,7 +36,7 @@
 
                             <div class="mt-8 border-t border-gray-700 pt-6 md:col-span-2">
                                 <label class="block mb-2 text-sm font-medium text-gray-300">Phone Number*</label>
-                                <input type="tel" id="phone" pattern="^\+?[0-9\s\-\(\)]{10,15}$" title="Enter a valid phone number (10–15 digits)" class="required-booking w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">                            
+                                <input type="tel" id="phone" maxlength="15" oninput="this.value=this.value.replace(/\D/g,'')" class="required-booking w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white">
                             </div>
 
                             <div class="md:col-span-2">
@@ -55,18 +55,18 @@
 
                                 <div>
                                     <label class="block mb-2 text-sm font-medium text-gray-300">Card Number*</label>
-                                    <input type="text" id="cardNumber" class="required-booking w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <input type="text" id="cardNumber" maxlength="19" oninput="this.value=this.value.replace(/\D/g,'').replace(/(.{4})/g,'$1 ').trim()" class="required-booking w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">                                
                                 </div>
 
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label class="block mb-2 text-sm font-medium text-gray-300">Expiration Date*</label>
-                                        <input type="text" id="expirationDate" placeholder="MM/YY" class="required-booking w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <input type="text" id="expirationDate" maxlength="5" placeholder="MM/YY" oninput="this.value=this.value.replace(/\D/g,''); if(this.value.length > 2){ this.value=this.value.slice(0,2)+'/'+this.value.slice(2,4);}" class="required-booking w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                     </div>
 
                                     <div>
                                         <label class="block mb-2 text-sm font-medium text-gray-300">CVC*</label>
-                                        <input type="text" id="cvc" class="required-booking w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        <input type="text" id="cvc" maxlength="4" oninput="this.value=this.value.replace(/\D/g,'')" class="required-booking w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">                                    
                                     </div>
                                 </div>
 
@@ -77,7 +77,7 @@
 
                                 <div>
                                     <label class="block mb-2 text-sm font-medium text-gray-300">ZIP Code*</label>
-                                    <input type="text" id="zipCode" class="required-booking w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <input type="text" id="zipCode" maxlength="10" oninput="this.value=this.value.replace(/[^0-9\-]/g,'')" class="required-booking w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                             </div>
 
@@ -117,4 +117,3 @@
                     </div>
                 </div>
             </div>
-                                
