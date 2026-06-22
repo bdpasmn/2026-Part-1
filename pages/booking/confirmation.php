@@ -20,7 +20,7 @@
         
         <main class="max-w-7xl mx-auto p-6">
             <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-lg p-6 mb-6">
-                <h1 class="text-3xl font-bold text-white">Booking Confirmed</h1>
+                <h1 class="text-3xl font-bold text-white">Booking Confirmed ✅</h1>
                 <p class="text-gray-400 mt-2">Your flight has been booked successfully. You can view your ticket at any time using the confirmation code below.</p>
             </div>
 

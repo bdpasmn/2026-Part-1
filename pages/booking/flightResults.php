@@ -114,7 +114,7 @@
 
             <section class="p-6">
                 <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-xl p-10 shadow-lg">
-                    <p class="tracking-[0.25em] text-sm text-blue-300 mb-4">BDPA AIRPORTS</p>
+                    <p class="tracking-[0.25em] text-sm text-blue-300 mb-4">BDPA AIRPORTS✈️</p>
 
                     <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">Flight Search Results</h1>
                     <p class="text-lg text-gray-300">Showing results for: 
@@ -160,7 +160,7 @@
             </section>
 
             <section class="p-6 pt-4">
-                <h2 class="text-2xl font-bold mb-4">Available Flights</h2>
+                <h2 class="text-2xl font-bold mb-4">🛫 Available Flights</h2>
                 
                 <div class="space-y-4">
                     <?php if (empty($flights)): ?>

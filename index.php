@@ -28,7 +28,7 @@
                     <div class="absolute inset-0 bg-black/70"></div>
                     <div class="relative z-10 flex items-center min-h-[500px] p-10 lg:p-16">
                         <div class="max-w-4xl">
-                            <p class="tracking-[0.25em] text-sm text-blue-300 mb-4">BDPA AIRPORTS</p>
+                            <p class="tracking-[0.25em] text-sm text-blue-300 mb-4">WELCOME TO BDPA AIRPORTS</p>
                             <h1 class="text-5xl md:text-7xl font-bold leading-tight mb-6">Your Journey Starts Here</h1>
                             <p class="text-xl text-gray-300 max-w-3xl mb-8">Search flights, book tickets, and track real-time arrivals, departures, gate changes, and flight status update from the official BDPA Airports portal.</p>
 

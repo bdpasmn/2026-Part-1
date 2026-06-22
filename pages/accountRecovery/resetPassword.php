@@ -49,7 +49,7 @@
 
             <section class="p-6">
                 <div class="max-w-3xl mx-auto bg-gray-800 border border-gray-700 rounded-xl p-8 shadow-lg">
-                    <p class="tracking-[0.25em] text-sm text-blue-300 mb-3">ACCOUNT RECOVERY</p>
+                    <p class="tracking-[0.25em] text-sm text-blue-300 mb-3">ACCOUNT RECOVER🔒</p>
                     <h2 class="text-4xl font-bold mb-3">Reset Password</h2>
                     <p class="text-gray-400 mb-6">Create a new password for your account.</p>
 

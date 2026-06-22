@@ -4,7 +4,7 @@
     <div class="relative min-h-screen flex items-center justify-center p-6">
         <div class="relative w-full max-w-4xl bg-gray-800 border border-gray-700 rounded-xl shadow-2xl overflow-hidden">
             <div class="px-8 py-6 border-b border-gray-700">
-                <h2 class="text-2xl font-bold text-white">Review Your Booking</h2>
+                <h2 class="text-2xl font-bold text-white">Review Your Booking 📝</h2>
                 <p class="text-sm text-gray-300 mt-1">Verify your information before confirming your purchase.</p>
             </div>
 
@@ -12,7 +12,7 @@
                 <div class="bg-gray-700 border border-gray-600 rounded-xl p-6 transition duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-gray-500">
                     <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-6">
                         <div>
-                            <h3 class="font-bold text-white text-2xl"><?= htmlspecialchars($flight['flightNumber'] ?? 'Flight') ?></h3>
+                            <h3 class="font-bold text-white text-2xl"><?= htmlspecialchars($flight['flightNumber'] ?? 'Flight') ?> ✈️</h3>
                             <p class="text-gray-200 mt-2"><?= htmlspecialchars($flight['landingAt'] ?? '') ?>→<?= htmlspecialchars($flight['departingTo'] ?? '') ?></p>
                             <p class="text-gray-300 text-sm mt-1"><?= htmlspecialchars($flight['airline'] ?? '') ?></p>
                         </div>
@@ -23,7 +23,7 @@
                 </div>
 
                 <div class="bg-gray-700 border border-gray-600 rounded-xl p-6 transition duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-gray-500">
-                    <h3 class="font-semibold text-white text-lg mb-5">Passenger Information</h3>
+                    <h3 class="font-semibold text-white text-lg mb-5">Passenger Information 📌</h3>
                     <div class="grid md:grid-cols-2 gap-5 text-sm">
                         <div>
                             <div class="text-gray-300 mb-1">Passenger</div>
@@ -53,7 +53,7 @@
                 </div>
 
                 <div class="bg-gray-700 border border-gray-600 rounded-xl p-6 transition duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-gray-500">
-                    <h3 class="font-semibold text-white text-lg mb-5">Travel Details</h3>
+                    <h3 class="font-semibold text-white text-lg mb-5">Travel Details 🎫</h3>
 
                     <div class="grid md:grid-cols-3 gap-5">
                         <div class="bg-slate-600 rounded-lg p-4">
@@ -74,7 +74,7 @@
                 </div>
 
                 <div class="bg-gray-700 border border-gray-600 rounded-xl p-6 transition duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-gray-500">
-                    <h3 class="font-semibold text-white text-lg mb-5">Price Summary</h3>
+                    <h3 class="font-semibold text-white text-lg mb-5">Price Summary 🏷️</h3>
 
                     <div class="space-y-4">
                         <div class="flex justify-between items-center">

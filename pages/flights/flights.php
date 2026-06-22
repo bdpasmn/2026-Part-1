@@ -60,12 +60,20 @@ $statusTab = $_GET['status'] ?? 'all';
 $mode   = $_GET['mode'] ?? 'all';
 $search = trim($_GET['search'] ?? '');
 
-$stmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
-$stmt->execute([$_SESSION['user_id']]);
-$dbUser = $stmt->fetch(PDO::FETCH_ASSOC);
+$sort = 'time_asc';
 
-$preferences = json_decode($dbUser['sort_preference'] ?? '{}', true);
-$sort = $_GET['sort'] ?? ($preferences['flight_sort'] ?? 'time_asc');
+if (isset($_SESSION['user_id'])) {
+    $stmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
+    $stmt->execute([$_SESSION['user_id']]);
+    $dbUser = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $preferences = json_decode($dbUser['sort_preference'] ?? '{}', true);
+
+    $sort = $_GET['sort']
+        ?? ($preferences['flight_sort'] ?? 'time_asc');
+} else {
+    $sort = $_GET['sort'] ?? 'time_asc';
+}
 
 $page = max(1, (int)($_GET['page'] ?? 1));
 
@@ -103,7 +111,6 @@ function fetchAllFlights(AirportsAPI $api) {
     return $all;
 }
 
-// ---------------- BUILD API MATCH ----------------
 
 $match = [];
 
@@ -111,7 +118,6 @@ if ($statusTab !== 'all') {
     $match['status'] = $statusTab;
 }
 
-// If searching by time/date, let the API do the filtering
 if ($mode === 'time' && $search !== '') {
 
     $timestamp = strtotime($search);
@@ -128,7 +134,6 @@ if ($mode === 'time' && $search !== '') {
     }
 }
 
-// ---------------- LOAD FLIGHTS ----------------
 
 if ($statusTab === 'all' && empty($match['departFromSender'])) {
 
@@ -141,7 +146,6 @@ if ($statusTab === 'all' && empty($match['departFromSender'])) {
     $flights = $apiResult['flights'] ?? [];
 }
 
-// ---------------- FILTER BY ALLOWED STATUSES ----------------
 $allowedStatuses = [
     'scheduled',
     'cancelled',
@@ -169,7 +173,6 @@ function buildQuery($overrides = []) {
         'page'   => 1
     ], $overrides));
 }
-// ---------------- TIME HELPER ----------------
 $getTime = function ($f) {
 
     $time = $f['departFromSender']
@@ -191,7 +194,6 @@ $getTime = function ($f) {
     return (int)$time;
 };
 
-// ---------------- DATE HELPER ----------------
 $getDate = function ($f) use ($getTime) {
 
     $time = $getTime($f);
@@ -201,7 +203,6 @@ $getDate = function ($f) use ($getTime) {
     return date("M d, Y g:i A", $time);
 };
 
-// ---------------- DROPDOWN FILTER ----------------
 
 if (in_array($mode, ['arrival', 'departure'], true)) {
 
@@ -213,7 +214,6 @@ if (in_array($mode, ['arrival', 'departure'], true)) {
     ));
 
 } 
-// ---------------- MODE-BASED SEARCH ----------------
 if ($search !== '') {
 
     $searchLower = strtolower($search);
@@ -270,7 +270,6 @@ if ($search !== '') {
                     return str_contains($cityString, $searchLower);
                     case 'time':
 
-                        // API already handled date searches
                         if (strtotime($searchLower) !== false) {
                             return true;
                         }
@@ -297,7 +296,6 @@ if ($search !== '') {
     ));
 }
 
-// ---------------- SORT ----------------
 usort($flights, function ($a, $b) use ($sort, $getTime) {
 
     switch ($sort) {
@@ -337,7 +335,6 @@ usort($flights, function ($a, $b) use ($sort, $getTime) {
     }
 });
 
-// ---------------- PAGINATION ----------------
 $totalFlights = count($flights);
 $totalPages = max(1, ceil($totalFlights / $perPage));
 
@@ -350,16 +347,15 @@ $pageFlights = array_slice($flights, $start, $perPage);
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Flight Search Results</title>
+    <title>Browse Flights</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-800 min-h-screen text-white">
 <div class="w-full min-h-screen bg-gray-900">
 
-    <!-- HERO -->
     <section class="p-6">
         <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-xl p-10 shadow-lg">
-            <p class="tracking-[0.25em] text-sm text-blue-300 mb-4">BDPA AIRPORTS</p>
+            <p class="tracking-[0.25em] text-sm text-blue-300 mb-4">BDPA AIRPORTS✈️</p>
             <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">Browse BDPA Flights</h1>
             <p class="text-lg text-gray-300 max-w-2xl">
                 Browse through recent and upcoming flights.
@@ -405,7 +401,6 @@ $pageFlights = array_slice($flights, $start, $perPage);
 
                     <?= htmlspecialchars($label) ?>
 
-                    <!-- active indicator -->
                     <?php if ($active): ?>
                         <span class="absolute left-0 right-0 bottom-0 h-[3px] bg-blue-500"></span>
                     <?php endif; ?>
@@ -421,14 +416,12 @@ $pageFlights = array_slice($flights, $start, $perPage);
 </section>
 
     
-<!-- SEARCH -->
 <section class="px-6">
 <form method="GET" class="bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
     <input type="hidden" name="status" value="<?= htmlspecialchars($statusTab) ?>">
     <input type="hidden" name="page" value="1">
 
     <div class="flex flex-col lg:flex-row lg:items-center gap-3">
-        <!-- SEARCH -->
         <input
             type="text"
             name="search"
@@ -439,7 +432,6 @@ $pageFlights = array_slice($flights, $start, $perPage);
                    focus:outline-none focus:ring-1 focus:ring-white focus:border-white"
         >
 
-        <!-- MODE DROPDOWN -->
         <select name="mode"
             class="h-12 w-full lg:w-64 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white
                    transition duration-200
@@ -453,7 +445,6 @@ $pageFlights = array_slice($flights, $start, $perPage);
             <option value="time" <?= $mode === 'time' ? 'selected' : '' ?>>Arrival / Departure Time</option>
         </select>
 
-        <!-- SEARCH BUTTON -->
         <button class="h-12 px-6 w-full lg:w-auto bg-blue-600 text-white rounded-lg font-medium
                    transition duration-200
                    hover:bg-blue-700 active:scale-95"
@@ -461,12 +452,7 @@ $pageFlights = array_slice($flights, $start, $perPage);
             Search
         </button>
 
-        <!-- SORT DROPDOWN -->
-        <select name="sort"
-            class="h-12 w-64 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white
-                   transition duration-200
-                   focus:outline-none focus:ring-1 focus:ring-white focus:border-white"
-        >
+        <select name="sort" class="h-12 w-full sm:w-64 max-w-full bg-gray-700 border border-gray-600 rounded-lg px-4 text-white transition duration-200 focus:outline-none focus:ring-1 focus:ring-white focus:border-white">
             <option value="airline_asc" <?= $sort == 'airline_asc' ? 'selected' : '' ?>>Airline A → Z</option>
             <option value="airline_desc" <?= $sort == 'airline_desc' ? 'selected' : '' ?>>Airline Z → A</option>
             <option value="time_asc" <?= $sort == 'time_asc' ? 'selected' : '' ?>>Time ↑ (Earliest First)</option>
@@ -475,7 +461,6 @@ $pageFlights = array_slice($flights, $start, $perPage);
             <option value="gate_desc" <?= $sort == 'gate_desc' ? 'selected' : '' ?>>Gate Z → A</option>
         </select>
 
-        <!-- SORT APPLY BUTTON -->
         <button type="submit" class="h-12 px-6 w-full lg:w-auto bg-blue-600 text-white rounded-lg font-medium
                    transition duration-200
                    hover:bg-blue-700 active:scale-95"
@@ -487,12 +472,10 @@ $pageFlights = array_slice($flights, $start, $perPage);
 </form>
 </section>
 
-    <!-- FLIGHTS -->
     <section class="p-6 pt-2 pb-0">
 
     <?php if (count($pageFlights) == 0): ?>
 
-        <!-- EMPTY STATE -->
         <div class="bg-blue-900/20 border border-blue-700 rounded-lg p-6 transition-all duration-200 hover:bg-blue-900/25 hover:border-blue-800 hover:shadow-lg">
             <h3 class="text-lg font-semibold text-white mb-2">
                 No Flights Found
@@ -524,7 +507,6 @@ $pageFlights = array_slice($flights, $start, $perPage);
                 transition duration-300">
 
                 <div class="grid grid-cols-1 md:grid-cols-[140px_200px_180px_180px_120px_160px_180px_1fr] gap-5 items-start md:items-center">
-            <!-- FLIGHT -->
             <div>
                 <h3 class="font-bold text-lg leading-tight">
                     <?= htmlspecialchars($f['flightNumber'] ?? 'N/A') ?>
@@ -534,7 +516,6 @@ $pageFlights = array_slice($flights, $start, $perPage);
                 </p>
             </div>
 
-            <!-- TIME -->
             <div>
                 <p class="text-xs text-gray-400 uppercase tracking-wide">Scheduled</p>
                 <p class="text-white text-sm whitespace-nowrap">
@@ -542,7 +523,6 @@ $pageFlights = array_slice($flights, $start, $perPage);
                 </p>
             </div>
 
-            <!-- FROM (UNCHANGED LOGIC) -->
             <div class="min-w-0">
                 <p class="text-xs text-gray-400 uppercase tracking-wide">
                     <?= ($f['type'] ?? '') === 'arrival' ? 'Coming From' : 'Departing From' ?>
@@ -564,7 +544,6 @@ $pageFlights = array_slice($flights, $start, $perPage);
                 </p>
             </div>
 
-            <!-- TO (UNCHANGED) -->
             <div class="min-w-0">
                 <p class="text-xs text-gray-400 uppercase tracking-wide">
                     <?= ($f['type'] ?? '') == 'arrival' ? 'Arriving At' : 'Departing To' ?>
@@ -577,15 +556,20 @@ $pageFlights = array_slice($flights, $start, $perPage);
                 </p>
             </div>
 
-            <!-- TYPE -->
             <div>
                 <p class="text-xs text-gray-400 uppercase tracking-wide">Type</p>
                 <p class="text-sm text-gray-200 capitalize">
                     <?= htmlspecialchars($f['type'] ?? 'N/A') ?>
+                    <?php 
+                        if ($f['type'] == 'arrival') {
+                            echo '🛬';
+                        } else {
+                            echo '🛫';
+                        }
+                    ?>
                 </p>
             </div>
 
-            <!-- STATUS (keep AJAX hooks) -->
             <div>
                 <p class="text-xs text-gray-400 uppercase tracking-wide">Status</p>
                 <p class="text-sm text-gray-200 capitalize"
@@ -595,7 +579,6 @@ $pageFlights = array_slice($flights, $start, $perPage);
                 </p>
             </div>
 
-            <!-- GATE -->
             <div>
                 <?php if (($f['type'] ?? '') == 'departure'): ?>
                     <p class="text-xs text-gray-400 uppercase tracking-wide">Gate</p>
@@ -607,8 +590,7 @@ $pageFlights = array_slice($flights, $start, $perPage);
                 <?php endif; ?>
             </div>
 
-                <!-- ACTION -->
-<div class="text-right justify-self-end">
+            <div class="text-right justify-self-end">
     <?php if ($canBook): ?>
         <a href="../booking/booking.php?flight_id=<?= urlencode($f['flight_id'] ?? '') ?>"
            class="bg-blue-600 px-4 py-2 rounded-lg text-sm
@@ -721,7 +703,6 @@ $pageFlights = array_slice($flights, $start, $perPage);
                     }
                 }
 
-                // GATE
                 const gateEl = document.querySelector(
                     `[data-flight-id="${f.flight_id}"][data-field="gate"]`
                 );

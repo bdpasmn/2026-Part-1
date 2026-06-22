@@ -43,7 +43,11 @@
         $dashboardLink = BASE_URL . "/pages/dashboard/root/root.php";
     }
 ?>
-<!-- loading overlay -->
+
+<head>
+<link rel="icon" href="<?= BASE_URL ?>/assets/favicon.ico?v=1">
+</head>
+
 <div id="loading-overlay" class="fixed inset-0 z-50 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center">
     <div class="flex flex-col items-center gap-4">
         <div class="w-12 h-12 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
@@ -54,18 +58,15 @@
         </p>
     </div>
 </div>
-
 <header class="h-16 bg-gray-800 border-b border-gray-700 relative z-50">
 <div class="h-full px-8 flex items-center justify-between relative">
 
         <a href="<?= BASE_URL ?>/index.php"
            class="text-white font-bold text-xl tracking-wide hover:text-blue-300 transition">
-            BDPA Airports
+            BDPA Airports 🌐
         </a>
 
-        <!-- DESKTOP NAV (UNCHANGED) -->
-        <nav class="hidden md:flex items-center gap-8 text-sm text-gray-300">
-
+        <nav class="hidden xl:flex items-center gap-4 lg:gap-6 text-sm text-gray-300 flex-nowrap">
             <?php if (!$isLoggedIn): ?>
                 <?php $active = isActivePath(BASE_URL . '/pages/auth/create.php'); ?>
                 <a href="<?= BASE_URL ?>/pages/auth/create.php" class="relative group">
@@ -136,11 +137,10 @@
 
         </nav>
 
-        <!-- RIGHT SIDE -->
         <div class="flex items-center gap-3">
 
             <?php if ($isLoggedIn): ?>
-                <div class="hidden sm:block text-gray-300 text-sm">Welcome, <span class="text-white font-medium"><?= htmlspecialchars($userFullName) ?></span></div>
+                <div class="hidden md:block text-gray-300 text-sm">Welcome, <span class="text-white font-medium"><?= htmlspecialchars($userFullName) ?></span></div>
                 <span class="hidden sm:inline px-2 py-1 text-xs rounded bg-gray-700 border border-gray-600 text-gray-300"><?= strtoupper($role) ?></span>
                 <a href="<?= BASE_URL ?>/pages/auth/logout.php" class="px-4 py-1.5 text-sm bg-red-600 rounded-lg hover:bg-red-700 transition">Logout</a>
             <?php else: ?>
@@ -155,9 +155,8 @@
                 </a>
             <?php endif; ?>
 
-            <!-- HAMBURGER (ONLY MOBILE) -->
             <button id="navToggle"
-                    class="md:hidden w-10 h-10 flex items-center justify-center rounded-lg bg-gray-700 hover:bg-gray-600 transition">
+                    class="xl:hidden w-10 h-10 flex items-center justify-center rounded-lg bg-gray-700 hover:bg-gray-600 transition">
                 <svg xmlns="http://www.w3.org/2000/svg"
                      class="w-5 h-5 text-white"
                      fill="none"
@@ -172,9 +171,8 @@
 
     </div>
 
-    <!-- MOBILE MENU (SAME LINKS, JUST STACKED) -->
     <div id="mobileMenu"
-     class="md:hidden hidden absolute left-0 top-full w-full bg-gray-800 border-b border-gray-700 shadow-lg z-50">
+     class="xl:hidden hidden absolute left-0 top-full w-full bg-gray-800 border-b border-gray-700 shadow-lg z-50">
 
         <div class="flex flex-col text-sm text-gray-300">
 
