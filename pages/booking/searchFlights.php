@@ -8,7 +8,7 @@
 
     $role = $_SESSION['role'] ?? null;
 
-    if ($role == 'admin' || $role == 'root') {
+    if ($role == 'Admin' || $role == 'Root') {
         header("Location: ../../index.php");
         exit;
     }

@@ -3,11 +3,6 @@
     
     $role = $_SESSION['role'] ?? null;
 
-    if ($role == 'admin' || $role == 'root') {
-        header("Location: ../../index.php");
-        exit;
-    }
-
     $message = $_GET['message'] ?? 'Booking could not be completed.';
     $isFlightNotFound = str_contains(strtolower($message), 'flight') && (str_contains(strtolower($message), 'not exist') || str_contains(strtolower($message), 'no longer available') || str_contains(strtolower($message), 'not found'));
     

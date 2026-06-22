@@ -6,20 +6,11 @@ $api = new AirportsAPI(AIRPORTS_API_KEY);
 
 $flightId = "6a3b56405ba90667e01cc88d";
 
-$response = $api->searchFlights(
-    ['flight_id' => $flightId],
-    null,
-    'desc'
-);
+$response = $api->getNoFlyList();
 
-$flight = $response['flights'][0] ?? null;
 
-if (!$flight) {
-    echo "Flight not found";
-    exit;
-}
 
 echo "<pre>";
-print_r($flight);
+print_r($response);
 echo "</pre>";
 ?>

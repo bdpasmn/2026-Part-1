@@ -57,10 +57,11 @@ foreach ($airports as $airport) {
     $airportLookup[strtolower($airport['shortName'])] = $airport;}
 
 $statusTab = $_GET['status'] ?? 'all';   
-$mode   = $_GET['mode'] ?? 'all';
+$mode   = $_GET['mode'] ?? 'flightNumber';
 $search = trim($_GET['search'] ?? '');
 
 $sort = 'time_asc';
+$role = $_SESSION['role'] ?? null;
 
 if (isset($_SESSION['user_id'])) {
     $stmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
@@ -437,7 +438,6 @@ $pageFlights = array_slice($flights, $start, $perPage);
                    transition duration-200
                    focus:outline-none focus:ring-1 focus:ring-white focus:border-white"
         >
-            <option value="all" <?= $mode === 'all' ? 'selected' : '' ?>>All Fields</option>
             <option value="flightNumber" <?= $mode === 'flightNumber' ? 'selected' : '' ?>>Flight Number</option>
             <option value="airline" <?= $mode === 'airline' ? 'selected' : '' ?>>Airline</option>
             <option value="airport" <?= $mode === 'airport' ? 'selected' : '' ?>>Airport (Codes)</option>
@@ -496,7 +496,8 @@ $pageFlights = array_slice($flights, $start, $perPage);
         $now = time();
 
         $canBook = (
-            ($f['type'] ?? '') == 'departure'
+            !in_array($role, ['Admin', 'Root'])
+            && ($f['type'] ?? '') == 'departure'
             && ($f['landingAt'] ?? '') == 'SMN'
             && $flightTime > ($now + 86400)
         );
@@ -591,12 +592,24 @@ $pageFlights = array_slice($flights, $start, $perPage);
             </div>
 
             <div class="text-right justify-self-end">
-    <?php if ($canBook): ?>
+
+            <?php if (in_array(strtolower($role), ['admin', 'root'])): ?>
+
+<div class="flex flex-col items-end gap-2">
+
+    <button onclick="copyFlightId(this, '<?= htmlspecialchars($f['flight_id'] ?? '', ENT_QUOTES) ?>')" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm transition duration-200">
+        Copy Flight ID
+    </button>
+</div>
+
+<?php elseif ($canBook): ?>
+
         <a href="../booking/booking.php?flight_id=<?= urlencode($f['flight_id'] ?? '') ?>"
            class="bg-blue-600 px-4 py-2 rounded-lg text-sm
                   hover:bg-blue-700 active:scale-95 transition duration-200">
             Book
         </a>
+
     <?php else: ?>
 
         <div class="relative group inline-flex items-center gap-1">
@@ -636,10 +649,11 @@ $pageFlights = array_slice($flights, $start, $perPage);
         </div>
 
     <?php endif; ?>
-</div>
-            </div>
 
     </div>
+    </div>
+
+</div>
 
 <?php endforeach; ?>
 
@@ -726,6 +740,28 @@ $pageFlights = array_slice($flights, $start, $perPage);
         }
     }
 
+    function copyFlightId(button, flightId) {
+    navigator.clipboard.writeText(flightId).then(() => {
+
+        const originalText = button.textContent;
+
+        button.textContent = "Copied!";
+        button.classList.add("bg-green-600");
+
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.classList.remove("bg-green-600");
+        }, 1500);
+
+    }).catch(() => {
+        button.textContent = "Failed";
+
+        setTimeout(() => {
+            button.textContent = "Copy ID";
+        }, 1500);
+    });
+}
+    
     updateFlights();
     setInterval(updateFlights, 5000);
 </script>
