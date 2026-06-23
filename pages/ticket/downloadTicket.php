@@ -169,9 +169,9 @@ function hex2rgb($hex) {
     return [$r,$g,$b];
 }
 
-// gradient background
-$top = hex2rgb('#cfeffd');
-$bottom = hex2rgb('#f6fbff');
+//slight gradient background cuz its cool
+$top = hex2rgb('#ffffff');
+$bottom = hex2rgb('#b6deff');
 for ($y=0;$y<$h;$y++) {
     $t = $y / ($h-1);
     $r = (int)($top[0]*(1-$t) + $bottom[0]*$t);
