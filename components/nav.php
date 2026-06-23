@@ -5,6 +5,10 @@
         session_start();
     }
 
+    if (session_status() == PHP_SESSION_NONE) {
+        session_start();
+    }
+
     $parts = explode('/', trim($_SERVER['SCRIPT_NAME'], '/'));
     $baseUrl = '/' . $parts[0] . '/' . $parts[1];
     define('BASE_URL', $baseUrl);
@@ -61,19 +65,18 @@
 <header class="h-16 bg-gray-800 border-b border-gray-700 relative z-50">
 <div class="h-full px-8 flex items-center justify-between relative">
 
-        <a href="<?= BASE_URL ?>/index.php"
-           class="text-white font-bold text-xl tracking-wide hover:text-blue-300 transition">
-            BDPA Airports 🌐
-        </a>
+        <p class="text-white font-bold text-xl tracking-wide">BDPA Airports 🌐</p>
 
         <nav class="hidden xl:flex items-center gap-4 lg:gap-6 text-sm text-gray-300 flex-nowrap">
             <?php if (!$isLoggedIn): ?>
+                <?php $active = isActivePath(BASE_URL . '/pages/auth/create.php'); ?>
                 <?php $active = isActivePath(BASE_URL . '/pages/auth/create.php'); ?>
                 <a href="<?= BASE_URL ?>/pages/auth/create.php" class="relative group">
                     <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Create Account</span>
                     <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
                 </a>
             <?php else: ?>
+                <?php $active = str_contains($currentPath, '/dashboard/'); ?>
                 <?php $active = str_contains($currentPath, '/dashboard/'); ?>
                 <a href="<?= $dashboardLink ?>" class="relative group">
                     <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Dashboard</span>
@@ -100,6 +103,7 @@
             </a>
 
             <?php if (!$isLoggedIn || $role == 'Customer'): ?>
+                <?php $active = str_contains($currentPath, '/booking/searchFlights.php'); ?>
                 <?php $active = str_contains($currentPath, '/booking/searchFlights.php'); ?>
                 <a href="<?= BASE_URL ?>/pages/booking/searchFlights.php" class="relative group">
                     <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Book Flight</span>
@@ -129,15 +133,19 @@
                 </a>
 
                 <?php $active = $currentTab == 'tickets'; ?>
+                <?php $active = $currentTab == 'tickets'; ?>
                 <a href="<?= BASE_URL ?>/pages/dashboard/<?= $role ?>/<?= $role ?>.php?tab=tickets" class="relative group">
                     <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Tickets</span>
                     <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
                 </a>
             <?php endif; ?>
 
+
         </nav>
 
+        <!-- RIGHT SIDE -->
         <div class="flex items-center gap-3">
+
 
             <?php if ($isLoggedIn): ?>
                 <div class="hidden md:block text-gray-300 text-sm">Welcome, <span class="text-white font-medium"><?= htmlspecialchars($userFullName) ?></span></div>

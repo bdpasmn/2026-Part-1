@@ -8,7 +8,11 @@
     $role = $_SESSION['role'] ?? null;
 
     if ($role == 'Admin' || $role == 'Root') {
-        header("Location: ../../index.php");
+        
+        if (in_array($role, ['Admin', 'Root'])) {
+            header("Location: ../dashboard/{$role}/{$role}.php");
+        }
+        
         exit;
     }
 

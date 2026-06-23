@@ -2,8 +2,14 @@
     session_start();
     require_once "../../database/db.php";
 
-    if (isset($_SESSION['role']) && ($_SESSION['role'] == 'Admin' || $_SESSION['role'] == 'Root')) {
-        header("Location: ../../index.php");
+    $role = $_SESSION['role'] ?? null;
+
+    if ($role == 'Admin' || $role == 'Root') {
+        
+        if (in_array($role, ['Admin', 'Root'])) {
+            header("Location: ../dashboard/{$role}/{$role}.php");
+        }
+        
         exit;
     }
 

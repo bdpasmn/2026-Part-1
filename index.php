@@ -9,7 +9,15 @@
     $stmt = $pdo->query("SELECT COUNT(*) FROM \"Users\" WHERE role = 'Customer'");
     $totalCustomers = $stmt->fetchColumn();
     
-    $role = $_SESSION['role'] ?? 'Guest';
+    if (isset($_SESSION['user_id'])) {
+        $role = $_SESSION['role'] ?? '';
+    
+        if (in_array($role, ['Customer', 'Admin', 'Root'])) {
+            header("Location: ./pages/dashboard/{$role}/{$role}.php");
+        }
+    
+        exit;
+    }
 ?>
 <html>
     <head>
@@ -41,7 +49,6 @@
                                     Browse Flights
                                 </a>
 
-                                <?php if ($role == 'guest' || $role == 'Customer'): ?>
                                     <a href="./pages/booking/searchFlights.php" class="px-8 py-4 bg-gray-700 border border-gray-600 rounded-lg font-medium hover:bg-gray-600 transition">
                                         Book Your Next Trip
                                     </a>
@@ -49,7 +56,6 @@
                                     <a href="./pages/ticket/viewTicket.php" class="px-8 py-4 bg-gray-700 border border-gray-600 rounded-lg font-medium hover:bg-gray-600 transition">
                                         View Your Tickets
                                     </a>
-                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -118,6 +124,24 @@
             </section>
             
         </div>
+
+        <script>
+            async function loadStats() {
+                try {
+                    const res = await fetch('./stats.php');
+                    const data = await res.json();
+
+                    document.getElementById('ticketCount').innerText = data.tickets.toLocaleString();
+                    document.getElementById('customerCount').innerText = data.customers.toLocaleString();
+
+                } catch (err) {
+                    console.error("Failed to load stats:", err);
+                }
+            }
+
+            loadStats();
+            setInterval(loadStats, 5000);
+        </script>
 
         <script>
             async function loadStats() {
