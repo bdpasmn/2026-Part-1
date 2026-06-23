@@ -4,8 +4,23 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 require_once '../../../api/key.php';
 require_once '../../../api/api.php';
 require_once '../../../database/db.php';
+/** 
+$_SESSION['user_id'] = 25;
+$_SESSION['role'] = 'customer';
 
+$stmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
+$stmt->execute([$_SESSION['user_id']]);
+$dbUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
+if (!$dbUser) {
+    die("User not found.");
+}
+
+if (strtolower($_SESSION['role'] ?? '') !== 'customer') {
+    header('Location: ../../../index.php');
+    exit;
+}
+*/
 $sessionUserId = $_SESSION['user_id'] ?? null;
 
 if (!$sessionUserId) {
@@ -26,7 +41,6 @@ if (($selfUser['role'] ?? '') !== 'Admin') {
     header('Location: ../../../index.php');
     exit;
 }
-
 $selfName = trim(($selfUser['first_name'] ?? '') . ' ' . ($selfUser['last_name'] ?? ''));
 if ($selfName === '') $selfName = 'Admin';
 
@@ -82,15 +96,25 @@ $utc = new DateTimeZone('UTC');
 $nowUtc = new DateTime('now', $utc);
 $now = $nowUtc->getTimestamp();
 
+function parseTicketPrice($rawPrice): float {
+    if ($rawPrice === null) return 0.0;
+    if (is_int($rawPrice) || is_float($rawPrice)) {
+        $p = (float)$rawPrice;
+        return ($p >= 0 && $p <= 100000) ? $p : 0.0;
+    }
+    $s = trim((string)$rawPrice);
+    if ($s === '') return 0.0;
+    $s = preg_replace('/[^0-9.\-]/', '', $s);
+    if ($s === '' || !is_numeric($s)) return 0.0;
+    $p = (float)$s;
+    if ($p < 0 || $p > 100000) return 0.0;
+    return $p;
+}
+
 foreach ($allTickets as $t) {
     if (strtolower($t['status'] ?? '') === 'cancelled') continue;
 
-    $rawPrice = $t['price'] ?? '0';
-    $price    = 0.0;
-    if (is_numeric($rawPrice)) {
-        $p = (float)$rawPrice;
-        if ($p >= 0 && $p <= 100000) $price = $p;
-    }
+    $price = parseTicketPrice($t['price'] ?? '0');
 
     $createdRaw = $t['created_at'] ?? '';
     try {
@@ -117,12 +141,12 @@ function validSeat(string $seat): bool {
     return (bool)preg_match('/^([1-9]|10)[A-Ia-i]$/', $seat);
 }
 
-function isSeatTaken(string $flightId, string $seat, array $flightMap): bool {
-    $f = $flightMap[$flightId] ?? null;
-    if (!$f) return false;
-    foreach ($f['takenSeats'] ?? $f['taken_seats'] ?? [] as $ts) {
-        $s = is_array($ts) ? ($ts['seat'] ?? '') : (string)$ts;
-        if (strtoupper($s) === strtoupper($seat)) return true;
+function isSeatTakenInDb(string $flightId, string $seat, array $allTickets): bool {
+    $seat = strtoupper($seat);
+    foreach ($allTickets as $t) {
+        if (strtolower($t['status'] ?? '') === 'cancelled') continue;
+        if (($t['flight_id'] ?? '') !== $flightId) continue;
+        if (strtoupper($t['seat'] ?? '') === $seat) return true;
     }
     return false;
 }
@@ -141,6 +165,24 @@ function formatPhone(string $raw): string {
     if (strlen($d) === 10) return '(' . substr($d,0,3) . ') ' . substr($d,3,3) . '-' . substr($d,6);
     if (strlen($d) === 11 && $d[0] === '1') return '+1 (' . substr($d,1,3) . ') ' . substr($d,4,3) . '-' . substr($d,7);
     return $raw;
+}
+
+/**
+ * True if $raw contains any alphabetic letters. Used to reject phone numbers
+ * that have letters mixed in (e.g. "555-CALL-NOW").
+ */
+function phoneHasLetters(string $raw): bool {
+    return (bool)preg_match('/[A-Za-z]/', $raw);
+}
+
+/**
+ * Minimal structural email check: must contain '@' and '.' in a sane order
+ * (something@something.something), in addition to filter_var's check.
+ */
+function isValidEmail(string $email): bool {
+    if ($email === '') return false;
+    if (!str_contains($email, '@') || !str_contains($email, '.')) return false;
+    return (bool)filter_var($email, FILTER_VALIDATE_EMAIL);
 }
 
 function fmtTs($ts): string {
@@ -187,9 +229,24 @@ function flightDestination(array $f, array $airportLookup): string {
     return strtoupper($code);
 }
 
+/**
+ * Resolve a ticket's destination string the exact same way it's resolved
+ * for display (flightDestination()): pull the destination code off the
+ * flight record and pass it through the airport lookup. Falls back to the
+ * raw posted destination only if the flight can't be found at all.
+ */
+function resolveTicketDestination(?array $flight, array $airportLookup, string $postedDestination): string {
+    if ($flight) {
+        return flightDestination($flight, $airportLookup);
+    }
+    return strtoupper(trim($postedDestination));
+}
+
 $updateMsg = null;
 $errorMsg  = null;
 $activeTab = $_GET['tab'] ?? 'overview';
+
+$isAjax = isset($_POST['ajax']) && $_POST['ajax'] === '1';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
@@ -208,15 +265,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $zip    = trim($_POST['zip']         ?? '');
         $country= trim($_POST['country']     ?? '');
 
-        if (!$fn || !$ln || !$email) {
-            $errorMsg = 'First name, last name, and email are required.';
-        } elseif (strlen($pw) < 8) {
-            $errorMsg = 'Password must be at least 8 characters.';
-        } elseif (!preg_match('/[A-Z]/', $pw) || !preg_match('/[a-z]/', $pw) || !preg_match('/[0-9]/', $pw)) {
-            $errorMsg = 'Password must contain uppercase, lowercase, and a number.';
-        } elseif (isOnNoFlyList($fn, $ln, $noFlyList)) {
-            $errorMsg = "{$fn} {$ln} is on the no-fly list and cannot be registered.";
-        } else {
+      if (!$fn || !$ln || !$email) {
+          $errorMsg = 'First name, last name, and email are required.';
+      } elseif (!isValidEmail($email)) {
+          $errorMsg = 'Please enter a valid email address (must contain "@" and ".").';
+      } elseif ($phone !== '' && phoneHasLetters($phone)) {
+          $errorMsg = 'Phone number cannot contain letters.';
+      } elseif (strlen($pw) < 8) {
+          $errorMsg = 'Password must be at least 8 characters.';
+      } else {
+          $emailCheck = $pdo->prepare('SELECT 1 FROM "Users" WHERE LOWER(email) = LOWER(?)');
+          $emailCheck->execute([$email]);
+
+          if ($emailCheck->fetch()) {
+              $errorMsg = 'That email address is already in use.';
+          } elseif (isOnNoFlyList($fn, $ln, $noFlyList)) {
+              $errorMsg = "{$fn} {$ln} is on the no-fly list and cannot be registered.";
+          } else {
             $phoneFormatted = $phone ? formatPhone($phone) : null;
             $hashed = password_hash($pw, PASSWORD_BCRYPT);
             $ins = $pdo->prepare(
@@ -235,6 +300,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $updateMsg = "Customer {$fn} {$ln} created successfully.";
             $usersStmt = $pdo->query('SELECT * FROM "Users" WHERE LOWER(role) = \'customer\' ORDER BY user_id ASC');
             $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
+            }
         }
         $activeTab = 'customers';
     }
@@ -249,18 +315,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $zip     = trim($_POST['zip']    ?? '');
         $country = trim($_POST['country']?? '');
 
-        $phoneFormatted = $phone ? formatPhone($phone) : null;
+        if ($email !== '' && !isValidEmail($email)) {
+            $errorMsg = 'Please enter a valid email address (must contain "@" and ".").';
+        } elseif ($phone !== '' && phoneHasLetters($phone)) {
+            $errorMsg = 'Phone number cannot contain letters.';
+        } else {
+            $phoneFormatted = $phone ? formatPhone($phone) : null;
 
-        $upd = $pdo->prepare(
-            'UPDATE "Users"
-             SET email=?, phone=?, street_address=?, city=?, state=?, zip_code=?, country=?
-             WHERE user_id=? AND LOWER(role)=\'customer\''
-        );
-        $upd->execute([$email, $phoneFormatted, $street, $city, $state, $zip, $country, $uid]);
-        $updateMsg = 'Customer updated successfully.';
+            $upd = $pdo->prepare(
+                'UPDATE "Users"
+                 SET email=?, phone=?, street_address=?, city=?, state=?, zip_code=?, country=?
+                 WHERE user_id=? AND LOWER(role)=\'customer\''
+            );
+            $upd->execute([$email, $phoneFormatted, $street, $city, $state, $zip, $country, $uid]);
+            $updateMsg = 'Customer updated successfully.';
 
-        $usersStmt = $pdo->query('SELECT * FROM "Users" WHERE LOWER(role) = \'customer\' ORDER BY user_id ASC');
-        $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
+            $usersStmt = $pdo->query('SELECT * FROM "Users" WHERE LOWER(role) = \'customer\' ORDER BY user_id ASC');
+            $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            if ($errorMsg) {
+                echo json_encode(['success' => false, 'message' => $errorMsg]);
+            } else {
+                echo json_encode(['success' => true, 'message' => $updateMsg]);
+            }
+            exit;
+        }
+
         $activeTab = 'customers';
     }
 
@@ -285,28 +368,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $errorMsg = 'Seat is required.';
         } elseif (!validSeat($seat)) {
             $errorMsg = 'Invalid seat. Must be row 1–10 and column A–I (e.g. 5A, 10I).';
+        } elseif ($email !== '' && !isValidEmail($email)) {
+            $errorMsg = 'Please enter a valid email address (must contain "@" and ".").';
+        } elseif ($phone !== '' && phoneHasLetters($phone)) {
+            $errorMsg = 'Phone number cannot contain letters.';
         } elseif (isOnNoFlyList($nameFirst, $nameLast, $noFlyList)) {
             $errorMsg = "{$nameFirst} {$nameLast} is on the no-fly list.";
         } else {
-            $code = strtoupper(bin2hex(random_bytes(4)));
-            $phoneFormatted = $phone ? formatPhone($phone) : null;
-            $ins = $pdo->prepare(
-                'INSERT INTO "Tickets"
-                    (flight_id, name_first, name_last, confirmation_code, seat, price,
-                     user_id, status, created_at, bags_carried, email, phone_number, sex, date_birth)
-                 VALUES (?,?,?,?,?,?,?,?,NOW(),?,?,?,?,?)'
-            );
-            $ins->execute([
-                $fid, $nameFirst, $nameLast, $code, $seat,
-                is_numeric($price) ? (float)$price : 0,
-                $uid ?: null, 'active',
-                is_numeric($bags) ? (int)$bags : 0,
-                $email ?: null, $phoneFormatted, $sex ?: null, $dob ?: null,
-            ]);
-            $updateMsg = "Ticket created. Confirmation: {$code}";
-            $ticketsStmt = $pdo->query('SELECT * FROM "Tickets"');
-            $allTickets  = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
+            $f = $flightMap[$fid] ?? null;
+            $takenFromApi = [];
+            if ($f) {
+                foreach ($f['takenSeats'] ?? $f['taken_seats'] ?? [] as $ts) {
+                    $s = is_array($ts) ? ($ts['seat'] ?? '') : (string)$ts;
+                    if ($s) $takenFromApi[] = strtoupper($s);
+                }
+            }
+
+            if (in_array($seat, $takenFromApi)) {
+                $errorMsg = "Seat {$seat} is already taken on this flight.";
+            } elseif (isSeatTakenInDb($fid, $seat, $allTickets)) {
+                $errorMsg = "Seat {$seat} is already taken on this flight.";
+            } else {
+                $code = strtoupper(bin2hex(random_bytes(4)));
+                $phoneFormatted = $phone ? formatPhone($phone) : null;
+                $destination = resolveTicketDestination($f, $airportLookup, $_POST['destination'] ?? '');
+
+                $ins = $pdo->prepare(
+                    'INSERT INTO "Tickets"
+                        (flight_id, name_first, name_last, confirmation_code, seat, price,
+                        user_id, status, created_at, bags_carried, email, phone_number,
+                        sex, date_birth, destination)
+                    VALUES (?,?,?,?,?,?,?,?,NOW(),?,?,?,?,?,?)'
+                );
+                $ins->execute([
+                    $fid, $nameFirst, $nameLast, $code, $seat,
+                    is_numeric($price) ? (float)$price : 0,
+                    $uid ?: null, 'active',
+                    is_numeric($bags) ? (int)$bags : 0,
+                    $email ?: null,
+                    $phoneFormatted,
+                    $sex ?: null,
+                    $dob ?: null,
+                    $destination
+                ]);
+                $updateMsg = "Ticket created. Confirmation: {$code}";
+                $ticketsStmt = $pdo->query('SELECT * FROM "Tickets"');
+                $allTickets  = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                if ($isAjax) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => true, 'message' => $updateMsg, 'confirmation_code' => $code]);
+                    exit;
+                }
+            }
         }
+
+        if ($isAjax && $errorMsg) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => $errorMsg]);
+            exit;
+        }
+
         $activeTab = 'tickets';
     }
 
@@ -317,6 +439,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $updateMsg = 'Ticket cancelled.';
         $ticketsStmt = $pdo->query('SELECT * FROM "Tickets"');
         $allTickets  = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => $updateMsg]);
+            exit;
+        }
+
         $activeTab = 'tickets';
     }
 
@@ -364,9 +493,19 @@ foreach ($allFlights as $f) {
 <style>
   body { font-family: 'Inter', sans-serif; background: #0f1117; color: #e2e8f0; }
 
-  .tab-active   { background: #2563eb; color: #fff; }
-  .tab-inactive { color: #9ca3af; }
-  .tab-inactive:hover { color: #fff; background: #374151; }
+  .tab-active {
+      background: rgb(37 99 235);
+      color: white;
+  }
+
+  .tab-inactive {
+      color: rgb(156 163 175);
+  }
+
+  .tab-inactive:hover {
+      color: white;
+      background: rgb(55 65 81);
+  }
   .period-btn { transition: all .15s; }
   .period-active { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
 
@@ -379,52 +518,88 @@ foreach ($allFlights as $f) {
   tbody tr:hover { background:rgba(55,65,81,.45); }
   .cancelled-row { opacity:.5; }
 
-  .field { width:100%; height:2.375rem; background:#1f2937; border:1px solid #374151; border-radius:.5rem;
-           padding:0 .875rem; font-size:.875rem; color:#f1f5f9; outline:none; transition:border-color .15s; }
+  .field {
+    width:100%;
+    height:2.5rem;
+    background:#374151;
+    border:1px solid #4b5563;
+    border-radius:.5rem;
+    padding:0 .875rem;
+    font-size:.875rem;
+    color:#fff;
+    transition:all .15s;
+}
   .field:focus { border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.2); }
   .field-error { border-color:#ef4444 !important; }
   select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right .6rem center; background-size:1.25rem; padding-right:2.5rem; appearance:none; }
 
-  .stat-card { background:#161b27; border:1px solid #1f2937; border-radius:.75rem; padding:1.5rem; }
   .hint { font-size:.7rem; color:#6b7280; margin-top:.2rem; }
 
   ::-webkit-scrollbar { width:6px; height:6px; }
   ::-webkit-scrollbar-track { background:#0f1117; }
   ::-webkit-scrollbar-thumb { background:#374151; border-radius:3px; }
   .table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-  .section-label { font-size:.65rem; text-transform:uppercase; letter-spacing:.08em; color:#6b7280; font-weight:600; padding:.5rem 0 .2rem; border-top:1px solid #1f2937; margin-top:.5rem; }
-  .section-label:first-child { border-top:none; margin-top:0; }
+  .section-label {
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: rgb(96 165 250);
+    font-weight: 700;
+    padding: .75rem 0 .4rem;
+}  .section-label:first-child { border-top:none; margin-top:0; }
 </style>
 </head>
-<body class="min-h-screen">
-<?php include_once __DIR__ . '/../../../components/nav.php'; ?>
+<body class="bg-gray-900 min-h-screen text-white">
+  <?php include_once __DIR__ . '/../../../components/nav.php'; ?>
 <main class="max-w-7xl mx-auto p-4 sm:p-6 space-y-5">
 
-  <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
-    <p class="text-xs uppercase tracking-widest text-blue-500 font-semibold mb-1">Airport BDPA</p>
-    <h1 class="text-3xl font-extrabold">Admin Dashboard</h1>
-    <p class="text-gray-400 text-sm mt-1">Manage customers, tickets, and airport operations.</p>
+  <div class="rounded-lg p-8 mb-6 bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 shadow-lg">
+      <p>
+          <span class="tracking-[0.25em] text-sm text-blue-300">
+              BDPA AIRPORTS - Admin Dashboard
+          </span>⚙️
+      </p>
+
+      <h1 class="text-4xl font-bold mt-2">
+          <?= htmlspecialchars($selfName) ?>
+      </h1>
+
+      <p class="text-gray-400 mt-4">
+          Manage customers, tickets, airport operations, and system activity.
+      </p>
   </div>
 
-  <?php if ($updateMsg): ?>
-  <div class="bg-emerald-950 border border-emerald-700 rounded-lg px-5 py-3 text-emerald-400 text-sm flex items-center gap-2">
-    <span>✓</span><?= htmlspecialchars($updateMsg) ?>
+  <div id="flashMsg" class="<?= $updateMsg ? '' : 'hidden' ?> bg-emerald-950 border border-emerald-700 rounded-lg px-5 py-3 text-emerald-400 text-sm flex items-center gap-2">
+    <span>✓</span><span id="flashMsgText"><?= htmlspecialchars($updateMsg ?? '') ?></span>
   </div>
-  <?php endif; ?>
-  <?php if ($errorMsg): ?>
-  <div class="bg-red-950 border border-red-700 rounded-lg px-5 py-3 text-red-400 text-sm flex items-center gap-2">
-    <span>⚠</span><?= htmlspecialchars($errorMsg) ?>
+  <div id="errorMsgBox" class="<?= $errorMsg ? '' : 'hidden' ?> bg-red-950 border border-red-700 rounded-lg px-5 py-3 text-red-400 text-sm flex items-center gap-2">
+    <span>⚠</span><span id="errorMsgText"><?= htmlspecialchars($errorMsg ?? '') ?></span>
   </div>
-  <?php endif; ?>
 
-  <div class="flex gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1 flex-wrap">
-    <?php
-    $tabs = ['overview' => '📊 Overview', 'customers' => '👤 Customers', 'tickets' => '🎫 Tickets'];
-    foreach ($tabs as $key => $label):
-      $cls = ($activeTab === $key) ? 'tab-active' : 'tab-inactive';
-    ?>
-    <a href="?tab=<?= $key ?>" class="px-4 py-2 rounded-lg text-sm font-medium transition <?= $cls ?>"><?= $label ?></a>
-    <?php endforeach; ?>
+  <div class="mb-6 bg-gray-800 border border-gray-700 rounded-lg p-1">
+      <div class="flex gap-2 overflow-x-auto sm:overflow-visible whitespace-nowrap sm:flex-wrap">
+
+          <?php
+          $tabs = [
+              'overview'  => 'Overview',
+              'customers' => 'Customers',
+              'tickets'   => 'Tickets'
+          ];
+
+          foreach ($tabs as $key => $label):
+              $cls = ($activeTab === $key)
+                  ? 'tab-active'
+                  : 'tab-inactive';
+          ?>
+
+          <a href="?tab=<?= $key ?>"
+            class="px-4 py-2 rounded-md text-sm font-medium transition flex-shrink-0 <?= $cls ?>">
+              <?= $label ?>
+          </a>
+
+          <?php endforeach; ?>
+
+      </div>
   </div>
 
   <?php if ($activeTab === 'overview'): ?>
@@ -434,47 +609,55 @@ foreach ($allFlights as $f) {
     <button onclick="setPeriod('<?= $k ?>')" id="period-<?= $k ?>"
         class="period-btn px-4 py-2 rounded-lg text-sm font-semibold border border-gray-700 text-gray-400 hover:bg-gray-800"
         data-tickets="<?= $ticketStats[$k] ?>"
-        data-profit="<?= number_format($profitStats[$k], 2) ?>">
+        data-profit="<?= $profitStats[$k] ?>">
       <?= $label ?>
     </button>
     <?php endforeach; ?>
   </div>
 
   <div class="grid xl:grid-cols-4 md:grid-cols-2 gap-4">
-    <div class="stat-card">
-      <p class="text-gray-500 text-xs uppercase tracking-wider font-semibold">Tickets Sold</p>
-      <h2 class="text-4xl font-extrabold mt-3 tabular-nums" id="stat-tickets">—</h2>
-      <p class="text-gray-600 text-xs mt-2" id="stat-period-label">Select a period above</p>
+      <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 overflow-hidden transition duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-blue-500">
+        <p class="text-gray-400 text-sm">
+            Tickets Sold
+        </p>
+
+        <h2 class="text-4xl font-bold mt-2 tabular-nums" id="stat-tickets">
+            —
+        </h2>
+
+        <p class="text-gray-500 text-sm mt-2" id="stat-period-label">
+            Select a period above
+        </p>
     </div>
-    <div class="stat-card">
-      <p class="text-gray-500 text-xs uppercase tracking-wider font-semibold">Gross Profit</p>
+    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 overflow-hidden transition duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-blue-500">
+      <p class="text-gray-400 text-sm">Gross Profit</p>
       <h2 class="text-3xl font-extrabold mt-3 tabular-nums text-emerald-400" id="stat-profit">—</h2>
-      <p class="text-gray-600 text-xs mt-2">Active tickets</p>
+      <p class="text-gray-600 text-xs mt-2">All tickets</p>
     </div>
-    <div class="stat-card">
-      <p class="text-gray-500 text-xs uppercase tracking-wider font-semibold">Total Customers</p>
+    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 overflow-hidden transition duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-blue-500">
+      <p class="text-gray-400 text-sm">Total Customers</p>
       <h2 class="text-4xl font-extrabold mt-3 tabular-nums"><?= count($allUsers) ?></h2>
       <p class="text-gray-600 text-xs mt-2">Registered customer accounts</p>
     </div>
-    <div class="stat-card">
-      <p class="text-gray-500 text-xs uppercase tracking-wider font-semibold">Total Tickets</p>
+    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 overflow-hidden transition duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-blue-500">
+      <p class="text-gray-400 text-sm">Total Tickets</p>
       <h2 class="text-4xl font-extrabold mt-3 tabular-nums"><?= count($allTickets) ?></h2>
       <p class="text-gray-600 text-xs mt-2">All time, all statuses</p>
     </div>
   </div>
 
   <div class="grid md:grid-cols-3 gap-4">
-    <a href="?tab=customers" class="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-blue-600 hover:bg-gray-800/60 transition block group">
+    <a href="?tab=customers" class="bg-gray-800 border border-gray-700 rounded-lg p-6 overflow-hidden transition duration-300 hover:shadow-xl hover:border-blue-600 block group">
       <div class="text-2xl mb-3">👤</div>
       <h3 class="font-bold group-hover:text-blue-400 transition">Customers</h3>
       <p class="text-gray-500 text-sm mt-1">View, create, and modify customer accounts.</p>
     </a>
-    <a href="?tab=tickets" class="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-blue-600 hover:bg-gray-800/60 transition block group">
+    <a href="?tab=tickets" class="bg-gray-800 border border-gray-700 rounded-lg p-6 overflow-hidden transition duration-300 hover:shadow-xl hover:border-blue-600 block group">
       <div class="text-2xl mb-3">🎫</div>
       <h3 class="font-bold group-hover:text-blue-400 transition">Tickets</h3>
       <p class="text-gray-500 text-sm mt-1">Create, cancel, and look up tickets.</p>
     </a>
-    <a href="?tab=tickets&conf=" class="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-blue-600 hover:bg-gray-800/60 transition block group">
+    <a href="?tab=tickets&conf=" class="bg-gray-800 border border-gray-700 rounded-lg p-6 overflow-hidden transition duration-300 hover:shadow-xl hover:border-blue-600 block group">
       <div class="text-2xl mb-3">🔍</div>
       <h3 class="font-bold group-hover:text-blue-400 transition">Ticket Lookup</h3>
       <p class="text-gray-500 text-sm mt-1">Find any ticket by confirmation code.</p>
@@ -522,43 +705,51 @@ $filteredUsers = array_slice(
 
   <div class="grid lg:grid-cols-2 gap-5">
 
-    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
-      <h2 class="font-bold text-base mb-4">Create New Customer</h2>
+    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 shadow-sm">
+    <h2 class="text-xl font-bold mb-1">
+        Create Customer📝
+    </h2>
+
+    <p class="text-sm text-gray-400 mb-5">
+        Register a new customer account and profile information.
+    </p>
       <form method="POST" class="space-y-3">
         <input type="hidden" name="action" value="create_customer">
 
         <p class="section-label">Required</p>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs text-gray-400 mb-1">First Name <span class="text-red-400">*</span></label>
+            <label class="block text-xs text-gray-400 mb-1">First Name*</label>
             <input type="text" name="first_name" required class="field">
           </div>
           <div>
-            <label class="block text-xs text-gray-400 mb-1">Middle Name</label>
+            <label class="block text-xs text-gray-400 mb-1">Middle Name (Optional)</label>
             <input type="text" name="middle_name" class="field">
           </div>
         </div>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Last Name <span class="text-red-400">*</span></label>
+          <label class="block text-xs text-gray-400 mb-1">Last Name*</label>
           <input type="text" name="last_name" required class="field">
         </div>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Email <span class="text-red-400">*</span></label>
-          <input type="email" name="email" required class="field">
+          <label class="block text-xs text-gray-400 mb-1">Emai Address*</label>
+          <input type="email" name="email" required pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+            title="Email must contain &quot;@&quot; and &quot;.&quot;" class="field">
         </div>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Password <span class="text-red-400">*</span></label>
-          <input type="password" name="password" required minlength="8" id="cpw" class="field"
-            oninput="checkPw(this.value)">
-          <p class="hint">Min 8 chars · uppercase · lowercase · number</p>
-          <p id="cpw-hint" class="text-xs mt-1 hidden"></p>
-        </div>
+          <label class="block text-sm text-gray-400 mb-1">Password</label>
 
-        <p class="section-label">Optional</p>
+          <input type="password" id="password" name="password" class="field" oninput="checkPw(this.value)" required>
+          <p class="mt-2 text-sm text-gray-400">
+              Password strength: <span id="cpw-hint">—</span>
+          </p>
+      </div>
+
+        <p class="section-label">Optional Fields</p>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Phone</label>
-          <input type="tel" name="phone" placeholder="(555) 555-5555" class="field"
-            oninput="autoFormatPhone(this)">
+          <label class="block text-xs text-gray-400 mb-1">Phone Number</label>
+          <input type="tel" name="phone" placeholder="" class="field"
+            inputmode="numeric" oninput="autoFormatPhone(this)">
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
@@ -568,9 +759,10 @@ $filteredUsers = array_slice(
           <div>
             <label class="block text-xs text-gray-400 mb-1">Sex</label>
             <select name="sex" class="field">
-              <option value="">— select —</option>
+              <option value=""></option>
               <option value="male">Male</option>
               <option value="female">Female</option>
+              <option value="female">Nonbinary</option>
               <option value="other">Other</option>
             </select>
           </div>
@@ -598,31 +790,32 @@ $filteredUsers = array_slice(
           <input type="text" name="country" class="field">
         </div>
 
-        <button type="submit" class="w-full h-10 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-semibold transition mt-1">
+        <button type="submit" class="w-full h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg">
           Create Customer
         </button>
       </form>
     </div>
 
     <?php if ($editUser): ?>
-    <div class="bg-gray-900 border border-blue-700 rounded-xl p-6">
+      <div class="bg-gray-800 border border-blue-600 rounded-lg p-6 shadow-sm">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="font-bold text-base">
-          Edit — <?= htmlspecialchars(trim(($editUser['first_name'] ?? '') . ' ' . ($editUser['last_name'] ?? ''))) ?>
+        <h2 class="text-xl font-bold">
+          Edit — <?= htmlspecialchars(trim(($editUser['first_name'] ?? '') . ' ' . ($editUser['last_name'] ?? ''))) ?>✏️
         </h2>
-        <a href="?tab=customers" class="text-xs text-gray-500 hover:text-gray-300">✕ Close</a>
+        <a href="?tab=customers" class="text-xs text-gray-500 hover:text-gray-300">✕</a>
       </div>
-      <form method="POST" class="space-y-3">
+      <form method="POST" class="space-y-3 update-customer-form">
         <input type="hidden" name="action" value="update_customer">
         <input type="hidden" name="user_id" value="<?= htmlspecialchars((string)($editUser['user_id'] ?? '')) ?>">
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Email</label>
-          <input type="email" name="email" value="<?= htmlspecialchars($editUser['email'] ?? '') ?>" class="field">
+          <label class="block text-xs text-gray-400 mb-1">Email Address</label>
+          <input type="email" name="email" value="<?= htmlspecialchars($editUser['email'] ?? '') ?>"
+            pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Email must contain &quot;@&quot; and &quot;.&quot;" class="field">
         </div>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Phone</label>
+          <label class="block text-xs text-gray-400 mb-1">Phone Number</label>
           <input type="tel" name="phone" value="<?= htmlspecialchars($editUser['phone'] ?? '') ?>"
-            placeholder="(555) 555-5555" class="field" oninput="autoFormatPhone(this)">
+            placeholder="(555) 555-5555" class="field" inputmode="numeric" oninput="autoFormatPhone(this)">
         </div>
         <div>
           <label class="block text-xs text-gray-400 mb-1">Street Address</label>
@@ -652,7 +845,7 @@ $filteredUsers = array_slice(
       </form>
     </div>
     <?php else: ?>
-    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 flex flex-col items-center justify-center text-center gap-2">
+    <div class="bg-gray-800 border border-gray-700 rounded-xl p-6 flex flex-col items-center justify-center text-center gap-2">
       <span class="text-3xl">✏️</span>
       <p class="text-gray-500 text-sm">Click <strong class="text-gray-400">Edit</strong> on a customer row to modify their details.</p>
 
@@ -661,74 +854,118 @@ $filteredUsers = array_slice(
     <?php endif; ?>
   </div>
 
-  <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-    <div class="p-4 border-b border-gray-800 flex flex-wrap items-center gap-3">
-      <h2 class="font-bold flex-1">All Customers
-        <span class="text-gray-600 font-normal text-sm ml-1">(<?= count($filteredUsers) ?>)</span>
-      </h2>
-      <form method="GET" class="flex gap-2 flex-wrap">
+  <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+
+<div class="p-5 border-b border-gray-700 flex flex-wrap items-center justify-between gap-4">
+    <h2 class="text-lg font-bold">
+        All Customers 👥
+    </h2>
+
+    <form method="GET" class="flex gap-2 flex-wrap">
         <input type="hidden" name="tab" value="customers">
-        <input type="text" name="csearch" value="<?= htmlspecialchars($customerSearch) ?>"
-          placeholder="Search name, email, address…" class="field h-9 w-64">
-        <button type="submit" class="h-9 px-4 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-semibold transition">Search</button>
+
+        <input
+            type="text"
+            name="csearch"
+            value="<?= htmlspecialchars($customerSearch) ?>"
+            placeholder="Search name, email, address..."
+            class="w-64 h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+        <button
+            type="submit"
+            class="h-10 px-5 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition">
+            Search
+        </button>
+
         <?php if ($customerSearch): ?>
-        <a href="?tab=customers" class="h-9 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-semibold transition flex items-center">Clear</a>
+        <a href="?tab=customers"
+           class="h-10 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-semibold transition flex items-center">
+            Clear
+        </a>
         <?php endif; ?>
-      </form>
-    </div>
-    <div class="table-wrap">
-      <table class="w-full text-sm">
+    </form>
+</div>
+
+<div class="overflow-x-auto">
+    <table class="w-full">
         <thead>
-          <tr class="bg-gray-800/60 text-gray-400 text-xs uppercase tracking-wider">
-            <th class="text-left px-5 py-3">ID</th>
-            <th class="text-left px-5 py-3">Name</th>
-            <th class="text-left px-5 py-3">Email</th>
-            <th class="text-left px-5 py-3">Phone</th>
-            <th class="text-left px-5 py-3">City</th>
-            <th class="text-left px-5 py-3">Country</th>
-            <th class="text-left px-5 py-3">Actions</th>
-          </tr>
+            <tr class="bg-gray-700/50 text-gray-400 text-sm">
+                <th class="text-left px-5 py-3">ID</th>
+                <th class="text-left px-5 py-3">Name</th>
+                <th class="text-left px-5 py-3">Email</th>
+                <th class="text-left px-5 py-3">Phone</th>
+                <th class="text-left px-5 py-3">City</th>
+                <th class="text-left px-5 py-3">Country</th>
+                <th class="text-left px-5 py-3">Actions</th>
+            </tr>
         </thead>
+
         <tbody>
-        <?php foreach ($filteredUsers as $u): ?>
-        <tr>
-          <td class="px-5 py-3 text-gray-500 font-mono text-xs"><?= (int)($u['user_id'] ?? 0) ?></td>
-          <td class="px-5 py-3 font-semibold"><?= htmlspecialchars(trim(($u['first_name'] ?? '') . ' ' . ($u['last_name'] ?? ''))) ?></td>
-          <td class="px-5 py-3 text-gray-400"><?= htmlspecialchars($u['email'] ?? '—') ?></td>
-          <td class="px-5 py-3 text-gray-400"><?= htmlspecialchars($u['phone'] ?? '—') ?></td>
-          <td class="px-5 py-3 text-gray-400"><?= htmlspecialchars($u['city'] ?? '—') ?></td>
-          <td class="px-5 py-3 text-gray-400"><?= htmlspecialchars($u['country'] ?? '—') ?></td>
-          <td class="px-5 py-3">
-            <a href="?tab=customers&edit=<?= urlencode((string)($u['user_id'] ?? '')) ?>"
-               class="text-blue-400 hover:text-blue-300 transition text-xs font-semibold">Edit</a>
-          </td>
-        </tr>
-        <?php endforeach; ?>
-        <?php if (empty($filteredUsers)): ?>
-        <tr><td colspan="7" class="px-5 py-10 text-center text-gray-600">No customers found.</td></tr>
-        <?php endif; ?>
+            <?php foreach ($filteredUsers as $u): ?>
+            <tr class="border-t border-gray-700 hover:bg-gray-700/40 transition">
+
+                <td class="px-5 py-4">
+                    <code class="text-xs bg-gray-700 px-2 py-1 rounded text-blue-300">
+                        #<?= (int)($u['user_id'] ?? 0) ?>
+                    </code>
+                </td>
+
+                <td class="px-5 py-4 font-semibold">
+                    <?= htmlspecialchars(trim(($u['first_name'] ?? '') . ' ' . ($u['last_name'] ?? ''))) ?>
+                </td>
+
+                <td class="px-5 py-4 text-gray-300">
+                    <?= htmlspecialchars($u['email'] ?? '—') ?>
+                </td>
+
+                <td class="px-5 py-4 text-gray-300">
+                    <?= htmlspecialchars($u['phone'] ?? '—') ?>
+                </td>
+
+                <td class="px-5 py-4 text-gray-300">
+                    <?= htmlspecialchars($u['city'] ?? '—') ?>
+                </td>
+
+                <td class="px-5 py-4 text-gray-300">
+                    <?= htmlspecialchars($u['country'] ?? '—') ?>
+                </td>
+
+                <td class="px-5 py-4">
+                  <a href="?tab=customers&edit=<?= urlencode((string)($u['user_id'] ?? '')) ?>" class="text-blue-400 hover:text-blue-300 transition text-sm font-semibold">Edit</a>
+                </td>
+
+            </tr>
+            <?php endforeach; ?>
+
+            <?php if (empty($filteredUsers)): ?>
+            <tr>
+                <td colspan="7" class="px-5 py-10 text-center text-gray-500">
+                    No customers found.
+                </td>
+            </tr>
+            <?php endif; ?>
         </tbody>
     </table>
 </div>
 
-<div class="px-4 py-3 border-t border-gray-800 flex justify-between items-center">
-    <span class="text-xs text-gray-500">
+<div class="px-5 py-4 border-t border-gray-700 flex items-center justify-between">
+    <span class="text-sm text-gray-400">
         Page <?= $customerPage ?> of <?= $totalCustomersPages ?>
     </span>
 
     <div class="flex gap-2">
         <?php if ($customerPage > 1): ?>
-            <a href="?tab=customers&csearch=<?= urlencode($customerSearch) ?>&cpage=<?= $customerPage - 1 ?>"
-               class="px-3 py-1 bg-gray-800 rounded text-sm hover:bg-gray-700">
-                Previous
-            </a>
+        <a href="?tab=customers&csearch=<?= urlencode($customerSearch) ?>&cpage=<?= $customerPage - 1 ?>"
+           class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition">
+            Previous
+        </a>
         <?php endif; ?>
 
         <?php if ($customerPage < $totalCustomersPages): ?>
-            <a href="?tab=customers&csearch=<?= urlencode($customerSearch) ?>&cpage=<?= $customerPage + 1 ?>"
-               class="px-3 py-1 bg-blue-600 rounded text-sm hover:bg-blue-500">
-                Next
-            </a>
+        <a href="?tab=customers&csearch=<?= urlencode($customerSearch) ?>&cpage=<?= $customerPage + 1 ?>"
+           class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition">
+            Next
+        </a>
         <?php endif; ?>
     </div>
 </div>
@@ -759,7 +996,7 @@ $filteredUsers = array_slice(
   if ($ticketSearch !== '') {
     $q = strtolower($ticketSearch);
     $filteredTickets = array_filter($allTickets, function($t) use ($q, $flightMap) {
-      $f = $flightMap[$t['flight_id'] ?? ''] ?? [];
+        $f = $flightMap[$t['flight_id'] ?? ''] ?? [];
       
       
       return str_contains(strtolower(
@@ -787,45 +1024,70 @@ $filteredTickets = array_slice(
 );
   ?>
 
-  <div class="grid lg:grid-cols-2 gap-5">
+<div class="grid lg:grid-cols-2 gap-5">
 
-    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
-      <h2 class="font-bold text-base mb-3">Create New Ticket</h2>
-      <form method="POST" id="ticketForm" class="space-y-3">
-        <input type="hidden" name="action" value="create_ticket">
+    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 shadow-sm">
+      <h2 class="font-bold text-base mb-3">Create New Ticket 🎫</h2>
+      <form id="ticketForm" class="space-y-3">
 
         <p class="section-label">Flight &amp; Seat (required)</p>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Flight ID <span class="text-red-400">*</span></label>
+          <label class="block text-xs text-gray-400 mb-1">Flight ID*</label>
           <input type="text" name="flight_id" id="tFlightId" required
-            placeholder="e.g. 6a2b68204b07f8ac"
             class="field font-mono text-xs" onblur="onFlightBlur(this.value)">
+          <p id="flightInfo" class="text-xs mt-1 hidden"></p>
         </div>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Seat <span class="text-red-400">*</span></label>
+          <label class="block text-xs text-gray-400 mb-1">Seat*</label>
           <input type="text" name="seat" id="tSeat" required maxlength="3"
-            placeholder="e.g. 5A"
+            placeholder="ex. 5A, 7H"
             class="field uppercase" oninput="this.value=this.value.toUpperCase()" onblur="onSeatBlur(this.value)">
           <p class="hint">Rows 1–10 · Columns A–I</p>
           <p id="seatErr" class="text-red-400 text-xs mt-1 hidden"></p>
         </div>
 
-        <p class="section-label">Passenger (required)</p>
+        <p class="section-label">Bags &amp; Pricing</p>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs text-gray-400 mb-1">First Name <span class="text-red-400">*</span></label>
-            <input type="text" name="name_first" required class="field">
+            <label class="block text-xs text-gray-400 mb-1">Carry-On Bags</label>
+            <select id="tCarryOn" class="field" onchange="onFlightBlur(document.getElementById('tFlightId').value)">
+              <option value="0">0 Carry-on (Free)</option>
+              <option value="1">1 Carry-on (Free)</option>
+              <option value="2">2 Carry-on ($30 extra)</option>
+            </select>
           </div>
           <div>
-            <label class="block text-xs text-gray-400 mb-1">Last Name <span class="text-red-400">*</span></label>
-            <input type="text" name="name_last" required class="field">
+            <label class="block text-xs text-gray-400 mb-1">Checked Bags</label>
+            <select id="tChecked" class="field" onchange="onFlightBlur(document.getElementById('tFlightId').value)">
+              <option value="0">0 Checked (Free)</option>
+              <option value="1">1 Checked (Free)</option>
+              <option value="2">2 Checked ($50 extra)</option>
+              <option value="3">3 Checked ($150 extra)</option>
+              <option value="4">4 Checked ($250 extra)</option>
+              <option value="5">5 Checked ($350 extra)</option>
+            </select>
           </div>
         </div>
 
-        <p class="section-label">Pricing</p>
-        <div>
-          <label class="block text-xs text-gray-400 mb-1">Price ($)</label>
-          <input type="number" name="price" step="0.01" min="0" max="100000" placeholder="0.00" class="field">
+        <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4 text-sm space-y-1 mt-3">
+          <div class="flex justify-between text-gray-300"><span>Seat Price</span><span id="priceSeatBase">$0.00</span></div>
+          <div class="flex justify-between text-gray-300"><span>Bag Fees</span><span id="priceBagFees">$0.00</span></div>
+          <div class="flex justify-between font-bold text-white border-t border-gray-700 pt-2 mt-1"><span>Total</span><span id="priceTotal" class="text-emerald-400">$0.00</span></div>
+        </div>
+        <input type="hidden" name="price" id="tPrice" value="0">
+        <input type="hidden" name="destination" id="tDestination" value="">
+        <input type="hidden" name="bags" id="tBags" value="0">
+
+        <p class="section-label">Passenger (required)</p>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">First Name*</label>
+            <input type="text" name="name_first" required class="field">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Last Name*</label>
+            <input type="text" name="name_last" required class="field">
+          </div>
         </div>
 
         <p class="section-label">Optional passenger details</p>
@@ -837,43 +1099,41 @@ $filteredTickets = array_slice(
           <div>
             <label class="block text-xs text-gray-400 mb-1">Sex</label>
             <select name="sex" class="field">
-              <option value="">— select —</option>
+              <option value=""></option>
               <option value="male">Male</option>
               <option value="female">Female</option>
+              <option value="female">Nonbinary</option>
               <option value="other">Other</option>
             </select>
           </div>
         </div>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Phone</label>
-          <input type="tel" name="phone" placeholder="(555) 555-5555" class="field"
-            oninput="autoFormatPhone(this)">
+          <label class="block text-xs text-gray-400 mb-1">Phone Number</label>
+          <input type="tel" name="phone" placeholder="" class="field"
+            inputmode="numeric" oninput="autoFormatPhone(this)">
         </div>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Email</label>
-          <input type="email" name="email" class="field">
+          <label class="block text-xs text-gray-400 mb-1">Email Address</label>
+          <input type="email" name="email" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+            title="Email must contain &quot;@&quot; and &quot;.&quot;" class="field">
         </div>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Bags Carried</label>
-          <input type="number" name="bags" min="0" max="10" placeholder="0" class="field">
-        </div>
-        <div>
-          <label class="block text-xs text-gray-400 mb-1">User ID (If Customer)<span class="text-gray-600">(optional)</span></label>
+          <label class="block text-xs text-gray-400 mb-3">User ID (If Customer) <span class="text-gray-600">(optional)</span></label>
           <input type="text" name="user_id" placeholder="Leave blank for guest" class="field">
         </div>
 
-        <button type="submit" class="w-full h-10 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-semibold transition mt-1">
-          Create Ticket
+        <button type="submit" class="w-full h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg">
+          Create Ticket 
         </button>
       </form>
     </div>
 
-    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
-      <h2 class="font-bold text-base mb-4">Lookup by Confirmation Code</h2>
+    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 shadow-sm">
+          <h2 class="font-bold text-base mb-4">Lookup by Confirmation Code</h2>
       <form method="GET" class="flex gap-2 mb-4">
         <input type="hidden" name="tab" value="tickets">
         <input type="text" name="conf" value="<?= htmlspecialchars($confLookup) ?>"
-          placeholder="e.g. E5920205" class="field flex-1 h-9">
+          class="field flex-1 h-9">
         <button type="submit" class="h-9 px-4 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-semibold transition">Look Up</button>
         <?php if ($confLookup): ?>
         <a href="?tab=tickets" class="h-9 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-semibold flex items-center transition">Clear</a>
@@ -889,11 +1149,11 @@ $filteredTickets = array_slice(
             'Confirmation' => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-blue-300">' . htmlspecialchars($lookupTicket['confirmation_code']) . '</code>',
             'Passenger'    => htmlspecialchars(trim(($lookupTicket['name_first'] ?? '') . ' ' . ($lookupTicket['name_last'] ?? '—'))),
             'Flight ID'    => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-xs text-gray-300">' . htmlspecialchars($lookupTicket['flight_id'] ?? '—') . '</code>',
-          'Route' => $lf
-    ? htmlspecialchars('SMN → ' . flightDestination($lf, $airportLookup))
-    : '—',
+                'Route' => htmlspecialchars(
+                'SMN → ' . strtoupper($lookupTicket['destination'] ?? '—')
+            ),
        'Departure' => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-xs text-gray-300">' . 'SMN' . '</code>',            'Seat'         => htmlspecialchars($lookupTicket['seat'] ?? '—'),
-            'Price'        => '$' . number_format((float)($lookupTicket['price'] ?? 0), 2),
+            'Price'        => '$' . number_format(parseTicketPrice($lookupTicket['price'] ?? 0), 2),
             'Status'       => statusBadge($lookupTicket['status'] ?? 'unknown'),
           ];
           foreach ($rows as $label => $val): ?>
@@ -904,7 +1164,7 @@ $filteredTickets = array_slice(
           <?php endforeach; ?>
         </div>
         <?php if (strtolower($lookupTicket['status'] ?? '') !== 'cancelled'): ?>
-        <form method="POST" class="mt-4">
+        <form method="POST" class="mt-4 cancel-ticket-form" data-ticket-id="<?= htmlspecialchars($lookupTicket['ticket_id']) ?>">
           <input type="hidden" name="action"    value="cancel_ticket">
           <input type="hidden" name="ticket_id" value="<?= htmlspecialchars($lookupTicket['ticket_id']) ?>">
           <button type="submit" onclick="return confirm('Cancel this ticket? This cannot be undone.')"
@@ -924,10 +1184,9 @@ $filteredTickets = array_slice(
     </div>
   </div>
 
-  <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-    <div class="p-4 border-b border-gray-800 flex flex-wrap items-center gap-3">
-      <h2 class="font-bold flex-1">All Tickets
-        <span class="text-gray-600 font-normal text-sm ml-1">(<?= count($filteredTickets) ?>)</span>
+  <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+  <div class="p-5 border-b border-gray-700 flex flex-wrap items-center justify-between gap-4">
+  <h2 class="text-lg font-bold">All Tickets 🎟️
       </h2>
       <form method="GET" class="flex gap-2 flex-wrap">
         <input type="hidden" name="tab" value="tickets">
@@ -942,8 +1201,8 @@ $filteredTickets = array_slice(
     <div class="table-wrap">
       <table class="w-full text-sm">
         <thead>
-          <tr class="bg-gray-800/60 text-gray-400 text-xs uppercase tracking-wider">
-            <th class="text-left px-4 py-3">Confirmation</th>
+        <tr class="bg-gray-700/50 text-gray-400 text-sm">
+                    <th class="text-left px-4 py-3">Confirmation</th>
             <th class="text-left px-4 py-3">Passenger</th>
             <th class="text-left px-4 py-3">Flight #</th>
             <th class="text-left px-4 py-3">Route</th>
@@ -960,15 +1219,14 @@ $filteredTickets = array_slice(
           $isCancelled = strtolower($t['status'] ?? '') === 'cancelled';
           $passenger   = trim(($t['name_first'] ?? '') . ' ' . ($t['name_last'] ?? ''));
           if (!$passenger) $passenger = '—';
-          $rawP  = $t['price'] ?? '0';
-          $safeP = (is_numeric($rawP) && (float)$rawP >= 0 && (float)$rawP <= 100000)
-                    ? '$' . number_format((float)$rawP, 2) : '—';
-        $route = 'SMN → ' . flightDestination($f, $airportLookup);
+          $safeP = '$' . number_format(parseTicketPrice($t['price'] ?? '0'), 2);
+        $destination = $t['destination'] ?? '—';
+$route = 'SMN → ' . strtoupper($destination);
 
 $dep = 'SMN';
         ?>
-        <tr class="<?= $isCancelled ? 'cancelled-row' : '' ?>">
-          <td class="px-4 py-3">
+<tr class="border-t border-gray-700 hover:bg-gray-700/40 transition <?= $isCancelled ? 'cancelled-row' : '' ?>"
+    data-ticket-id="<?= htmlspecialchars($t['ticket_id']) ?>">          <td class="px-4 py-3">
             <code class="text-xs bg-gray-800 px-2 py-1 rounded text-blue-300 font-mono"><?= htmlspecialchars($t['confirmation_code'] ?? '—') ?></code>
           </td>
           <td class="px-4 py-3 text-gray-300"><?= htmlspecialchars($passenger) ?></td>
@@ -979,9 +1237,9 @@ $dep = 'SMN';
           <td class="px-4 py-3 text-gray-400 text-xs whitespace-nowrap"><?= $dep ?></td>
           <td class="px-4 py-3 text-gray-400 text-xs"><?= htmlspecialchars($t['seat'] ?? '—') ?></td>
           <td class="px-4 py-3 text-gray-300 text-xs font-mono"><?= $safeP ?></td>
-          <td class="px-4 py-3">
+          <td class="px-4 py-3 status-cell">
             <?php if (!$isCancelled): ?>
-            <form method="POST" class="inline">
+            <form method="POST" class="inline cancel-ticket-form" data-ticket-id="<?= htmlspecialchars($t['ticket_id']) ?>">
               <input type="hidden" name="action"    value="cancel_ticket">
               <input type="hidden" name="ticket_id" value="<?= htmlspecialchars($t['ticket_id']) ?>">
               <button type="submit"
@@ -1002,8 +1260,8 @@ $dep = 'SMN';
         </tbody>
       </table>
     </div>
-    <div class="px-4 py-3 border-t border-gray-800 flex justify-between items-center">
-    <span class="text-xs text-gray-500">
+    <div class="px-5 py-4 border-t border-gray-700 flex items-center justify-between">
+        <span class="text-xs text-gray-500">
         Page <?= $ticketPage ?> of <?= $totalTicketPages ?>
     </span>
 
@@ -1023,6 +1281,7 @@ $dep = 'SMN';
         <?php endif; ?>
     </div>
 </div>
+  </div>
 
   <?php endif; ?>
 
@@ -1056,35 +1315,102 @@ function autoFormatPhone(el) {
 }
 
 function checkPw(val) {
-  const hint = document.getElementById('cpw-hint');
-  if (!hint) return;
-  const issues = [];
-  if (val.length < 8)            issues.push('at least 8 characters');
-  if (!/[A-Z]/.test(val))        issues.push('an uppercase letter');
-  if (!/[a-z]/.test(val))        issues.push('a lowercase letter');
-  if (!/[0-9]/.test(val))        issues.push('a number');
-  if (issues.length) {
-    hint.className = 'text-xs mt-1 text-amber-400';
-    hint.textContent = 'Needs: ' + issues.join(', ');
-    hint.classList.remove('hidden');
-  } else {
-    hint.className = 'text-xs mt-1 text-emerald-400';
-    hint.textContent = '✓ Password looks good';
-    hint.classList.remove('hidden');
-  }
+    const hint = document.getElementById('cpw-hint');
+    if (!hint) return;
+
+    if (val.length <= 10) {
+        hint.className = 'text-xs mt-1 text-red-400';
+        hint.textContent = 'Weak password (10 characters or fewer)';
+        hint.classList.remove('hidden');
+
+    } else if (val.length <= 17) {
+        hint.className = 'text-xs mt-1 text-yellow-400';
+        hint.textContent = 'Medium password';
+        hint.classList.remove('hidden');
+
+    } else {
+        hint.className = 'text-xs mt-1 text-emerald-400';
+        hint.textContent = 'Strong password';
+        hint.classList.remove('hidden');
+    }
 }
 
-
-
-
-
-
-
+function showFlash(msg) {
+  const el = document.getElementById('flashMsg');
+  const txt = document.getElementById('flashMsgText');
+  document.getElementById('errorMsgBox').classList.add('hidden');
+  txt.textContent = msg;
+  el.classList.remove('hidden');
+}
+function showError(msg) {
+  const el = document.getElementById('errorMsgBox');
+  const txt = document.getElementById('errorMsgText');
+  document.getElementById('flashMsg').classList.add('hidden');
+  txt.textContent = msg;
+  el.classList.remove('hidden');
+}
 
 const knownFlights  = <?= json_encode(array_keys($flightMap)) ?>;
 const takenSeats    = <?= json_encode($takenSeatsByFlight) ?>;
+const dbTakenSeats  = <?php
+  $dbTaken = [];
+  foreach ($allTickets as $t) {
+    if (strtolower($t['status'] ?? '') === 'cancelled') continue;
+    $fid = $t['flight_id'] ?? '';
+    if (!$fid) continue;
+    $dbTaken[$fid][] = strtoupper($t['seat'] ?? '');
+  }
+  echo json_encode($dbTaken);
+?>;
 
-function onFlightBlur(val) {}
+async function onFlightBlur(val) {
+  const infoEl = document.getElementById('flightInfo');
+  const carryOn = document.getElementById('tCarryOn').value;
+  const checked = document.getElementById('tChecked').value;
+
+  if (!val) {
+    infoEl.classList.add('hidden');
+    document.getElementById('priceSeatBase').textContent = '$0.00';
+    document.getElementById('priceBagFees').textContent = '$0.00';
+    document.getElementById('priceTotal').textContent = '$0.00';
+    document.getElementById('tPrice').value = '0';
+    document.getElementById('tDestination').value = '';
+    document.getElementById('tBags').value = '0';
+    return;
+  }
+
+  try {
+    const res = await fetch(`flight_lookup.php?flight_id=${encodeURIComponent(val)}&carry_on=${carryOn}&checked=${checked}`);
+    const data = await res.json();
+
+    if (data.error) {
+      infoEl.textContent = data.error;
+      infoEl.className = 'text-xs mt-1 text-red-400';
+      infoEl.classList.remove('hidden');
+      document.getElementById('priceSeatBase').textContent = '$0.00';
+      document.getElementById('priceBagFees').textContent = '$0.00';
+      document.getElementById('priceTotal').textContent = '$0.00';
+      document.getElementById('tPrice').value = '0';
+      document.getElementById('tDestination').value = '';
+      return;
+    }
+
+    infoEl.textContent = `${data.flightNumber} · ${data.airline} → ${data.destination}`;
+    infoEl.className = 'text-xs mt-1 text-emerald-400';
+    infoEl.classList.remove('hidden');
+
+    document.getElementById('priceSeatBase').textContent = '$' + data.seatPrice.toFixed(2);
+    document.getElementById('priceBagFees').textContent = '$' + data.bagCost.toFixed(2);
+    document.getElementById('priceTotal').textContent = '$' + data.total.toFixed(2);
+    document.getElementById('tPrice').value = data.total;
+    document.getElementById('tDestination').value = data.destination;
+    document.getElementById('tBags').value = (parseInt(carryOn) + parseInt(checked));
+  } catch (e) {
+    infoEl.textContent = 'Could not look up flight.';
+    infoEl.className = 'text-xs mt-1 text-red-400';
+    infoEl.classList.remove('hidden');
+  }
+}
 
 function onSeatBlur(val) {
   const errEl   = document.getElementById('seatErr');
@@ -1094,19 +1420,104 @@ function onSeatBlur(val) {
     errEl.textContent = 'Invalid seat. Must be row 1–10, column A–I (e.g. 5A, 10I).';
     errEl.classList.remove('hidden'); return;
   }
-  const taken = takenSeats[flightId] || [];
-  if (taken.includes(val.toUpperCase())) {
-    errEl.textContent = 'Seat ' + val.toUpperCase() + ' is already taken on this flight.';
+  const apiTaken = takenSeats[flightId] || [];
+  const dbTaken  = dbTakenSeats[flightId] || [];
+  const seatUp = val.toUpperCase();
+  if (apiTaken.includes(seatUp) || dbTaken.includes(seatUp)) {
+    errEl.textContent = 'Seat ' + seatUp + ' is already taken on this flight.';
     errEl.classList.remove('hidden'); return;
   }
   errEl.classList.add('hidden');
 }
 
-document.getElementById('ticketForm')?.addEventListener('submit', function(e) {
-  if (!seatErr.classList.contains('hidden')) {
-    e.preventDefault();
+document.getElementById('ticketForm')?.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const errEl = document.getElementById('seatErr');
+  if (!errEl.classList.contains('hidden')) {
     alert('Please fix the highlighted errors before submitting.');
-}
+    return;
+  }
+
+  const formData = new FormData(this);
+  formData.append('action', 'create_ticket');
+  formData.append('ajax', '1');
+
+  try {
+    const res = await fetch(window.location.pathname + '?tab=tickets', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (data.success) {
+      showFlash(data.message);
+      this.reset();
+      document.getElementById('flightInfo').classList.add('hidden');
+      document.getElementById('priceSeatBase').textContent = '$0.00';
+      document.getElementById('priceBagFees').textContent = '$0.00';
+      document.getElementById('priceTotal').textContent = '$0.00';
+      setTimeout(() => window.location.reload(), 900);
+    } else {
+      showError(data.message || 'Something went wrong.');
+    }
+  } catch (err) {
+    showError('Something went wrong. Please try again.');
+  }
+});
+
+document.querySelectorAll('.cancel-ticket-form').forEach(form => {
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    if (!confirm('Cancel this ticket? This cannot be undone.')) return;
+
+    const formData = new FormData(this);
+    formData.append('ajax', '1');
+
+    try {
+      const res = await fetch(window.location.pathname + '?tab=tickets', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        showFlash(data.message);
+        const tid = this.dataset.ticketId;
+        const row = document.querySelector(`tr[data-ticket-id="${tid}"]`);
+        if (row) {
+          row.classList.add('cancelled-row');
+          const statusCell = row.querySelector('.status-cell');
+          if (statusCell) statusCell.innerHTML = '<span class="text-xs text-gray-700">Cancelled</span>';
+        }
+      } else {
+        showError(data.message || 'Something went wrong.');
+      }
+    } catch (err) {
+      showError('Something went wrong. Please try again.');
+    }
+  });
+});
+
+document.querySelectorAll('.update-customer-form').forEach(form => {
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    formData.append('ajax', '1');
+
+    try {
+      const res = await fetch(window.location.pathname + '?tab=customers', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        showFlash(data.message);
+        setTimeout(() => window.location.href = '?tab=customers', 900);
+      } else {
+        showError(data.message || 'Something went wrong.');
+      }
+    } catch (err) {
+      showError('Something went wrong. Please try again.');
+    }
+  });
 });
 </script>
 </body>

@@ -3,7 +3,12 @@
     require_once "../../database/db.php";
     
     if (isset($_SESSION['user_id'])) {
-        header("Location: ../../index.php");
+        $role = $_SESSION['role'] ?? '';
+    
+        if (in_array($role, ['Customer', 'Admin', 'Root'])) {
+            header("Location: ../dashboard/{$role}/{$role}.php");
+        }
+    
         exit;
     }
 
@@ -82,7 +87,7 @@
 
             <section class="p-6">
                 <div class="max-w-3xl mx-auto bg-gray-800 border border-gray-700 rounded-xl p-8 shadow-lg">
-                    <p class="tracking-[0.25em] text-sm text-blue-300 mb-3">ACCOUNT RECOVERY</p>
+                    <p class="tracking-[0.25em] text-sm text-blue-300 mb-3">ACCOUNT RECOVER🔒</p>
                     <h2 class="text-4xl font-bold mb-3">Recover Your Account</h2>
                     <p class="text-gray-400 mb-4">Answer your security questions to verify your identity.</p>
 

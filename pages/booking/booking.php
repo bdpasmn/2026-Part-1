@@ -7,8 +7,12 @@
     
     $role = $_SESSION['role'] ?? null;
 
-    if ($role == 'admin' || $role == 'root') {
-        header("Location: ../../index.php");
+    if ($role == 'Admin' || $role == 'Root') {
+        
+        if (in_array($role, ['Admin', 'Root'])) {
+            header("Location: ../dashboard/{$role}/{$role}.php");
+        }
+        
         exit;
     }
 
@@ -54,7 +58,7 @@
             <div class="bg-gray-800 border border-gray-700 rounded-lg p-5 mb-0 transition-all duration-300 hover:bg-gray-750 hover:border-blue-400 hover:shadow-lg">
                 <div class="flex justify-between items-center">
                     <div>
-                        <h2 class="text-lg font-bold text-white">Flight Summary</h2>
+                        <h2 class="text-lg font-bold text-white">Flight Summary ✈️</h2>
                         <p class="text-gray-400">
                             <?= htmlspecialchars($flight['flightNumber'] ?? 'Flight') ?>
                             |
@@ -113,9 +117,11 @@
             <section class="scroll-mt-52 mb-6">
                 <div class="bg-gray-800 p-6 rounded-lg border border-gray-700">
                     <div class="flex justify-between">
-                        <a href="searchFlights.php" class="px-6 h-12 flex items-center bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-600">Cancel</a>
+                        <a href="<?= htmlspecialchars($_SERVER['HTTP_REFERER'] ?? 'searchFlights.php') ?>" class="px-6 h-12 flex items-center bg-gray-700 hover:bg-gray-600 text-white rounded-lg border border-gray-600">
+                            Cancel
+                        </a>
                         <div class="relative">
-                            <button id="reviewButton" onclick="openReviewModal()" disabled onmouseenter="showTooltip()" onmouseleave="hideTooltip()" class="px-6 h-12 bg-gray-600 text-gray-400 rounded-lg cursor-not-allowed transition">Review Purchase</button>
+                            <button id="reviewButton" onclick="openReviewModal()" disabled onmouseenter="showTooltip()" onmouseleave="hideTooltip()" class="px-6 h-12 bg-gray-600 text-gray-400 rounded-lg cursor-not-allowed transition">Review Purchase 📝</button>
 
                             <div id="reviewTooltip" class="hidden absolute bottom-full right-0 mb-2 w-72 bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm text-gray-300 shadow-lg">
                                 Complete all required passenger information and select a seat before reviewing your purchase.

@@ -27,7 +27,7 @@
 </style>
 
 <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
-    <h2 class="text-xl font-bold mb-6 text-white">Select Your Seat</h2>
+    <h2 class="text-xl font-bold mb-6 text-white">Select Your Seat ✏️</h2>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2">
             <div class="mb-4 text-sm text-gray-400">Click a seat to select it. All seats are the same price.</div>

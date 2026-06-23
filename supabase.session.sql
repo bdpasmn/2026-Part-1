@@ -1,9 +1,10 @@
-CREATE TABLE IF NOT EXISTS connection_test (
-  id SERIAL PRIMARY KEY,
-  message TEXT,
-  connected_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-INSERT INTO connection_test (message)
-VALUES ('Connected from VS Code!')
-RETURNING *;
+SELECT
+  ticket_id,
+  price,
+  pg_typeof(price) AS db_type,
+  length(price) AS char_length,
+  price ~ '^[0-9]+$' AS is_clean_digits,
+  status
+FROM "Tickets"
+WHERE status != 'cancelled'
+ORDER BY ticket_id;

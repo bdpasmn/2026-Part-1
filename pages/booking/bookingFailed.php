@@ -3,11 +3,6 @@
     
     $role = $_SESSION['role'] ?? null;
 
-    if ($role == 'admin' || $role == 'root') {
-        header("Location: ../../index.php");
-        exit;
-    }
-
     $message = $_GET['message'] ?? 'Booking could not be completed.';
     $isFlightNotFound = str_contains(strtolower($message), 'flight') && (str_contains(strtolower($message), 'not exist') || str_contains(strtolower($message), 'no longer available') || str_contains(strtolower($message), 'not found'));
     
@@ -26,7 +21,7 @@
         <main class="max-w-7xl mx-auto p-6">
             <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-lg p-6 mb-6">
             <h1 class="text-3xl font-bold text-white">
-                <?= htmlspecialchars($title) ?>
+                <?= htmlspecialchars($title) . '⚠️' ?>
             </h1>
 
             <p class="text-gray-400 mt-2">
@@ -37,7 +32,6 @@
             <div class="bg-gray-800 border border-gray-700 rounded-lg p-8">
                 <div class="space-y-8">
                     <div>
-                        <h2 class="text-xl font-bold text-white mb-4">Notice</h2>
                         <div class="bg-slate-700 border border-gray-600 rounded-lg p-6 transition duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-gray-500">
                             <div class="text-gray-400 text-sm uppercase tracking-wide">Message</div>
 

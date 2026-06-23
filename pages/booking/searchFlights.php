@@ -8,8 +8,12 @@
 
     $role = $_SESSION['role'] ?? null;
 
-    if ($role == 'admin' || $role == 'root') {
-        header("Location: ../../index.php");
+    if ($role == 'Admin' || $role == 'Root') {
+        
+        if (in_array($role, ['Admin', 'Root'])) {
+            header("Location: ../dashboard/{$role}/{$role}.php");
+        }
+        
         exit;
     }
 
@@ -35,7 +39,7 @@
 
             <section class="p-6">
                 <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-xl p-10 shadow-lg">
-                    <p class="tracking-[0.25em] text-sm text-blue-300 mb-4">BDPA AIRPORTS</p>
+                    <p class="tracking-[0.25em] text-sm text-blue-300 mb-4">BDPA AIRPORTS✈️</p>
                     <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">Flight Search</h1>
                     <p class="text-lg text-gray-300 max-w-2xl">Search available flights and book your next trip with BDPA Airports.</p>
                 </div>
@@ -61,7 +65,7 @@
             </section>
 
             <section class="p-6 pt-4">
-                <h2 class="text-2xl font-bold text-white mb-4">Popular Destinations</h2>
+                <h2 class="text-2xl font-bold text-white mb-4">Popular Destinations📍</h2>
 
                 <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
                     <?php foreach ($featuredAirports as $airport): ?>

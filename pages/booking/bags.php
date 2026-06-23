@@ -1,7 +1,7 @@
 <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
-            <h2 class="text-xl font-bold mb-6 text-white">Baggage Selection</h2>
+            <h2 class="text-xl font-bold mb-6 text-white">Baggage Selection 💼</h2>
             <div class="space-y-6">
                 <div>
                     <label class="block mb-2 text-sm font-medium text-gray-300">Carry-on Bags (Max 2)</label>

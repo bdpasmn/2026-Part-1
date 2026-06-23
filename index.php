@@ -9,7 +9,15 @@
     $stmt = $pdo->query("SELECT COUNT(*) FROM \"Users\" WHERE role = 'Customer'");
     $totalCustomers = $stmt->fetchColumn();
     
-    $role = $_SESSION['role'] ?? 'Guest';
+    if (isset($_SESSION['user_id'])) {
+        $role = $_SESSION['role'] ?? '';
+    
+        if (in_array($role, ['Customer', 'Admin', 'Root'])) {
+            header("Location: ./pages/dashboard/{$role}/{$role}.php");
+        }
+    
+        exit;
+    }
 ?>
 <html>
     <head>
@@ -28,7 +36,7 @@
                     <div class="absolute inset-0 bg-black/70"></div>
                     <div class="relative z-10 flex items-center min-h-[500px] p-10 lg:p-16">
                         <div class="max-w-4xl">
-                            <p class="tracking-[0.25em] text-sm text-blue-300 mb-4">BDPA AIRPORTS</p>
+                            <p class="tracking-[0.25em] text-sm text-blue-300 mb-4">WELCOME TO BDPA AIRPORTS</p>
                             <h1 class="text-5xl md:text-7xl font-bold leading-tight mb-6">Your Journey Starts Here</h1>
                             <p class="text-xl text-gray-300 max-w-3xl mb-8">Search flights, book tickets, and track real-time arrivals, departures, gate changes, and flight status update from the official BDPA Airports portal.</p>
 
@@ -41,7 +49,6 @@
                                     Browse Flights
                                 </a>
 
-                                <?php if ($role == 'guest' || $role == 'Customer'): ?>
                                     <a href="./pages/booking/searchFlights.php" class="px-8 py-4 bg-gray-700 border border-gray-600 rounded-lg font-medium hover:bg-gray-600 transition">
                                         Book Your Next Trip
                                     </a>
@@ -49,7 +56,6 @@
                                     <a href="./pages/ticket/viewTicket.php" class="px-8 py-4 bg-gray-700 border border-gray-600 rounded-lg font-medium hover:bg-gray-600 transition">
                                         View Your Tickets
                                     </a>
-                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -71,7 +77,7 @@
                     </div>
 
                     <div class="bg-gray-800 border border-gray-700 rounded-lg p-8 hover:shadow-xl hover:-translate-y-1 hover:border-blue-500 transition duration-300">
-                        <div class="text-4xl mb-4">📄</div>
+                        <div class="text-4xl mb-4">🎫</div>
                         <h3 class="text-2xl font-bold mb-3">Ticket View</h3>
                         <p class="text-gray-400">View your tickets using your confirmation code.</p>
                     </div>
@@ -118,6 +124,24 @@
             </section>
             
         </div>
+
+        <script>
+            async function loadStats() {
+                try {
+                    const res = await fetch('./stats.php');
+                    const data = await res.json();
+
+                    document.getElementById('ticketCount').innerText = data.tickets.toLocaleString();
+                    document.getElementById('customerCount').innerText = data.customers.toLocaleString();
+
+                } catch (err) {
+                    console.error("Failed to load stats:", err);
+                }
+            }
+
+            loadStats();
+            setInterval(loadStats, 5000);
+        </script>
 
         <script>
             async function loadStats() {

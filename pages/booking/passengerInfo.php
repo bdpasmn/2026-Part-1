@@ -2,7 +2,7 @@
             <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                        <h2 class="text-xl font-bold mb-6 text-white">Passenger Information</h2>
+                        <h2 class="text-xl font-bold mb-6 text-white">Passenger Information 👤</h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block mb-2 text-sm font-medium text-gray-300">First Name*</label>
@@ -36,7 +36,13 @@
 
                             <div class="mt-8 border-t border-gray-700 pt-6 md:col-span-2">
                                 <label class="block mb-2 text-sm font-medium text-gray-300">Phone Number*</label>
-                                <input type="tel" id="phone" maxlength="15" oninput="this.value=this.value.replace(/\D/g,'')" class="required-booking w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white">
+                                <input
+                                    type="tel"
+                                    id="phone"
+                                    maxlength="20"
+                                    oninput="this.value=this.value.replace(/[^0-9()\-\s]/g,'')"
+                                    class="required-booking w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white"
+                                >
                             </div>
 
                             <div class="md:col-span-2">
@@ -46,7 +52,7 @@
                         </div>
 
                         <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                            <h2 class="text-xl font-bold mb-6 text-white">Payment Information</h2>
+                            <h2 class="text-xl font-bold mb-6 text-white">Payment Information 💳</h2>
                             <div class="space-y-4">
                                 <div>
                                     <label class="block mb-2 text-sm font-medium text-gray-300">Cardholder Name*</label>

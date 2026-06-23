@@ -3,6 +3,17 @@ session_start();
 require_once "../../database/db.php";
 require_once __DIR__ . '/../../components/config.php';
 
+if (isset($_SESSION['user_id'])) {
+    $role = $_SESSION['role'] ?? '';
+
+    if (in_array($role, ['Customer', 'Admin', 'Root'])) {
+        $roleLower = strtolower($role);
+
+        header("Location: ../dashboard/{$roleLower}/{$roleLower}.php");
+        exit;
+    }
+}
+
 $message = '';
 $first = $_POST['first'] ?? '';
 $last = $_POST['last'] ?? '';
@@ -199,11 +210,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="relative z-10 space-y-4">
 
         <p class="tracking-[0.25em] text-xs text-blue-300">
-            BDPA AIRPORTS
+            BDPA AIRPORTS✈️
         </p>
 
         <h1 class="text-4xl md:text-5xl font-bold leading-tight">
-            Sign In
+            Sign In 🔐
         </h1>
 
         <p class="text-gray-300 text-sm md:text-base max-w-2xl mx-auto">
@@ -280,13 +291,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <input type="checkbox" name="remember" class="accent-blue-500">
                         Remember me
                     </label>
+                    
 
                     <a href="<?= BASE_URI ?>/pages/accountRecovery/recovery.php"
                         class="text-blue-400 hover:text-blue-300">
                         Forgot password?
                     </a>
                 </div>
-
                 <!-- BUTTON -->
                 <button type="submit"
                     class="w-full h-12 bg-blue-600 hover:bg-blue-700 border border-blue-600 rounded-lg transition">
@@ -294,8 +305,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </button>
 
             </form>
+            
+<div class="flex items-center my-4">
+    <div class="flex-1 h-px bg-gray-700"></div>
+</div>
 
-        </div>
+<div class="text-center text-sm text-gray-400 mb-4">
+    Don't have an account?
+    <a href="<?= BASE_URI ?>/pages/auth/create.php"
+       class="text-blue-400 hover:text-blue-300 ml-1">
+        Sign up
+    </a>
+</div>
+
+        
 
     </div>
 

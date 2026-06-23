@@ -1,11 +1,19 @@
 <?php
-//session_start();
+session_start();
 
 require_once '../../../api/key.php';
 require_once '../../../api/api.php';
 require_once '../../../database/db.php';
-session_start();
 
+if (strtolower($_SESSION['role'] ?? '') !== 'customer') {
+  header('Location: ../../../index.php');
+  exit;
+}
+
+if (!$_SESSION['user_id']) {
+header('Location: ../../../index.php');
+exit;
+}
 $stmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
 $stmt->execute([$_SESSION['user_id']]);
 $dbUser = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -13,16 +21,11 @@ $dbUser = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$dbUser) {
     die("User not found.");
 }
-
-if (strtolower($_SESSION['role'] ?? '') !== 'customer') {
-    header('Location: ../../../index.php');
-    exit;
+function formatCard($num) {
+  $num = preg_replace('/\D/', '', $num); // safety
+  return trim(chunk_split($num, 4, ' '));
 }
 
- if (!$_SESSION['user_id']) {
-  header('Location: ../../../index.php');
-  exit;
-}
 
 $stmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
 $stmt->execute([$_SESSION['user_id']]);
@@ -369,26 +372,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 
     if ($_POST['action'] === 'add_card') {
-        $cardNumber = preg_replace('/\D/', '', trim($_POST['card_number'] ?? ''));
-        $expiry     = htmlspecialchars(trim($_POST['card_expiry']     ?? ''));
-        $cvc        = preg_replace('/\D/', '', trim($_POST['card_cvc']  ?? ''));
-        $billing    = htmlspecialchars(trim($_POST['billing_address']  ?? ''));
-        $zip        = htmlspecialchars(trim($_POST['billing_zip']      ?? ''));
-        $cardName   = htmlspecialchars(trim($_POST['card_name']        ?? $currentUser['name']));
+      $cardNumber = formatCard($_POST['card_number'] ?? '');
+            $expiry     = htmlspecialchars(trim($_POST['card_expiry']     ?? ''));
 
-        if (strlen($cardNumber) < 13 || strlen($cardNumber) > 19) {
-            $_SESSION['flash_msg'] = 'Please enter a valid card number (13–19 digits).';
+        if (!preg_match('/^(0[1-9]|1[0-2])\/\d{2}$/', $expiry)) {
+            $_SESSION['flash_msg'] = 'Invalid expiration format. Use MM/YY.';
+            header('Location: ?tab=payment');
+            exit;
+        }
+        
+        [$expMonth, $expYear] = explode('/', $expiry);
+        $expMonth = (int)$expMonth;
+        $expYear  = (int)("20" . $expYear); 
+        
+        $currentYear  = (int)date('Y');
+        $currentMonth = (int)date('m');
+        
+        if ($expYear < $currentYear || ($expYear === $currentYear && $expMonth < $currentMonth)) {
+            $_SESSION['flash_msg'] = 'Card is expired. Please use a valid card.';
             header('Location: ?tab=payment');
             exit;
         }
 
-        $masked = str_repeat('*', strlen($cardNumber) - 4) . substr($cardNumber, -4);
+        $cvc        = preg_replace('/\D/', '', trim($_POST['card_cvc']  ?? ''));
+        $billing    = htmlspecialchars(trim($_POST['billing_address']  ?? ''));
+        $zip        = htmlspecialchars(trim($_POST['billing_zip']      ?? ''));
+
+        $cardName = trim($_POST['card_name'] ?? '');
+        if ($cardName === '') {
+            $cardName = $currentUser['name'];
+        }
+        $cardName = htmlspecialchars($cardName);
+        $rawCard = preg_replace('/\D/', '', $_POST['card_number'] ?? '');
+
+        if (strlen($rawCard) < 13 || strlen($rawCard) > 19) {
+            $_SESSION['flash_msg'] = 'Please enter a valid card number.';
+            header('Location: ?tab=payment');
+            exit;
+        }
+        
+        $cardNumber = formatCard($rawCard);
+
 
         $ins = $pdo->prepare(
             'INSERT INTO "Saved Cards" (user_id, card_number, expiration_date, cvc, billing_address, zip_code, card_name)
-             VALUES (?,?,?,?,?,?,?)'
+            VALUES (?,?,?,?,?,?,?)'
         );
-        $ins->execute([$_SESSION['user_id'], $masked, $expiry, $cvc, $billing, $zip, $cardName]);
+        
+        $ins->execute([
+            $_SESSION['user_id'],
+            $cardNumber, 
+            $expiry,
+            $cvc,
+            $billing,
+            $zip,
+            $cardName
+        ]);
         $_SESSION['flash_msg'] = 'Card saved.';
         header('Location: ?tab=payment');
         exit;
@@ -479,8 +518,8 @@ window.__autoLogoutMinutes = <?= (int)$currentUser['auto_logout'] ?>;
 
 <main class="max-w-7xl mx-auto p-6">
 
-  <div class="bg-gray-800 border border-gray-700 rounded-lg p-8 mb-6">
-    <p class="uppercase tracking-widest text-gray-400 text-sm">Welcome back</p>
+  <div class="rounded-lg p-8 mb-6 bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 shadow-lg">
+    <p><span class="tracking-[0.25em] text-sm text-blue-300 mb-4">WELCOME BACK</span>👋</p>
     <h1 class="text-4xl font-bold mt-2"><?= htmlspecialchars($currentUser['name']) ?></h1>
     <div class="flex flex-wrap gap-6 mt-4 text-sm text-gray-400">
       <span>
@@ -501,13 +540,13 @@ window.__autoLogoutMinutes = <?= (int)$currentUser['auto_logout'] ?>;
   <?php endif; ?>
 
   <?php if ($updateMsg): ?>
-  <div class="mb-4 bg-emerald-900/30 border border-emerald-700 rounded-lg px-5 py-3 text-emerald-400 text-sm">
-    ✓ <?= htmlspecialchars($updateMsg) ?>
+  <div class="mb-4 bg-blue-900/30 border border-blue-700 rounded-lg px-5 py-3 text-blue-400 text-sm">
+    <?= htmlspecialchars($updateMsg) ?>
   </div>
   <?php endif; ?>
 
-  <div class="flex gap-2 mb-6 bg-gray-800 border border-gray-700 rounded-lg p-1 flex-wrap">
-    <?php
+<div class="mb-6 bg-gray-800 border border-gray-700 rounded-lg p-1">
+  <div class="flex gap-2 overflow-x-auto sm:overflow-visible whitespace-nowrap sm:flex-wrap">    <?php
     $tabs = [
       'overview'    => 'Overview',
       'flights'     => 'My Flights',
@@ -519,24 +558,26 @@ window.__autoLogoutMinutes = <?= (int)$currentUser['auto_logout'] ?>;
       $isLocked = $profileIncomplete && $key !== 'profile';
       $cls = $isLocked ? 'tab-disabled' : (($activeTab === $key) ? 'tab-active' : 'tab-inactive');
     ?>
-    <a href="<?= $isLocked ? '#' : '?tab=' . $key ?>" class="px-4 py-2 rounded-md text-sm font-medium transition <?= $cls ?>">
+    <a href="<?= $isLocked ? '#' : '?tab=' . $key ?>"
+      class="px-4 py-2 rounded-md text-sm font-medium transition flex-shrink-0 sm:flex-shrink <?= $cls ?>">
       <?= $label ?>
     </a>
     <?php endforeach; ?>
   </div>
+    </div>
 
   <?php if ($activeTab === 'overview'): ?>
 
   <div class="grid xl:grid-cols-3 md:grid-cols-2 gap-4 mb-6">
-    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 overflow-hidden transition duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-blue-500">
       <p class="text-gray-400 text-sm">Upcoming Flights</p>
       <h2 class="text-4xl font-bold mt-2"><?= count($upcomingFlights) ?></h2>
     </div>
-    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 overflow-hidden transition duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-blue-500">
       <p class="text-gray-400 text-sm">Past Flights</p>
       <h2 class="text-4xl font-bold mt-2"><?= count($pastFlights) ?></h2>
     </div>
-    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 overflow-hidden transition duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-blue-500">
       <p class="text-gray-400 text-sm">Saved Cards</p>
       <h2 class="text-4xl font-bold mt-2"><?= count($savedCards) ?></h2>
     </div>
@@ -544,7 +585,7 @@ window.__autoLogoutMinutes = <?= (int)$currentUser['auto_logout'] ?>;
 
   <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden mb-6">
     <div class="p-5 border-b border-gray-700 flex items-center justify-between">
-      <h2 class="text-lg font-bold">Upcoming Flights</h2>
+      <h2 class="text-lg font-bold">Upcoming Flights ✈️</h2>
       <a href="?tab=flights" class="text-sm text-blue-400 hover:text-blue-300">View all</a>
     </div>
     <div class="overflow-x-auto">
@@ -623,7 +664,7 @@ window.__autoLogoutMinutes = <?= (int)$currentUser['auto_logout'] ?>;
   <?php if ($activeTab === 'flights'): ?>
 
   <?php if ($guestMsg): ?>
-  <div class="mb-4 bg-emerald-900/30 border border-emerald-700 rounded-lg px-5 py-3 text-emerald-400 text-sm">✓ <?= htmlspecialchars($guestMsg) ?></div>
+    <div class="mb-4 bg-blue-900/30 border border-blue-700 rounded-lg px-5 py-3 text-blue-400 text-sm"><?= htmlspecialchars($guestMsg) ?></div>
   <?php endif; ?>
   <?php if ($guestError): ?>
   <div class="mb-4 bg-red-900/30 border border-red-700 rounded-lg px-5 py-3 text-red-400 text-sm">⚠ <?= htmlspecialchars($guestError) ?></div>
@@ -652,7 +693,7 @@ window.__autoLogoutMinutes = <?= (int)$currentUser['auto_logout'] ?>;
 
   <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden mb-6">
     <div class="p-5 border-b border-gray-700 flex items-center justify-between">
-      <h2 class="text-lg font-bold">Upcoming Flights</h2>
+      <h2 class="text-lg font-bold">Upcoming Flights 🎫</h2>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full">
@@ -738,7 +779,7 @@ window.__autoLogoutMinutes = <?= (int)$currentUser['auto_logout'] ?>;
 
   <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden mb-6">
     <div class="p-5 border-b border-gray-700">
-      <h2 class="text-lg font-bold">Past Flights</h2>
+      <h2 class="text-lg font-bold">Past Flights 🎫</h2>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full">
@@ -929,7 +970,7 @@ function fmtTs(ts) {
 
   <div class="grid lg:grid-cols-2 gap-6">
     <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
-      <h2 class="text-lg font-bold mb-5">Personal Information</h2>
+      <h2 class="text-lg font-bold mb-5">Personal Information 👤</h2>
       <form method="POST" id="profile-form" class="space-y-4" novalidate>
         <input type="hidden" name="action" value="update_profile">
         <div>
@@ -938,38 +979,46 @@ function fmtTs(ts) {
             class="w-full h-10 bg-gray-700/50 border border-gray-600 rounded-lg px-4 text-gray-400 text-sm cursor-not-allowed">
         </div>
         <div>
-          <label class="block text-sm text-gray-400 mb-1">Email <span class="text-red-400">*</span></label>
+          <label class="block text-sm text-gray-400 mb-1">Email Address*</label>
           <input type="email" name="email" required value="<?= htmlspecialchars($currentUser['email']) ?>"
             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div>
-          <label class="block text-sm text-gray-400 mb-1">Phone <span class="text-red-400">*</span></label>
-          <input type="text" name="phone" required value="<?= htmlspecialchars($currentUser['phone']) ?>"
-            class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <label class="block text-sm text-gray-400 mb-1">Phone Number*</label>
+        <input 
+          type="text" 
+          name="phone" 
+          required 
+          maxlength="15"
+          inputmode="tel"
+          value="<?= htmlspecialchars($currentUser['phone']) ?>"
+          oninput="this.value = this.value.replace(/[^0-9()-]/g, '').slice(0, 15)"
+          class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
         </div>
         <div>
-          <label class="block text-sm text-gray-400 mb-1">Date of Birth <span class="text-red-400">*</span></label>
+          <label class="block text-sm text-gray-400 mb-1">Date of Birth*</label>
           <input type="date" name="date_birth" required value="<?= htmlspecialchars($dbUser['date_birth'] ?? $dbUser['date_of_birth'] ?? '') ?>"
             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div>
-          <label class="block text-sm text-gray-400 mb-1">Street Address <span class="text-red-400">*</span></label>
+          <label class="block text-sm text-gray-400 mb-1">Street Address*</label>
           <input type="text" name="street" required value="<?= htmlspecialchars($dbUser['street_address'] ?? '') ?>"
             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div class="grid grid-cols-3 gap-3">
           <div>
-            <label class="block text-sm text-gray-400 mb-1">City <span class="text-red-400">*</span></label>
+            <label class="block text-sm text-gray-400 mb-1">City*</label>
             <input type="text" name="city" required value="<?= htmlspecialchars($dbUser['city'] ?? '') ?>"
               class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
           <div>
-            <label class="block text-sm text-gray-400 mb-1">State <span class="text-red-400">*</span></label>
+            <label class="block text-sm text-gray-400 mb-1">State*</label>
             <input type="text" name="state" required value="<?= htmlspecialchars($dbUser['state'] ?? '') ?>"
               class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
           <div>
-            <label class="block text-sm text-gray-400 mb-1">ZIP <span class="text-red-400">*</span></label>
+            <label class="block text-sm text-gray-400 mb-1">ZIP Code*</label>
             <input type="text" name="zip" required value="<?= htmlspecialchars($dbUser['zip_code'] ?? '') ?>"
               class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
@@ -980,12 +1029,12 @@ function fmtTs(ts) {
           <p class="text-sm text-amber-400 mb-3">A password is required for your account.</p>
           <div class="space-y-3">
             <div>
-              <label class="block text-sm text-gray-400 mb-1">New Password <span class="text-red-400">*</span></label>
+              <label class="block text-sm text-gray-400 mb-1">New Password*</label>
               <input type="password" name="new_password" required minlength="8"
                 class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
             <div>
-              <label class="block text-sm text-gray-400 mb-1">Confirm Password <span class="text-red-400">*</span></label>
+              <label class="block text-sm text-gray-400 mb-1">Confirm Password*</label>
               <input type="password" name="confirm_password" required minlength="8"
                 class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
@@ -1000,29 +1049,33 @@ function fmtTs(ts) {
     </div>
 
     <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
-      <h2 class="text-lg font-bold mb-5">Account Details</h2>
-      <div class="space-y-1">
-        <?php
-        $details = [
-          'Customer ID'        => '<code class="text-sm bg-gray-700 px-2 py-0.5 rounded text-gray-300">' . htmlspecialchars($currentUser['id']) . '</code>',
-          'Last Login'         => htmlspecialchars($currentUser['last_login_datetime']),
-          'Last Login IP'      => '<code class="text-sm bg-gray-700 px-2 py-0.5 rounded text-gray-300">' . htmlspecialchars($currentUser['last_login_ip']) . '</code>',
-          'Date of Birth'      => htmlspecialchars($dbUser['date_birth'] ?? $dbUser['date_of_birth'] ?? '—'),
-          'Role'               => htmlspecialchars($dbUser['role'] ?? '—'),
-          'Airlines in System' => count($airlinesMap),
-          'Airports in System' => count($airportsMap),
-          'Auto-Logout'        => $currentUser['auto_logout'] === '60' ? '1 hour' : $currentUser['auto_logout'] . ' minutes',
-        ];
-        foreach ($details as $label => $val): ?>
-        <div class="flex justify-between items-center py-3 border-b border-gray-700 last:border-0">
-          <span class="text-gray-400 text-sm"><?= $label ?></span>
-          <span class="text-sm"><?= $val ?></span>
-        </div>
-        <?php endforeach; ?>
-      </div>
-    </div>
-  </div>
+  <h2 class="text-lg font-bold mb-5">Account Details ⚙️</h2>
 
+  <div class="space-y-1">
+    <?php
+    $details = [
+      'Customer ID'   => '<code class="text-sm bg-gray-700 px-2 py-0.5 rounded text-gray-300">' . htmlspecialchars($currentUser['id']) . '</code>',
+      'Last Login'    => htmlspecialchars($currentUser['last_login_datetime']),
+      'Last Login IP' => '<code class="text-sm bg-gray-700 px-2 py-0.5 rounded text-gray-300">' . htmlspecialchars($currentUser['last_login_ip']) . '</code>',
+      'Date of Birth'  => htmlspecialchars($dbUser['date_birth'] ?? $dbUser['date_of_birth'] ?? '—'),
+      'Role'          => htmlspecialchars($dbUser['role'] ?? '—'),
+      'Auto-Logout'   => $currentUser['auto_logout'] === '60' ? '1 hour' : $currentUser['auto_logout'] . ' minutes',
+    ];
+
+    foreach ($details as $label => $val): ?>
+      <div class="flex justify-between items-center py-3 px-3 rounded-md border-b border-gray-700 last:border-0 transition-all duration-200 hover:bg-gray-700/40  hover:shadow-sm">
+        
+        <span class="text-gray-400 text-sm transition-colors duration-200 group-hover:text-gray-300">
+          <?= $label ?>
+        </span>
+
+        <span class="text-sm text-gray-200">
+          <?= $val ?>
+        </span>
+      </div>
+    <?php endforeach; ?>
+  </div>
+</div>
   <script>
   const profileForm = document.getElementById('profile-form');
   profileForm?.addEventListener('submit', function (e) {
@@ -1054,15 +1107,15 @@ function fmtTs(ts) {
   <?php if ($activeTab === 'payment'): ?>
 
   <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-6">
-    <h2 class="text-lg font-bold mb-5">Saved Cards</h2>
+    <h2 class="text-lg font-bold mb-5">Saved Cards 🏦</h2>
     <div class="space-y-3 mb-6" id="saved-cards-list">
       <?php foreach ($savedCards as $card): ?>
-      <div class="flex items-center justify-between bg-gray-700/50 border border-gray-600 rounded-lg px-5 py-4 saved-card-item">
+        <div class="flex items-center justify-between bg-gray-700/50 border border-gray-600 rounded-lg px-5 py-4 transition-all duration-200 ease-in-out hover:bg-gray-700/80 hover:border-gray-500 hover:-translate-y-0.5 hover:shadow-md">
         <div class="flex items-center gap-4">
           <div class="w-10 h-7 bg-gray-600 rounded flex items-center justify-center text-xs font-bold text-gray-300">
             💳
           </div>
-          <div>
+          <div>  <!-- -->
             <div class="font-semibold text-sm">
               <?= htmlspecialchars($card['card_name'] ?? ('Card ending ···· ' . substr($card['card_number'] ?? '****', -4))) ?>
               — ending ····<?= htmlspecialchars(substr($card['card_number'] ?? '****', -4)) ?>
@@ -1084,7 +1137,7 @@ function fmtTs(ts) {
     <div id="saved-cards-pagination" class="flex items-center justify-between text-sm text-gray-400 mb-2"></div>
 
     <div class="border-t border-gray-700 pt-5">
-      <h3 class="font-semibold mb-4 text-sm text-gray-300">Add New Card</h3>
+      <h3 class="font-semibold mb-4 text-sm text-gray-300">Save New Card 📌</h3>
       <form method="POST" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <input type="hidden" name="action" value="add_card">
         <div class="sm:col-span-2">
@@ -1094,29 +1147,33 @@ function fmtTs(ts) {
             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div class="sm:col-span-2">
+        <label class="block text-xs text-gray-400 mb-1">Card Name (Optional)</label>
+        <input type="text" name="card_name" placeholder="ex. <?= htmlspecialchars($currentUser['name']) ?>'s card" class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+        <div class="sm:col-span-2">
           <label class="block text-xs text-gray-400 mb-1">Card Number</label>
-          <input type="text" name="card_number" placeholder="1234 5678 9012 3456" maxlength="19"
-            oninput="this.value=this.value.replace(/\D/g,'').replace(/(.{4})/g,'$1 ').trim()"
+          <input type="text" id="cardNumber" name="card_number" maxlength="19"
+              oninput="this.value=this.value.replace(/\D/g,'').replace(/(.{4})/g,'$1 ').trim()"
             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Expiry (MM/YY)</label>
+          <label class="block text-xs text-gray-400 mb-1">Expiration Date (MM/YY)</label>
           <input type="text" name="card_expiry" placeholder="MM/YY" maxlength="5"
             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div>
           <label class="block text-xs text-gray-400 mb-1">CVC</label>
-          <input type="text" name="card_cvc" placeholder="123" maxlength="4"
+          <input type="text" name="card_cvc" maxlength="4"
             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div>
           <label class="block text-xs text-gray-400 mb-1">Billing Address</label>
-          <input type="text" name="billing_address" placeholder="123 Main St"
+          <input type="text" name="billing_address" 
             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Billing ZIP</label>
-          <input type="text" name="billing_zip" placeholder="55901" maxlength="10"
+          <label class="block text-xs text-gray-400 mb-1">ZIP Code</label>
+          <input type="text" name="billing_zip" maxlength="10"
             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div class="sm:col-span-2">
@@ -1129,6 +1186,14 @@ function fmtTs(ts) {
   </div>
 
   <script>
+    const cardInput = document.getElementById("cardNumber");
+
+cardInput?.addEventListener("input", function () {
+    let value = this.value.replace(/\D/g, ""); 
+    value = value.substring(0, 16);
+
+    this.value = value.replace(/(.{4})/g, "$1 ").trim();
+});
   (function () {
       const perPage = 10;
       const list = document.getElementById('saved-cards-list');
@@ -1170,76 +1235,100 @@ function fmtTs(ts) {
 
   <?php endif; ?>
 
-  <?php if ($activeTab === 'preferences'): ?>
+  <?php if ($activeTab == 'preferences'): ?>
 
-  <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 max-w-lg">
-    <h2 class="text-lg font-bold mb-5">Preferences</h2>
-    <form method="POST" class="space-y-6">
+<div class="grid lg:grid-cols-2 gap-6">
+
+  <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+    <h2 class="text-lg font-bold mb-5">Preferences ⚙️</h2>
+
+    <form method="POST" class="space-y-8">
       <input type="hidden" name="action" value="update_preferences">
+
       <div>
-        <label class="block text-sm text-gray-400 mb-3">Default Flight Sort Order</label>
-        <div class="space-y-2">
+        <label class="block text-sm text-gray-400 mb-3">
+          Default Flight Sort Order
+        </label>
+
+        <div class="grid sm:grid-cols-2 gap-2">
           <?php
           $sortOptions = [
-            'time_asc'    => 'Time ↑ (Earliest First)',
-            'time_desc'   => 'Time ↓ (Latest First)',
-            'airline_asc' => 'Airline A → Z',
-            'airline_desc'=> 'Airline Z → A',
-            'gate_asc'    => 'Gate A → Z',
-            'gate_desc'   => 'Gate Z → A',
+            'time_asc'     => 'Time ↑ (Earliest First)',
+            'time_desc'    => 'Time ↓ (Latest First)',
+            'airline_asc'  => 'Airline A → Z',
+            'airline_desc' => 'Airline Z → A',
+            'gate_asc'     => 'Gate A → Z',
+            'gate_desc'    => 'Gate Z → A',
           ];
           foreach ($sortOptions as $val => $label):
             $checked = $currentUser['flight_sort'] === $val ? 'checked' : '';
           ?>
-          <label class="flex items-center gap-3 cursor-pointer">
-            <input type="radio" name="flight_sort" value="<?= $val ?>" <?= $checked ?> class="accent-blue-500">
-            <span class="text-sm"><?= $label ?></span>
-          </label>
+            <label class="flex items-center gap-3 bg-gray-700/40 border border-gray-600 rounded-lg px-3 py-2 hover:bg-gray-700 transition cursor-pointer">
+              <input type="radio" name="flight_sort" value="<?= $val ?>" <?= $checked ?> class="accent-blue-500">
+              <span class="text-sm"><?= $label ?></span>
+            </label>
           <?php endforeach; ?>
         </div>
       </div>
+
       <div>
-        <label class="block text-sm text-gray-400 mb-3">Auto-Logout Time</label>
-        <div class="space-y-2">
+        <label class="block text-sm text-gray-400 mb-3">
+          Auto-Logout Time
+        </label>
+
+        <div class="grid sm:grid-cols-3 gap-2">
           <?php
-          $logoutOptions = ['5' => '5 minutes', '15' => '15 minutes', '60' => '1 hour'];
+          $logoutOptions = [
+            '5'  => '5 min',
+            '15' => '15 min',
+            '60' => '1 hour'
+          ];
           foreach ($logoutOptions as $val => $label):
             $checked = $currentUser['auto_logout'] === $val ? 'checked' : '';
           ?>
-          <label class="flex items-center gap-3 cursor-pointer">
-            <input type="radio" name="auto_logout" value="<?= $val ?>" <?= $checked ?> class="accent-blue-500">
-            <span class="text-sm"><?= $label ?></span>
-          </label>
+            <label class="flex items-center justify-center gap-2 bg-gray-700/40 border border-gray-600 rounded-lg px-3 py-2 hover:bg-gray-700 transition cursor-pointer">
+              <input type="radio" name="auto_logout" value="<?= $val ?>" <?= $checked ?> class="accent-blue-500">
+              <span class="text-sm"><?= $label ?></span>
+            </label>
           <?php endforeach; ?>
         </div>
       </div>
-      <button type="submit" class="w-full h-10 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition">
+
+      <button type="submit"
+        class="w-full h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition">
         Save Preferences
       </button>
     </form>
   </div>
 
-  <div class="bg-gray-800 border border-red-900 rounded-lg p-6 max-w-lg mt-6">
-    <h2 class="text-lg font-bold mb-2 text-red-400">Delete Account</h2>
-    <p class="text-sm text-gray-400 mb-5">This will permanently delete your account, all saved cards, and all tickets. This cannot be undone.</p>
-    <form method="POST" id="delete-account-form">
+  <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 flex flex-col justify-between transform transition-all duration-300 ease-in-out hover:scale-[1.005] hover:border-red-700 hover:shadow">    <div>
+      <h2 class="text-lg font-bold text-red-400">Delete Your Account 🗑️</h2>
+      <p class="text-sm text-gray-400 mt-2">
+        Permanently delete your account and all associated data. This action can never be undone, so think carefully.
+      </p>
+    </div>
+
+    <form method="POST" id="delete-account-form" class="mt-6">
       <input type="hidden" name="action" value="delete_account">
-      <button type="submit" class="w-full h-10 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold transition">
+
+      <button type="submit"
+        class="w-full h-11 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold transition">
         Delete My Account
       </button>
     </form>
   </div>
 
-  <script>
-  document.getElementById('delete-account-form')?.addEventListener('submit', function (e) {
-      if (!confirm('Are you sure you want to permanently delete your account? This cannot be undone.')) {
-          e.preventDefault();
-      }
-  });
-  </script>
+</div>
 
-  <?php endif; ?>
+<script>
+document.getElementById('delete-account-form')?.addEventListener('submit', function (e) {
+    if (!confirm('Are you sure you want to permanently delete your account? This cannot be undone.')) {
+        e.preventDefault();
+    }
+});
+</script>
 
+<?php endif; ?>
 </main>
 
 </body>
