@@ -3,6 +3,17 @@ session_start();
 require_once "../../database/db.php";
 require_once __DIR__ . '/../../components/config.php';
 
+if (isset($_SESSION['user_id'])) {
+    $role = $_SESSION['role'] ?? '';
+
+    if (in_array($role, ['Customer', 'Admin', 'Root'])) {
+        $roleLower = strtolower($role);
+
+        header("Location: ../dashboard/{$roleLower}/{$roleLower}.php");
+        exit;
+    }
+}
+
 $message = '';
 $first = $_POST['first'] ?? '';
 $last = $_POST['last'] ?? '';

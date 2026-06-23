@@ -3,6 +3,17 @@ session_start();
 require_once __DIR__ . '/../../database/db.php';
 require_once __DIR__ . '/../../components/config.php';
 
+if (isset($_SESSION['user_id'])) {
+    $role = $_SESSION['role'] ?? '';
+
+    if (in_array($role, ['Customer', 'Admin', 'Root'])) {
+        $roleLower = strtolower($role);
+
+        header("Location: ../dashboard/{$roleLower}/{$roleLower}.php");
+        exit;
+    }
+}
+
 function regenerateCaptcha() {
     $_SESSION['captcha_num1'] = rand(1, 10);
     $_SESSION['captcha_num2'] = rand(1, 10);
@@ -600,10 +611,12 @@ $num2 = $_SESSION['captcha_num2'];
                 class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
         </div>
 
+
         <div>
-            <label class="text-xs text-gray-400">Phone Number</label>
-            <input type="tel" name="phone" value="<?= htmlspecialchars($phone) ?>"
-                class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+          <label class="text-xs text-gray-400">Phone Number</label>
+          <input type="tel" name="phone" placeholder=""
+             class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
+            inputmode="numeric" oninput="autoFormatPhone(this)">
         </div>
 
         <div>
@@ -690,6 +703,15 @@ $num2 = $_SESSION['captcha_num2'];
                 </div>
             </main>
         <script>
+            function autoFormatPhone(el) {
+  let d = el.value.replace(/\D/g, '');
+  if (d.length > 11) d = d.slice(0, 11);
+  if (d.length === 0) { el.value = ''; return; }
+  if (d.length <= 3)       { el.value = '(' + d; return; }
+  if (d.length <= 6)       { el.value = '(' + d.slice(0,3) + ') ' + d.slice(3); return; }
+  if (d.length <= 10)      { el.value = '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6); return; }
+  el.value = '+' + d[0] + ' (' + d.slice(1,4) + ') ' + d.slice(4,7) + '-' + d.slice(7);
+}
             document.addEventListener('DOMContentLoaded', function () {
                 var passwordInput = document.getElementById('password');
                 var strengthText = document.getElementById('password-strength');
