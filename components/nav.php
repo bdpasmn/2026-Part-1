@@ -5,10 +5,6 @@
         session_start();
     }
 
-    if (session_status() == PHP_SESSION_NONE) {
-        session_start();
-    }
-
     $parts = explode('/', trim($_SERVER['SCRIPT_NAME'], '/'));
     $baseUrl = '/' . $parts[0] . '/' . $parts[1];
     define('BASE_URL', $baseUrl);
