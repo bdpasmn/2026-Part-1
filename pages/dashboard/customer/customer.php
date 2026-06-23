@@ -22,7 +22,7 @@ if (!$dbUser) {
     die("User not found.");
 }
 function formatCard($num) {
-  $num = preg_replace('/\D/', '', $num); // safety
+  $num = preg_replace('/\D/', '', $num); // safety 
   return trim(chunk_split($num, 4, ' '));
 }
 
@@ -40,8 +40,25 @@ if (strtolower($_SESSION['role'] ?? '') !== 'customer') {
     exit;
 } 
 
+function getUserIp() {
+    $keys = [
+        'HTTP_CF_CONNECTING_IP',
+        'HTTP_X_FORWARDED_FOR',
+        'HTTP_CLIENT_IP',
+        'REMOTE_ADDR'
+    ];
+
+    foreach ($keys as $key) {
+        if (!empty($_SERVER[$key])) {
+            return trim(explode(',', $_SERVER[$key])[0]);
+        }
+    }
+
+    return '0.0.0.0';
+}
+
 if (!isset($_SESSION['last_login_ip'])) {
-    $_SESSION['last_login_ip']       = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    $_SESSION['last_login_ip'] = getUserIp();
     $_SESSION['last_login_datetime'] = date('Y-m-d H:i:s');
 }
 
@@ -71,7 +88,6 @@ $currentUser = [
     'flight_sort'         => $prefs['flight_sort'],
 ];
 
-// ---- Force-complete-profile check ----
 $requiredProfileFields = [
     'email'          => $dbUser['email']          ?? '',
     'phone'          => $dbUser['phone']           ?? '',

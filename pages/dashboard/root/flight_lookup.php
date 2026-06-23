@@ -24,9 +24,47 @@ if (!$flight) {
     exit;
 }
 
-$destination = $flight['destination'] ?? ($flight['arrival'] ?? '—');
+function flightDestination(array $f, array $airportLookup): string {
+
+    $code =
+        $f['departingTo']
+        ?? $f['landingAt']
+        ?? $f['destination']
+        ?? $f['arrivalCode']
+        ?? $f['arrival']
+        ?? '';
+
+    if (!$code) {
+        return '—';
+    }
+
+    $airport = $airportLookup[strtolower($code)] ?? null;
+
+    if ($airport) {
+        $city = $airport['city']
+             ?? $airport['cityName']
+             ?? $airport['location']
+             ?? '';
+
+        if ($city !== '') {
+            return $city . ' (' . strtoupper($code) . ')';
+        }
+    }
+
+    return strtoupper($code);
+}
+
+$airportResults = $api->getAirports();
+$airports = $airportResults['airports'] ?? [];
+$airportLookup = [];
+foreach ($airports as $airport) {
+    $airportLookup[strtolower($airport['shortName'])] = $airport;
+}
+
+$destination  = flightDestination($flight, $airportLookup);
 $flightNumber = $flight['flightNumber'] ?? $flight['flight_number'] ?? '—';
-$airline = $flight['airline'] ?? '—';
+$airline      = $flight['airline'] ?? '—';
+
 $seatPrice = 0.0;
 foreach (['seatPrice', 'price', 'baseFare', 'fare'] as $key) {
     if (isset($flight[$key]) && is_numeric($flight[$key])) {

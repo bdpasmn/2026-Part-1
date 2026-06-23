@@ -167,18 +167,12 @@ function formatPhone(string $raw): string {
     return $raw;
 }
 
-/**
- * True if $raw contains any alphabetic letters. Used to reject phone numbers
- * that have letters mixed in (e.g. "555-CALL-NOW").
- */
+
 function phoneHasLetters(string $raw): bool {
     return (bool)preg_match('/[A-Za-z]/', $raw);
 }
 
-/**
- * Minimal structural email check: must contain '@' and '.' in a sane order
- * (something@something.something), in addition to filter_var's check.
- */
+
 function isValidEmail(string $email): bool {
     if ($email === '') return false;
     if (!str_contains($email, '@') || !str_contains($email, '.')) return false;
@@ -229,12 +223,7 @@ function flightDestination(array $f, array $airportLookup): string {
     return strtoupper($code);
 }
 
-/**
- * Resolve a ticket's destination string the exact same way it's resolved
- * for display (flightDestination()): pull the destination code off the
- * flight record and pass it through the airport lookup. Falls back to the
- * raw posted destination only if the flight can't be found at all.
- */
+
 function resolveTicketDestination(?array $flight, array $airportLookup, string $postedDestination): string {
     if ($flight) {
         return flightDestination($flight, $airportLookup);
