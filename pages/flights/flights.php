@@ -296,7 +296,8 @@ if ($search !== '') {
         }
     ));
 }
-
+ 
+// ---------------- SORT ----------------
 usort($flights, function ($a, $b) use ($sort, $getTime) {
 
     switch ($sort) {

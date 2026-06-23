@@ -1,8 +1,6 @@
 <?php
     session_start();
 
-    session_start();
-
     require_once "../../api/api.php";
     require_once "../../api/key.php";
 

@@ -5,10 +5,6 @@
         session_start();
     }
 
-    if (session_status() == PHP_SESSION_NONE) {
-        session_start();
-    }
-
     $parts = explode('/', trim($_SERVER['SCRIPT_NAME'], '/'));
     $baseUrl = '/' . $parts[0] . '/' . $parts[1];
     define('BASE_URL', $baseUrl);
@@ -63,9 +59,19 @@
     </div>
 </div>
 <header class="h-16 bg-gray-800 border-b border-gray-700 relative z-50">
-<div class="h-full px-8 flex items-center justify-between relative">
-
-        <p class="text-white font-bold text-xl tracking-wide">BDPA Airports 🌐</p>
+    <div class="h-full px-8 flex items-center justify-between relative">
+        <a href="<?php 
+            if (!$isLoggedIn) { 
+                echo BASE_URL . '/index.php'; 
+            } else {
+                $role = $_SESSION['role'] ?? '';
+                if (in_array($role, ['Customer', 'Admin', 'Root'])) {
+                    echo "../dashboard/{$role}/{$role}.php";
+                }
+             }
+            ?>" class="text-white font-bold text-xl tracking-wide hover:text-blue-300 transition">
+            BDPA Airports 🌐
+        </a>
 
         <nav class="hidden xl:flex items-center gap-4 lg:gap-6 text-sm text-gray-300 flex-nowrap">
             <?php if (!$isLoggedIn): ?>
@@ -85,7 +91,7 @@
             <?php endif; ?>
 
             <?php if ($role == 'Customer'): ?>
-                <?php $active = str_contains($currentPath, '/customer/customer.php') && $currentTab === 'flights';?>
+                <?php $active = str_contains($currentPath, '/customer/customer.php') && $currentTab == 'flights';?>
 
                 <a href="<?= BASE_URL ?>/pages/dashboard/customer/customer.php?tab=flights"
                 class="relative group">
