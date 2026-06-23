@@ -291,13 +291,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <input type="checkbox" name="remember" class="accent-blue-500">
                         Remember me
                     </label>
+                    
 
                     <a href="<?= BASE_URI ?>/pages/accountRecovery/recovery.php"
                         class="text-blue-400 hover:text-blue-300">
                         Forgot password?
                     </a>
                 </div>
-
                 <!-- BUTTON -->
                 <button type="submit"
                     class="w-full h-12 bg-blue-600 hover:bg-blue-700 border border-blue-600 rounded-lg transition">
@@ -305,8 +305,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </button>
 
             </form>
+            
+<div class="flex items-center my-4">
+    <div class="flex-1 h-px bg-gray-700"></div>
+</div>
 
-        </div>
+<div class="text-center text-sm text-gray-400 mb-4">
+    Don't have an account?
+    <a href="<?= BASE_URI ?>/pages/auth/create.php"
+       class="text-blue-400 hover:text-blue-300 ml-1">
+        Sign up
+    </a>
+</div>
+
+        
 
     </div>
 

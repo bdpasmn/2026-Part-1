@@ -255,7 +255,6 @@ $num2 = $_SESSION['captcha_num2'];
                 <div class="w-full max-w-3xl space-y-6">
 <div class="bg-gray-800 border border-gray-700 rounded-xl p-10 text-center relative overflow-hidden">
 
-
     <div class="relative z-10 space-y-4">
 
         <p class="tracking-[0.25em] text-xs text-blue-300">
@@ -263,16 +262,27 @@ $num2 = $_SESSION['captcha_num2'];
         </p>
 
         <h1 class="text-4xl md:text-5xl font-bold leading-tight">
-            Create Account  🔐
+            Create Account 🔐
         </h1>
 
         <p class="text-gray-300 text-sm md:text-base max-w-2xl mx-auto">
             Create an account to manage bookings and flights.
         </p>
 
+        
         <div class="mt-3 inline-flex items-center px-3 py-1 rounded-full bg-gray-900 border border-red-700 text-red-300 text-xs">
-    * Required fields
+            * Required fields
         </div>
+
+
+        
+<div class="text-middle text-xs text-gray-500">
+    Already have an account?
+    <a href="<?= BASE_URI ?>/pages/auth/login.php" class="text-blue-400 hover:text-blue-300 ml-1">
+        Sign in
+    </a>
+</div>
+        
 
     </div>
 </div>
