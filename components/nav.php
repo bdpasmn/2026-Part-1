@@ -45,7 +45,7 @@
 ?>
 
 <head>
-<link rel="icon" href="<?= BASE_URL ?>/assets/favicon.ico?v=1">
+<link rel="icon" href="<?= BASE_URL ?>/favicon.ico">
 </head>
 
 <div id="loading-overlay" class="fixed inset-0 z-50 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center">
@@ -272,6 +272,8 @@ document.addEventListener('click', (e) => {
     const link = e.target.closest('a');
     if (!link) return;
 
+    if (link.hasAttribute('data-skip-loader')) return;
+
     const href = link.getAttribute('href');
     if (!href || href.startsWith('#')) return;
 
@@ -280,10 +282,8 @@ document.addEventListener('click', (e) => {
     Loader.show();
 });
 
-document.querySelectorAll('form').forEach(form => {
-    form.addEventListener('submit', () => {
-        Loader.show();
-    });
+document.addEventListener('submit', (e) => {
+    Loader.show();
 });
 </script>
 
@@ -299,8 +299,16 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 
 <?php if ($isLoggedIn): ?>
+
+<script>
+window.__autoLogoutMinutes = <?= (int)($_SESSION['auto_logout'] ?? 0) ?>;
+window.__remembered = <?= !empty($_SESSION['remembered']) ? 'true' : 'false' ?>;
+</script>
+
 <script>
 (function () {
+    if (window.__remembered) return;
+
     const minutes = window.__autoLogoutMinutes;
     if (!minutes || isNaN(minutes)) return;
 

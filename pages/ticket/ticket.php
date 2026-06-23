@@ -365,9 +365,9 @@ $statusClass = match ($status) {
         </p>
 
         <div class="flex flex-col sm:flex-row gap-3">
-            <a href="<?= BASE_URI ?>/pages/booking/booking.php"
+            <a href="<?= BASE_URI ?>/pages/booking/searchFlights.php"
                class="flex-1 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg">
-                Book Flight
+                Book New Flight
             </a>
             <a href="<?= BASE_URI ?>"
                class="flex-1 px-5 py-2.5 bg-gray-900 border border-gray-700 hover:bg-gray-700 rounded-lg">
@@ -404,7 +404,7 @@ $statusClass = match ($status) {
         </div>
 
         <div class="flex flex-col sm:flex-row gap-3">
-            <a href="<?= BASE_URI ?>/pages/booking/booking.php"
+            <a href="<?= BASE_URI ?>/pages/booking/searchFlights.php"
                class="flex-1 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg">
                 Book New Flight
             </a>
@@ -429,7 +429,7 @@ $statusClass = match ($status) {
                     <!-- status/headline -->
                     <div class="flex justify-between items-center mb-8">
                         <div class="flex flex-col gap-1">
-                            <p class="text-sm tracking-widest text-blue-400 uppercase">BDPA Airports &middot; Ticket View</p>
+                            <p class="text-sm tracking-widest text-blue-400 uppercase">BDPA Airports &middot; Ticket View 🎫</p>
                             <p id="local-clock" class="text-xs text-slate-500 font-mono"></p>
                         </div>
                         <span id="flight-status" class="px-6 py-2 rounded-full text-xl font-semibold <?= $statusClass ?>">
@@ -504,7 +504,7 @@ $statusClass = match ($status) {
                 <div class="p-6 md:p-10">
  
                     <!-- Passenger -->
-                    <p class="text-xs tracking-widest text-slate-500 uppercase mb-2">Passenger</p>
+                    <p class="text-xs tracking-widest text-slate-500 uppercase mb-2">Passenger 👤</p>
                     <p class="text-2xl font-semibold text-white mb-6"><?= htmlspecialchars(
                         $ticket["passenger_name"]
                     ) ?></p>

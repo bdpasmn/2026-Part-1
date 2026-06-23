@@ -199,11 +199,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="relative z-10 space-y-4">
 
         <p class="tracking-[0.25em] text-xs text-blue-300">
-            BDPA AIRPORTS
+            BDPA AIRPORTS✈️
         </p>
 
         <h1 class="text-4xl md:text-5xl font-bold leading-tight">
-            Sign In
+            Sign In 🔐
         </h1>
 
         <p class="text-gray-300 text-sm md:text-base max-w-2xl mx-auto">

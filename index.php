@@ -71,7 +71,7 @@
                     </div>
 
                     <div class="bg-gray-800 border border-gray-700 rounded-lg p-8 hover:shadow-xl hover:-translate-y-1 hover:border-blue-500 transition duration-300">
-                        <div class="text-4xl mb-4">📄</div>
+                        <div class="text-4xl mb-4">🎫</div>
                         <h3 class="text-2xl font-bold mb-3">Ticket View</h3>
                         <p class="text-gray-400">View your tickets using your confirmation code.</p>
                     </div>
