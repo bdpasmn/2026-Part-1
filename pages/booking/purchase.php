@@ -173,6 +173,13 @@
     if ($userId && !empty($_POST['save_card']) && !empty($_POST['card_name'])) {
         $check = $pdo->prepare('SELECT COUNT(*) FROM "Saved Cards" WHERE user_id = ? AND card_number = ?');
 
+        $cardholderName = trim($_POST['cardholderName'] ?? '');
+        $cardName = trim($_POST['cardName'] ?? '');
+        
+        if ($cardName == '') {
+            $cardName = $cardholderName . "'s card";
+        }
+
         $check->execute([
             $userId,
             $_POST['card_number']

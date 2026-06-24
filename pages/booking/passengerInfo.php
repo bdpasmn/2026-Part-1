@@ -27,6 +27,7 @@
                                     <option value="female">Female</option>
                                     <option value="nonbinary">Non-binary</option>
                                     <option value="other">Other</option>
+                                    <option value="prefer-not-to-say">Prefer not to say</option>
                                 </select>
                             </div>
 
@@ -115,8 +116,8 @@
                                     </div>
 
                                     <div id="cardNameContainer" class="hidden mt-4">
-                                        <label class="block mb-2 text-sm font-medium text-gray-300">Card Name*</label>
-                                        <input type="text" id="cardName" class="w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white">
+                                        <label class="block mb-2 text-sm font-medium text-gray-300">Card Name (Optional)</label>
+                                        <input type="text" id="cardName" class="w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white" placeholder="">
                                     </div>
                                 </div>
                             <?php endif; ?>
@@ -124,3 +125,13 @@
                     </div>
                 </div>
             </div>
+
+            <script>
+                document.getElementById('cardholderName').addEventListener('input', function () {
+                    const cardName = document.getElementById('cardName');
+
+                    if (!cardName.dataset.touched) {
+                        cardName.placeholder = this.value ?  `ex. ${this.value}'s card` : "ex. ____'s card";
+                    }
+                });
+            </script>

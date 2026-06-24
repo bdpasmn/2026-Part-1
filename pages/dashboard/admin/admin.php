@@ -749,11 +749,12 @@ $filteredUsers = array_slice(
           <div>
             <label class="block text-xs text-gray-400 mb-1">Sex</label>
             <select name="sex" class="field">
-              <option value=""></option>
+              <option value="">Select</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
-              <option value="female">Nonbinary</option>
+              <ption value="nonbinary">Non-binary</option>
               <option value="other">Other</option>
+              <option value="prefer-not-to-say">Prefer not to say</option>
             </select>
           </div>
         </div>

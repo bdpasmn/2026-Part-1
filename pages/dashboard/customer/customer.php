@@ -366,7 +366,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             if (!$foundTicket) {
                 $_SESSION['flash_guest_error'] = "No booking found with confirmation code \"{$conf}\".";
-            } elseif ((int)($foundTicket['user_id'] ?? 0) === (int)$_SESSION['user_id']) {
+            } elseif ((int)($foundTicket['user_id'] ?? 0) == (int)$_SESSION['user_id']) {
                 $_SESSION['flash_guest_error'] = 'This booking is already linked to your account.';
             } elseif (!empty($foundTicket['user_id'])) {
                 $_SESSION['flash_guest_error'] = 'This booking is already linked to another account.';
