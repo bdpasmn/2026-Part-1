@@ -1,9 +1,9 @@
 <?php
-require_once __DIR__ . '/../../components/config.php';
-session_start();
-$_SESSION = [];
-session_destroy();
-setcookie('remember_me', '', time() - 3600, '/');
-header("Location: " . BASE_URI . "/index.php");
-exit;
+    require_once __DIR__ . '/../../components/config.php';
+    session_start();
+    $_SESSION = [];
+    session_destroy();
+    setcookie('remember_me', '', time() - 3600, '/');
+    header("Location: " . BASE_URI . "/index.php");
+    exit;
 ?>
