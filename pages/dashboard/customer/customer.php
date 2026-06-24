@@ -398,6 +398,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             header('Location: ?tab=payment');
             exit;
         }
+
+        $cvc = preg_replace('/\D/', '', trim($_POST['card_cvc'] ?? ''));
+
+        if (!preg_match('/^\d{3,4}$/', $cvc)) {
+            $_SESSION['flash_msg'] = 'CVC must be 3 or 4 digits.';
+            header('Location: ?tab=payment');
+            exit;
+        }
+
+        $zip = trim($_POST['billing_zip'] ?? '');
+
+        if (!preg_match('/^[0-9-]{3,10}$/', $zip)) {
+            $_SESSION['flash_msg'] = 'ZIP code can only contain numbers and dashes.';
+            header('Location: ?tab=payment');
+            exit;
+        }
         
         [$expMonth, $expYear] = explode('/', $expiry);
         $expMonth = (int)$expMonth;
@@ -1186,14 +1202,28 @@ function fmtTs(ts) {
         </div>
         <div>
           <label class="block text-xs text-gray-400 mb-1">Expiration Date (MM/YY)</label>
-          <input type="text" name="card_expiry" placeholder="MM/YY" maxlength="5"
+          <input
+            type="text"
+            name="card_expiry"
+            placeholder="MM/YY"
+            maxlength="5"
+            oninput="
+                let v=this.value.replace(/\D/g,'').slice(0,4);
+                if(v.length>2) v=v.slice(0,2)+'/'+v.slice(2);
+                this.value=v;
+            "
             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div>
           <label class="block text-xs text-gray-400 mb-1">CVC</label>
-          <input type="text" name="card_cvc" maxlength="4"
+          <input
+            type="text"
+            name="card_cvc"
+            maxlength="4"
+            inputmode="numeric"
+            oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)"
             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
+          </div>
         <div>
           <label class="block text-xs text-gray-400 mb-1">Billing Address</label>
           <input type="text" name="billing_address" 
@@ -1201,7 +1231,12 @@ function fmtTs(ts) {
         </div>
         <div>
           <label class="block text-xs text-gray-400 mb-1">ZIP Code</label>
-          <input type="text" name="billing_zip" maxlength="10"
+          <input
+            type="text"
+            name="billing_zip"
+            maxlength="10"
+            inputmode="text"
+            oninput="this.value=this.value.replace(/[^0-9-]/g,'')"
             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div class="sm:col-span-2">
