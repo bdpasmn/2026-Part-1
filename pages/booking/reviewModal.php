@@ -14,7 +14,9 @@
                         <div>
                             <h3 class="font-bold text-white text-2xl"><?= htmlspecialchars($flight['flightNumber'] ?? 'Flight') ?> ✈️</h3>
                             <p class="text-gray-200 mt-2"><?= htmlspecialchars($flight['landingAt'] ?? '') ?>→<?= htmlspecialchars($flight['departingTo'] ?? '') ?></p>
-                            <p class="text-gray-300 text-sm mt-1"><?= htmlspecialchars($flight['airline'] ?? '') ?></p>
+                            <p class="text-gray-300 text-sm mt-1"><?= htmlspecialchars($flight['airline'] ?? '') ?> Airlines</p>
+                            <?php $timestamp = $flight['departFromReceiver'] ?? null; ?>
+                            <p class="text-gray-300 text-sm mt-1"><?= $timestamp ? date("D, M j Y g:i A", $timestamp / 1000) : "N/A" ?></p>
                         </div>
                         <div class="md:text-right">
                             <div class="text-3xl font-bold text-white mt-1">$<?= htmlspecialchars($flight['seatPrice'] ?? 0) ?></div>

@@ -78,7 +78,7 @@
                 return false;
             }
 
-            $arrivalTime = $flight['arriveAtReceiver'] ?? 0;
+            $arrivalTime = $flight['departFromReceiver'] ?? 0;
             return $arrivalTime > ($now + $twentyFourHours);
         }
     );
@@ -187,7 +187,7 @@
                             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                                 <div>
                                     <h3 class="font-bold text-lg text-white"><?= htmlspecialchars($flight['airline'] ?? 'Unknown Airline') ?></h3>
-                                    <p class="text-gray-400"><?= htmlspecialchars($flight['departingTo'] ?? '') ?> Airport</p>
+                                    <p class="text-gray-400">To <?= htmlspecialchars($flight['departingTo'] ?? '') ?> Airport</p>
                                 </div>
 
                                 <div>
@@ -195,6 +195,11 @@
                                     <p class="text-gray-400"><?= htmlspecialchars($flight['flightNumber'] ?? '') ?></p>
                                 </div>
 
+                                <div>
+                                    <p class="font-medium text-white">Departing From</p>
+                                    <p class="text-gray-400">SMN Airport</p>
+                                </div>
+                                
                                 <div>
                                     <p class="font-medium text-white">Departure</p>
                                     <p class="text-gray-400"><?= $timestamp ? date("D, M j Y g:i A", $timestamp / 1000) : "N/A" ?></p>

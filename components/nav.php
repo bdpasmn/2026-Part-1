@@ -68,9 +68,9 @@
                 if (in_array($role, ['Customer', 'Admin', 'Root'])) {
                     echo "../dashboard/{$role}/{$role}.php";
                 }
-             }
-            ?>" class="text-white font-bold text-xl tracking-wide hover:text-blue-300 transition">
-            BDPA Airports 🌐
+            }?>" class="flex items-center text-white font-bold text-xl hover:text-blue-300 transition">
+            <img src="<?= BASE_URL ?>/favicon.ico" alt="B" class="w-7 h-7" style="margin-right:-2px;">
+            <span class="tracking-wide">DPA Airports</span>
         </a>
 
         <nav class="hidden xl:flex items-center gap-4 lg:gap-6 text-sm text-gray-300 flex-nowrap">

@@ -44,6 +44,32 @@
         ]));
         exit;
     }
+
+    if ($flight['status'] == 'cancelled') {
+        header("Location: bookingFailed.php?" . http_build_query([
+            'message' => 'The selected flight was cancelled, and can no longer be booked.'
+        ]));
+        exit;
+    }
+    
+    if ($flight['status'] == 'departed') {
+        header("Location: bookingFailed.php?" . http_build_query([
+            'message' => 'The selected flight has departed, and can no longer be booked.'
+        ]));
+        exit;
+    }
+
+    $departureTimestamp = $flight['departFromReceiver'] ?? null;
+
+    if (
+        !$departureTimestamp ||
+        ($departureTimestamp / 1000) < (time() + 86400)
+    ) {
+        header("Location: bookingFailed.php?" . http_build_query([
+            'message' => 'Flights must be booked at least 24 hours before departure.'
+        ]));
+        exit;
+    }
 ?>
 
 <html>
@@ -58,7 +84,7 @@
             <div class="bg-gray-800 border border-gray-700 rounded-lg p-5 mb-0 transition-all duration-300 hover:bg-gray-750 hover:border-blue-400 hover:shadow-lg">
                 <div class="flex justify-between items-center">
                     <div>
-                        <h2 class="text-lg font-bold text-white">Flight Summary ✈️</h2>
+                        <h2 class="text-lg font-bold text-white">Flight Summary ✈️ - <?= htmlspecialchars(ucfirst($flight['status'] ?? 'Status')) ?></h2>
                         <p class="text-gray-400">
                             <?= htmlspecialchars($flight['flightNumber'] ?? 'Flight') ?>
                             |
@@ -66,7 +92,10 @@
                             →
                             <?= htmlspecialchars($flight['departingTo'] ?? '___') ?>
                             |
-                            <?= htmlspecialchars($flight['airline'] ?? 'Airline') ?>
+                            <?php $timestamp = $flight['departFromReceiver'] ?? null; ?>
+                            <?= $timestamp ? date("D, M j Y g:i A", $timestamp / 1000) : "N/A" ?>
+                            |
+                            <?= htmlspecialchars($flight['airline'] ?? '___') ?> Airlines
                         </p>
                     </div>
 
@@ -215,7 +244,7 @@
                 }
 
                 if (checked > 2) {
-                    bagCost + bagShot + (checked - 2) * 100;
+                    bagCost + (checked - 2) * 100;
                 }
 
                 const total = seatPrice + bagCost;

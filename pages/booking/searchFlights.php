@@ -49,9 +49,23 @@
                 <form action="./flightResults.php" method="GET">
                     <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
                         <div class="flex flex-col lg:flex-row gap-4">
-                            <div class="flex-1 relative">
-                                <input type="text" name="destination" placeholder="Enter destination" class="w-full h-12 border border-gray-600 rounded-lg pl-10 pr-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-1 focus:ring-white focus:border-white">
+                        <div class="flex-1 relative">
+                                <input type="text" name="destination" placeholder="Enter destination" class="w-full h-12 border border-gray-600 rounded-lg pl-10 pr-12 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-1 focus:ring-white focus:border-white">
                                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+
+                                <div class="absolute right-3 top-1/2 -translate-y-1/2 group cursor-help">
+                                    <span class="text-gray-400 hover:text-white">ⓘ</span>
+                                    <div class="absolute right-0 mt-2 w-72 bg-gray-900 border border-gray-700 rounded-lg p-3 text-sm text-gray-300 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition duration-200 z-50">
+                                        Search by:
+                                        <ul class="list-disc pl-5 mt-2 space-y-1">
+                                            <li>Airport code (NOV, TWN, DCA)</li>
+                                            <li>Airport name</li>
+                                            <li>City (Chicago, Dulles)</li>
+                                            <li>State abbreviation (MN, IL, NC)</li>
+                                            <li>Country abbreviation (USA)</li>
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="flex-1">

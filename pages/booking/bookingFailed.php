@@ -4,8 +4,18 @@
     $role = $_SESSION['role'] ?? null;
 
     $message = $_GET['message'] ?? 'Booking could not be completed.';
-    $isFlightNotFound = str_contains(strtolower($message), 'flight') && (str_contains(strtolower($message), 'not exist') || str_contains(strtolower($message), 'no longer available') || str_contains(strtolower($message), 'not found'));
-    
+    $isFlightNotFound =
+    str_contains(strtolower($message), 'flight') &&
+    (
+        str_contains(strtolower($message), 'not exist') ||
+        str_contains(strtolower($message), 'no longer available') ||
+        str_contains(strtolower($message), 'not found') ||
+        str_contains(strtolower($message), 'no flight was selected') ||
+        str_contains(strtolower($message), 'has departed') ||
+        str_contains(strtolower($message), 'was cancelled') ||
+        str_contains(strtolower($message), '24 hours before departure')
+    );
+
     $title = $isFlightNotFound ? 'Selected Flight is Not Available' : 'Booking Could Not Be Completed';
     $subtitle = $isFlightNotFound ? 'The flight you selected is unavailable or no longer exists.' : 'We were unable to finish your request. Please review the details below and try again.';
     $helpText = $isFlightNotFound ? 'This flight may have been removed, cancelled, or the link may be incorrect. Please select another flight.' : 'You can go back, adjust your passenger information, or select a different seat and try again.';

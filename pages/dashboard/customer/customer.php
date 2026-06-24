@@ -185,45 +185,48 @@ $linkedFlightIds = [];
 
 if ($needsFlightDetails) {
     foreach ($userTickets as $ticket) {
-      if (strtolower($ticket['status'] ?? '') == 'cancelled') {
-        continue;
-      }
-      $fid = $ticket['flight_id'] ?? '';
-      if ($fid) $linkedFlightIds[] = $fid;
-      $flightRaw = getFlightById($api, $fid);
+        if (strtolower($ticket['status'] ?? '') === 'cancelled') {
+            continue;
+        }
 
-      if ($flightRaw) {
-          $flight = normalizeFlight($flightRaw);
-      } else {
-          $flight = [
-              'flight_id' => $fid,
-              'flightNumber' => $fid,
-              'destination' => '—',
-              'departureTime' => 0,
-              'arrivalTime' => 0,
-              'airline' => '—',
-              'status' => '—',
-          ];
-      }
-
-      $row = [
-          'ticket' => $ticket,
-          'flight' => $flight,
-      ];
-
-      $depTs = (int)($flight['departureTime'] ?? 0);
-
-      if ($depTs >= $now || $depTs === 0) {
-          $upcomingFlights[] = $row;
-      } else {
-          $pastFlights[] = $row;
-      }
-    }
-} else {
-    foreach ($userTickets as $ticket) {
-        if (strtolower($ticket['status'] ?? '') == 'cancelled') continue;
         $fid = $ticket['flight_id'] ?? '';
-        if ($fid) $linkedFlightIds[] = $fid;
+
+        if ($fid) {
+            $linkedFlightIds[] = $fid;
+        }
+
+        $flightRaw = getFlightById($api, $fid);
+
+        if ($flightRaw) {
+            $flight = normalizeFlight($flightRaw);
+        } else {
+            $flight = [
+                'flight_id' => $fid,
+                'flightNumber' => $fid,
+                'destination' => '—',
+                'departureTime' => 0,
+                'arrivalTime' => 0,
+                'airline' => '—',
+                'status' => '—',
+            ];
+        }
+
+        $row = [
+            'ticket' => $ticket,
+            'flight' => $flight,
+        ];
+
+        $depTs = (int)($flight['departureTime'] ?? 0);
+
+        if ($depTs > 1000000000000) {
+            $depTs = (int)($depTs / 1000);
+        }
+
+        if ($depTs === 0 || $depTs >= $now) {
+            $upcomingFlights[] = $row;
+        } else {
+            $pastFlights[] = $row;
+        }
     }
 }
 
@@ -732,7 +735,19 @@ window.__autoLogoutMinutes = <?= (int)$currentUser['auto_logout'] ?>;
         $f = $row['flight'];
         $ticket = $row['ticket'];
         $fid = $f['flight_id'] ?? '';
-        $isPast = (int)($f['departureTime'] ?? 0) > 0 && (int)$f['departureTime'] < $now;
+        $depTs = (int)($f['departureTime'] ?? 0);
+
+        if ($depTs > 1000000000000) {
+            $depTs = (int)($depTs / 1000);
+        }
+
+        $depTs = (int)($f['departureTime'] ?? 0);
+
+        if ($depTs > 1000000000000) {
+            $depTs = (int)($depTs / 1000);
+        }
+
+        $isPast = $depTs > 0 && $depTs < $now;
     ?>
     
     <tr data-flight-id="<?= htmlspecialchars($fid) ?>"
@@ -817,9 +832,7 @@ window.__autoLogoutMinutes = <?= (int)$currentUser['auto_logout'] ?>;
         $ticket = $row['ticket'];
         $fid = $f['flight_id'] ?? '';
         ?>
-        <tr data-flight-id="<?= htmlspecialchars($fid) ?>"
-    class="border-t border-gray-700 hover:bg-gray-700/40 transition opacity-50 cursor-not-allowed"
-    title="This flight has already departed">
+        <tr data-flight-id="<?= htmlspecialchars($fid) ?>" class="border-t border-gray-700 hover:bg-gray-700/40 transition cursor-not-allowed">
 
   <td class="px-5 py-4 font-semibold">
     <?= htmlspecialchars($f['flightNumber'] ?? $fid ?: '—') ?>
