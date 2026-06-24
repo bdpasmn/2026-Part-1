@@ -3,6 +3,7 @@
 
     require_once "../../api/api.php";
     require_once "../../api/key.php";
+    require_once "../../database/db.php";
 
     $api = new AirportsAPI(AIRPORTS_API_KEY);
     
@@ -17,6 +18,24 @@
         exit;
     }
 
+    $sortPreference = 'time_asc';
+
+    if (!empty($_SESSION['user_id'])) {
+        $stmt = $pdo->prepare("SELECT sort_preference FROM \"Users\" WHERE user_id = :user_id");
+        $stmt->execute([
+            'user_id' => $_SESSION['user_id']
+        ]);
+    
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+        if (!empty($result['sort_preference'])) {
+            $prefs = json_decode($result['sort_preference'], true);
+    
+            if (!empty($prefs['flight_sort'])) {
+                $sortPreference = $prefs['flight_sort'];
+            }
+        }
+    }
 
     $destination = trim($_GET['destination'] ?? '');
     $date = $_GET['date'] ?? '';
@@ -88,8 +107,33 @@
 
     $failedTimeRequirement = ($flightsBeforeBookingRules > 0 && $flightsAfterBookingRules == 0);
 
-    usort($batch, function ($a, $b) {
-        return ($a['departFromSender'] ?? 0) <=> ($b['departFromSender'] ?? 0);
+    usort($batch, function ($a, $b) use ($sortPreference) {
+
+        $getTime = function ($flight) {
+            return $flight['departFromSender'] ?? 0;
+        };
+    
+        switch ($sortPreference) {
+    
+            case 'airline_asc':
+                return strcasecmp($a['airline'] ?? '', $b['airline'] ?? '');
+    
+            case 'airline_desc':
+                return strcasecmp($b['airline'] ?? '', $a['airline'] ?? '');
+    
+            case 'gate_asc':
+                return strcasecmp($a['gate'] ?? '', $b['gate'] ?? '');
+    
+            case 'gate_desc':
+                return strcasecmp($b['gate'] ?? '', $a['gate'] ?? '');
+    
+            case 'time_desc':
+                return $getTime($b) <=> $getTime($a);
+    
+            case 'time_asc':
+            default:
+                return $getTime($a) <=> $getTime($b);
+        }
     });
 
     $page = max(1, intval($_GET['page'] ?? 1));

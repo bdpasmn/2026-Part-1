@@ -1,48 +1,64 @@
 <?php
-    session_start();
-    require_once __DIR__ . '/../../database/db.php';
-    require_once __DIR__ . '/../../components/config.php';
-    if (isset($_SESSION['user_id'])) {
-        $role = $_SESSION['role'] ?? '';
-        if (in_array($role, ['Customer', 'Admin', 'Root'])) {
-            $roleLower = strtolower($role);
-            header("Location: ../dashboard/{$roleLower}/{$roleLower}.php");
-            exit;
-        }
+session_start();
+require_once __DIR__ . '/../../database/db.php';
+require_once __DIR__ . '/../../components/config.php';
+
+if (isset($_SESSION['user_id'])) {
+    $role = strtolower($_SESSION['role']) ?? '';
+    
+    if (in_array($role, ['customer', 'admin', 'root'])) {
+        $roleLower = strtolower($role);
+
+        header("Location: ../dashboard/{$roleLower}/{$roleLower}.php");
+        exit;
     }
-    function regenerateCaptcha() {
-        $_SESSION['captcha_num1'] = rand(1, 10);
-        $_SESSION['captcha_num2'] = rand(1, 10);
-    } 
-    if (!isset($_SESSION['captcha_num1']) || !isset($_SESSION['captcha_num2']) || $_SERVER['REQUEST_METHOD'] === 'GET') {
-        regenerateCaptcha();
-    }
-    $first = trim($_POST['first'] ?? '');
-    $title = trim($_POST['title'] ?? '');
-    $middle = trim($_POST['middle'] ?? '');
-    $last = trim($_POST['last'] ?? '');
-    $suffix = trim($_POST['suffix'] ?? '');
-    $birth = trim($_POST['birth'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $gender = strtolower(trim($_POST['gender'] ?? ''));
-    $phone = trim($_POST['phone'] ?? '');
-    $street = trim($_POST['street-address'] ?? '');
-    $city = trim($_POST['city'] ?? '');
-    $state = trim($_POST['state'] ?? '');
-    $zip = trim($_POST['zip'] ?? '');
-    $country = trim($_POST['country'] ?? '');
-    $password = $_POST['password'] ?? '';
-    $question1 = trim($_POST['question1'] ?? '');
-    $question2 = trim($_POST['question2'] ?? '');
-    $question3 = trim($_POST['question3'] ?? '');
-    $question1_answer = trim($_POST['answer1'] ?? '');
-    $question2_answer = trim($_POST['answer2'] ?? '');
-    $question3_answer = trim($_POST['answer3'] ?? '');
-    $captcha = trim($_POST['captcha'] ?? '');
-    $message = '';
-    $redirect = false;
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
-        $captchaValid =
+}
+
+function regenerateCaptcha() {
+    $_SESSION['captcha_num1'] = rand(1, 10);
+    $_SESSION['captcha_num2'] = rand(1, 10);
+}
+
+if (
+    !isset($_SESSION['captcha_num1']) ||
+    !isset($_SESSION['captcha_num2']) ||
+    $_SERVER['REQUEST_METHOD'] === 'GET'
+) {
+    regenerateCaptcha();
+}
+
+$first = trim($_POST['first'] ?? '');
+$title = trim($_POST['title'] ?? '');
+$middle = trim($_POST['middle'] ?? '');
+$last = trim($_POST['last'] ?? '');
+$suffix = trim($_POST['suffix'] ?? '');
+$birth = trim($_POST['birth'] ?? '');
+$email = trim($_POST['email'] ?? '');
+$gender = strtolower(trim($_POST['gender'] ?? ''));
+$phone = trim($_POST['phone'] ?? '');
+$street = trim($_POST['street-address'] ?? '');
+$city = trim($_POST['city'] ?? '');
+$state = trim($_POST['state'] ?? '');
+$zip = trim($_POST['zip'] ?? '');
+$country = trim($_POST['country'] ?? '');
+$password = $_POST['password'] ?? '';
+
+$question1 = trim($_POST['question1'] ?? '');
+$question2 = trim($_POST['question2'] ?? '');
+$question3 = trim($_POST['question3'] ?? '');
+
+$question1_answer = trim($_POST['answer1'] ?? '');
+$question2_answer = trim($_POST['answer2'] ?? '');
+$question3_answer = trim($_POST['answer3'] ?? '');
+
+$captcha = trim($_POST['captcha'] ?? '');
+
+$message = '';
+$redirect = false;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
+
+    $captchaValid =
         ((int)$captcha ===
         ($_SESSION['captcha_num1'] + $_SESSION['captcha_num2']));
         if (strlen($password) <= 10) {

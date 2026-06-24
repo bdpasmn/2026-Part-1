@@ -3,9 +3,9 @@
     require_once "../../database/db.php";
     
     if (isset($_SESSION['user_id'])) {
-        $role = $_SESSION['role'] ?? '';
+        $role = strtolower($_SESSION['role']) ?? '';
     
-        if (in_array($role, ['Customer', 'Admin', 'Root'])) {
+        if (in_array($role, ['customer', 'admin', 'root'])) {
             header("Location: ../dashboard/{$role}/{$role}.php");
         }
     
