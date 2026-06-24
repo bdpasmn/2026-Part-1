@@ -47,7 +47,7 @@
         $db1 = strtolower(trim($userSecurityCheck["question1_answer"] ?? ""));
         $db2 = strtolower(trim($userSecurityCheck["question2_answer"] ?? ""));
         $db3 = strtolower(trim($userSecurityCheck["question3_answer"] ?? ""));
-        if ($a1 == $db1 && $a2 == $db2 && $a3 == $db3) {
+        if (hash_equals($db1, $a1) && hash_equals($db2, $a2) && hash_equals($db3, $a3)) {
             unset($_SESSION["recovery_email"]);
             header("Location: resetPassword.php?email=" . urlencode($emailInput));
             exit;
