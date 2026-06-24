@@ -255,7 +255,7 @@ const Loader = {
         this.slowTimer = setTimeout(() => {
             const t = this.text;
             if (t) t.textContent = "Hmm... this is taking longer than usual";
-        }, 10000);
+        }, 20000);
     },
 
     hide() {

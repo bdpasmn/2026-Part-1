@@ -263,13 +263,14 @@
                             <input required type="date" name="birth" value="<?= htmlspecialchars($birth) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
                         </div>
                         <div>
-                            <label class="text-xs text-gray-400">* Gender</label>
+                            <label class="text-xs text-gray-400">* Sex/Gender</label>
                             <select required name="gender" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
-                                <option value="" disabled <?= $gender === '' ? 'selected' : '' ?>>Select Gender</option>
-                                <option value="male" <?= $gender === 'male' ? 'selected' : '' ?>>Male</option>
-                                <option value="female" <?= $gender === 'female' ? 'selected' : '' ?>>Female</option>
-                                <option value="other" <?= $gender === 'other' ? 'selected' : '' ?>>Other</option>
-                                <option value="prefer not to say" <?= $gender === 'prefer not to say' ? 'selected' : '' ?>>Prefer Not To Say</option>
+                                <option value="" disabled <?= $gender === '' ? 'selected' : '' ?>>Select</option>
+                                <option value="male" <?= $gender === 'Male' ? 'selected' : '' ?>>Male</option>
+                                <option value="female" <?= $gender === 'Female' ? 'selected' : '' ?>>Female</option>
+                                <option value="Non binary" <?= $gender === 'Non binary' ? 'selected' : '' ?>>Non Binary</option>
+                                <option value="Other" <?= $gender === 'Other' ? 'selected' : '' ?>>Other</option>
+                                <option value="prefer-not-to-say" <?= $gender === 'prefer-not-to-say' ? 'selected' : '' ?>>Prefer Not To Say</option>
                             </select>
                         </div>
                         <div class="md:col-span-2">
@@ -413,7 +414,7 @@
                                 <option value="Oman"> Oman </option>
                                 <option value="Pakistan"> Pakistan </option>
                                 <option value="Palau"> Palau </option>
-                                <option value="Panama"> Panama /option>
+                                <option value="Panama"> Panama </option>
                                 <option value="Papua New Guinea"> Papua New Guinea </option>
                                 <option value="Paraguay"> Paraguay </option>
                                 <option value="Peru"> Peru </option>
@@ -477,7 +478,7 @@
                                 <option value="Zimbabwe">Zimbabwe </option>
                             </select>
                         </div>
-                        <div id="state-container">
+                        <div>
                             <label class="text-xs text-gray-400">* State</label>
                             <select required name="state" id="state" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
                                 <option value=""> Select State </option>
@@ -534,7 +535,7 @@
                                 <option value="WY"> Wyoming </option>
                             </select>
                         </div>
-                        <div id="zip-container">
+                        <div>
                             <label class="text-xs text-gray-400">* ZIP</label>
                             <input required type="text" name="zip" id="zip" value="<?= htmlspecialchars($zip) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
                         </div>
@@ -632,34 +633,6 @@
                 }
                 passwordInput.addEventListener('input', updateStrength);
                 updateStrength();
-            });
-            document.addEventListener("DOMContentLoaded", function () {
-                const countrySelect = document.getElementById("country");
-                const stateSelect = document.getElementById("state");
-                const zipInput = document.getElementById("zip");
-                const stateContainer = document.getElementById("state-container");
-                const zipContainer = document.getElementById("zip-container");
-                const selectedCountry = <?php echo json_encode($country); ?>;
-                const selectedState = <?php echo json_encode($state); ?>;
-                if (selectedCountry) {
-                    countrySelect.value = selectedCountry;
-                }
-                if (selectedState) {
-                    stateSelect.value = selectedState;
-                }
-                function updateUSFields() {
-                    const isUS = countrySelect.value === "United States" || countrySelect.value === "US";
-                    stateContainer.style.display = isUS ? "" : "none";
-                    zipContainer.style.display = isUS ? "" : "none";
-                    stateSelect.required = isUS;
-                    zipInput.required = isUS;
-                    if (!isUS) {
-                        stateSelect.value = "";
-                        zipInput.value = "";
-                    }
-                }
-                updateUSFields();
-                countrySelect.addEventListener("change", updateUSFields);
             });
         </script>
     </body>
