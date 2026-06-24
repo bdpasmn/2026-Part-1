@@ -88,7 +88,7 @@
                                 </div>
                             </div>
 
-                            <?php if (!empty($_SESSION['user_id'])): ?>
+                            <?php if (!empty($_SESSION['user_id']) && !empty($savedPayments)): ?>
                                 <div class="mt-8 border-t border-gray-700 pt-6">
                                     <h3 class="font-semibold mb-4 text-white">Saved Payment Methods</h3>
                                     <select id="savedCard" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white">
