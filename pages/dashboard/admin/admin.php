@@ -279,6 +279,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                      date_birth, sex, street_address, city, state, zip_code, country)
                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
             );
+           
             $ins->execute([
                 $fn, $mn ?: null, $ln, $email,
                 $phoneFormatted, $hashed, 'Customer',

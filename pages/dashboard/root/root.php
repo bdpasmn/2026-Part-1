@@ -112,9 +112,6 @@ function parseTicketPrice($rawPrice): float {
     return $p;
 }
 
-// TEMPORARY DIAGNOSTIC ROUTE — visit ?tab=overview&debug_price=1
-// Shows the exact raw value + PHP type PDO returns for price on every ticket.
-// Remove this block once the price bug is confirmed and fixed.
 if (isset($_GET['debug_price'])) {
     header('Content-Type: text/plain');
     echo "ticket_id | status | raw price (var_export) | gettype | parsed\n";
@@ -251,13 +248,6 @@ function flightDestination(array $f, array $airportLookup): string {
 
     return strtoupper($code);
 }
-
-/**
- * Resolve a ticket's destination string the exact same way it's resolved
- * for display (flightDestination()): pull the destination code off the
- * flight record and pass it through the airport lookup. Falls back to the
- * raw posted destination only if the flight can't be found at all.
- */
 function resolveTicketDestination(?array $flight, array $airportLookup, string $postedDestination): string {
     if ($flight) {
         return flightDestination($flight, $airportLookup);

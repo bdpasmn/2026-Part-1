@@ -267,7 +267,6 @@ usort($pastFlights, function ($a, $b) {
       <=> ($a['flight']['departureTime'] ?? 0);
 });
 
-// Force incomplete profiles onto the profile tab
 if ($profileIncomplete && $activeTab !== 'profile') {
     header('Location: ?tab=profile');
     exit;
@@ -293,7 +292,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         $errors = [];
         if ($email === '')  $errors[] = 'Email is required.';
-        if ($phone === '')  $errors[] = 'Phone is required.';
+      //  if ($phone === '')  $errors[] = 'Phone is required.';
         if ($street === '') $errors[] = 'Street address is required.';
         if ($city === '')   $errors[] = 'City is required.';
         if ($state === '')  $errors[] = 'State is required.';
