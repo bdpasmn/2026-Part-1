@@ -747,7 +747,7 @@ $filteredUsers = array_slice(
             <input type="date" name="dob" class="field">
           </div>
           <div>
-            <label class="block text-xs text-gray-400 mb-1">Sex</label>
+            <label class="block text-xs text-gray-400 mb-1">Sex/Gender</label>
             <select name="sex" class="field">
               <option value="">Select</option>
               <option value="male">Male</option>
@@ -1088,7 +1088,7 @@ $filteredTickets = array_slice(
             <input type="date" name="dob" class="field">
           </div>
           <div>
-            <label class="block text-xs text-gray-400 mb-1">Sex</label>
+            <label class="block text-xs text-gray-400 mb-1">Sex/Gender</label>
             <select name="sex" class="field">
               <option value=""></option>
               <option value="male">Male</option>
