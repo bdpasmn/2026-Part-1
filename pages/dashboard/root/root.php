@@ -271,8 +271,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $pw    = trim($_POST['password']    ?? '');
         if (!$fn || !$ln || !$email) {
             $errorMsg = 'First name, last name, email, and password are required.';
-        } elseif (strlen($pw) < 11) {
-            $errorMsg = 'Password must be at least 11 characters.';
+        } elseif (strlen($pw) < 10) {
+            $errorMsg = 'Password must be at least 10 characters.';
         } else {
             $emailCheck = $pdo->prepare('SELECT 1 FROM "Users" WHERE LOWER(email) = LOWER(?)');
             $emailCheck->execute([$email]);
@@ -814,7 +814,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
           <input type="email" name="email" required class="field">
         </div>
         <div>
-          <label class="block text-sm text-gray-400 mb-1">Password* <span class="text-gray-600">(min 11 chars)</span></label>
+          <label class="block text-sm text-gray-400 mb-1">Password* <span class="text-gray-600">(min 10 chars)</span></label>
           <input type="password" id="password" name="password" required minlength="11" class="field" oninput="checkPw(this.value)">
           <p class="mt-2 text-sm text-gray-400">
               Password strength: <span id="cpw-hint">—</span>
