@@ -17,7 +17,21 @@
         $cvc = preg_replace('/\D/', '', $_POST['cvc'] ?? '');
         $zipCode = trim($_POST['zip_code'] ?? '');
 
-        $phone = preg_replace('/\D/', '', $_POST['phone'] ?? '');
+        $phoneDigits = preg_replace('/\D/', '', $_POST['phone'] ?? '');
+
+            if (strlen($phoneDigits) === 11) {
+                $phone = '+' . $phoneDigits[0] . ' (' .
+                    substr($phoneDigits, 1, 3) . ') ' .
+                    substr($phoneDigits, 4, 3) . '-' .
+                    substr($phoneDigits, 7, 4);
+            } elseif (strlen($phoneDigits) === 10) {
+                $phone = '(' .
+                    substr($phoneDigits, 0, 3) . ') ' .
+                    substr($phoneDigits, 3, 3) . '-' .
+                    substr($phoneDigits, 6, 4);
+            } else {
+                $phone = $_POST['phone'] ?? '';
+            }
         $email = trim($_POST['email'] ?? '');
         
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -170,13 +184,13 @@
         "active"
     ]);
 
-    if ($userId && !empty($_POST['save_card']) && !empty($_POST['card_name'])) {
+    if ($userId && !empty($_POST['save_card'])) {
         $check = $pdo->prepare('SELECT COUNT(*) FROM "Saved Cards" WHERE user_id = ? AND card_number = ?');
 
-        $cardholderName = trim($_POST['cardholderName'] ?? '');
-        $cardName = trim($_POST['cardName'] ?? '');
+        $cardholderName = trim($_POST['cardholder_name'] ?? '');
+        $cardName = trim($_POST['card_name'] ?? '');
         
-        if ($cardName == '') {
+        if ($cardName === '') {
             $cardName = $cardholderName . "'s card";
         }
 
@@ -190,8 +204,8 @@
 
             $stmt->execute([
                 $userId,
-                $_POST['card_name'],
-                $_POST['cardholder_name'],
+                $cardName,
+                $cardholderName,
                 $_POST['card_number'],
                 $_POST['expiration_date'],
                 $_POST['cvc'],

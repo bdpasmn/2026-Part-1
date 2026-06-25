@@ -357,7 +357,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } elseif ($seat === '') {
             $errorMsg = 'Seat is required.';
         } elseif (!validSeat($seat)) {
-            $errorMsg = 'Invalid seat. Must be row 1–10 and column A–I (e.g. 5A, 10I).';
+            $errorMsg = 'Invalid seat. Must be row 1–10 and column A–I (Ex. 5A, 10I).';
         } elseif ($email !== '' && !isValidEmail($email)) {
             $errorMsg = 'Please enter a valid email address (must contain "@" and ".").';
         } elseif ($phone !== '' && phoneHasLetters($phone)) {
@@ -752,7 +752,7 @@ $filteredUsers = array_slice(
               <option value="">Select</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
-              <ption value="nonbinary">Non-binary</option>
+              <option value="nonbinary">Non-binary</option>
               <option value="other">Other</option>
               <option value="prefer-not-to-say">Prefer not to say</option>
             </select>
@@ -1088,13 +1088,14 @@ $filteredTickets = array_slice(
             <input type="date" name="dob" class="field">
           </div>
           <div>
-            <label class="block text-xs text-gray-400 mb-1">Sex/Gender</label>
+          <label class="block text-xs text-gray-400 mb-1">Sex/Gender</label>
             <select name="sex" class="field">
-              <option value=""></option>
+              <option value="">Select</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
-              <option value="female">Nonbinary</option>
+              <option value="nonbinary">Non-binary</option>
               <option value="other">Other</option>
+              <option value="prefer-not-to-say">Prefer not to say</option>
             </select>
           </div>
         </div>
@@ -1408,7 +1409,7 @@ function onSeatBlur(val) {
   const flightId = document.getElementById('tFlightId').value.trim();
   if (!val) { errEl.classList.add('hidden'); return; }
   if (!/^([1-9]|10)[A-Ia-i]$/.test(val)) {
-    errEl.textContent = 'Invalid seat. Must be row 1–10, column A–I (e.g. 5A, 10I).';
+    errEl.textContent = 'Invalid seat. Must be row 1–10, column A–I (Ex. 5A, 10I).';
     errEl.classList.remove('hidden'); return;
   }
   const apiTaken = takenSeats[flightId] || [];

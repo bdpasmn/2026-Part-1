@@ -362,7 +362,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } elseif ($seat === '') {
             $errorMsg = 'Seat is required.';
         } elseif (!validSeat($seat)) {
-            $errorMsg = 'Invalid seat. Must be row 1–9 and column A–I (e.g. 5A, 9I).';
+            $errorMsg = 'Invalid seat. Must be row 1–9 and column A–I (Ex. 5A, 9I).';
         } elseif ($email !== '' && !isValidEmail($email)) {
             $errorMsg = 'Please enter a valid email address (must contain "@" and ".").';
         } elseif ($phone !== '' && phoneHasLetters($phone)) {
@@ -704,7 +704,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
   <div class="grid lg:grid-cols-2 gap-5">
     <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 shadow-sm">
       <h2 class="text-xl font-bold mb-1">Create New Administrator🛡️</h2>
-      <p class="text-sm text-gray-400 mb-5">Grant another account full admin-level access.</p>
+      <p class="text-sm text-gray-400 mb-5">Create an account with full admin-level access.</p>
       <form method="POST" class="space-y-3">
         <input type="hidden" name="action" value="create_admin">
         <p class="section-label">Required</p>
@@ -785,7 +785,6 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
   <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
     <div class="p-5 border-b border-gray-700 flex flex-wrap items-center justify-between gap-4">
       <h2 class="text-lg font-bold">All Administrators 🛡️
-        <span class="text-gray-500 font-normal text-sm ml-1">(<?= count($filteredAdmins) ?>)</span>
       </h2>
       <form method="GET" class="flex gap-2 flex-wrap">
         <input type="hidden" name="tab" value="admins">
@@ -946,7 +945,6 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
   <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
     <div class="p-5 border-b border-gray-700 flex flex-wrap items-center justify-between gap-4">
       <h2 class="text-lg font-bold">All Customers 👥
-        <span class="text-gray-500 font-normal text-sm ml-1">(<?= count($filteredUsers) ?>)</span>
       </h2>
       <form method="GET" class="flex gap-2 flex-wrap">
         <input type="hidden" name="tab" value="customers">
@@ -1057,14 +1055,13 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
         <div>
           <label class="block text-xs text-gray-400 mb-1">Flight ID*</label>
           <input type="text" name="flight_id" id="tFlightId" required
-            placeholder="e.g. 6a2b68204b07f8ac"
             class="field font-mono text-xs" onblur="onFlightBlur(this.value)">
           <p id="flightInfo" class="text-xs mt-1 hidden"></p>
         </div>
         <div>
           <label class="block text-xs text-gray-400 mb-1">Seat*</label>
           <input type="text" name="seat" id="tSeat" required maxlength="3"
-            placeholder="e.g. 5A"
+            placeholder="Ex. 5A, 7H"
             class="field uppercase" oninput="this.value=this.value.toUpperCase()" onblur="onSeatBlur(this.value)">
           <p class="hint">Rows 1–9 · Columns A–I</p>
           <p id="seatErr" class="text-red-400 text-xs mt-1 hidden"></p>
@@ -1126,7 +1123,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
               <option value="">Select</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
-              <ption value="nonbinary">Non-binary</option>
+              <option value="nonbinary">Non-binary</option>
               <option value="other">Other</option>
               <option value="prefer-not-to-say">Prefer not to say</option>
             </select>
@@ -1134,7 +1131,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
         </div>
         <div>
           <label class="block text-xs text-gray-400 mb-1">Phone</label>
-          <input type="tel" name="phone" placeholder="(555) 555-5555" class="field"
+          <input type="tel" name="phone" class="field"
             oninput="autoFormatPhone(this)">
         </div>
         <div>
@@ -1156,8 +1153,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
       <h2 class="font-bold text-base mb-4">Lookup by Confirmation Code</h2>
       <form method="GET" class="flex gap-2 mb-4">
         <input type="hidden" name="tab" value="tickets">
-        <input type="text" name="conf" value="<?= htmlspecialchars($confLookup) ?>"
-          placeholder="e.g. E5920205" class="field flex-1 h-9">
+        <input type="text" name="conf" value="<?= htmlspecialchars($confLookup) ?>" class="field flex-1 h-9">
         <button type="submit" class="h-9 px-4 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-semibold transition">Look Up</button>
         <?php if ($confLookup): ?>
         <a href="?tab=tickets" class="h-9 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-semibold flex items-center transition">Clear</a>
@@ -1209,9 +1205,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
 
   <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
     <div class="p-5 border-b border-gray-700 flex flex-wrap items-center justify-between gap-4">
-      <h2 class="text-lg font-bold">All Tickets 🎟️
-        <span class="text-gray-500 font-normal text-sm ml-1">(<?= count($filteredTickets) ?>)</span>
-      </h2>
+      <h2 class="text-lg font-bold">All Tickets 🎟️</h2>
       <form method="GET" class="flex gap-2 flex-wrap">
         <input type="hidden" name="tab" value="tickets">
         <input type="text" name="tsearch" value="<?= htmlspecialchars($ticketSearch) ?>"
@@ -1410,7 +1404,7 @@ function onSeatBlur(val) {
   const flightId = document.getElementById('tFlightId').value.trim();
   if (!val) { errEl.classList.add('hidden'); return; }
   if (!/^[1-9][A-Ia-i]$/.test(val)) {
-    errEl.textContent = 'Invalid seat. Must be row 1–9, column A–I (e.g. 5A, 9I).';
+    errEl.textContent = 'Invalid seat. Must be row 1–9, column A–I (Ex. 5A, 9I).';
     errEl.classList.remove('hidden'); return;
   }
   const apiTaken = takenSeats[flightId] || [];

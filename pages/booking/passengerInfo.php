@@ -42,7 +42,6 @@
                                     type="tel"
                                     id="phone"
                                     maxlength="20"
-                                    oninput="this.value=this.value.replace(/[^0-9()\-\s]/g,'')"
                                     class="required-booking w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white"
                                 >
                             </div>
@@ -132,6 +131,38 @@
 
                     if (!cardName.dataset.touched) {
                         cardName.placeholder = this.value ?  `ex. ${this.value}'s card` : "ex. ____'s card";
+                    }
+                });
+
+                document.getElementById('cardholderName').addEventListener('input', function () {
+                    const cardName = document.getElementById('cardName');
+
+                    if (!cardName.dataset.touched) {
+                        cardName.placeholder = this.value
+                            ? `ex. ${this.value}'s card`
+                            : "ex. ____'s card";
+                    }
+                });
+
+                const phoneInput = document.getElementById('phone');
+
+                phoneInput.addEventListener('input', function () {
+                    let d = this.value.replace(/\D/g, '');
+
+                    if (d.length > 11) {
+                        d = d.slice(0, 11);
+                    }
+
+                    if (d.length == 0) {
+                        this.value = '';
+                    } else if (d.length <= 3) {
+                        this.value = '(' + d;
+                    } else if (d.length <= 6) {
+                        this.value = '(' + d.slice(0, 3) + ') ' + d.slice(3);
+                    } else if (d.length <= 10) {
+                        this.value = '(' + d.slice(0, 3) + ') ' + d.slice(3, 6) + '-' + d.slice(6);
+                    } else {
+                        this.value = '+1 (' + d.slice(1, 4) + ') ' + d.slice(4, 7) + '-' + d.slice(7);
                     }
                 });
             </script>

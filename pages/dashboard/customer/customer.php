@@ -26,19 +26,10 @@ function formatCard($num) {
   return trim(chunk_split($num, 4, ' '));
 }
 
-
-$stmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
-$stmt->execute([$_SESSION['user_id']]);
-$dbUser = $stmt->fetch(PDO::FETCH_ASSOC);
-
 if (!$dbUser) {
     die("User not found.");
 }
 
-if (strtolower($_SESSION['role'] ?? '') !== 'customer') {
-    header('Location: ../../../index.php');
-    exit;
-} 
 
 function getUserIp() {
     $keys = [
@@ -90,7 +81,6 @@ $currentUser = [
 
 $requiredProfileFields = [
     'email'          => $dbUser['email']          ?? '',
-    'phone'          => $dbUser['phone']           ?? '',
     'street_address' => $dbUser['street_address']  ?? '',
     'city'           => $dbUser['city']            ?? '',
     'state'          => $dbUser['state']           ?? '',
@@ -110,6 +100,7 @@ $activeTab = $_GET['tab'] ?? 'overview';
 $needsFlightDetails = in_array($activeTab, ['overview', 'flights'], true);
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
+
 
 $airlinesData   = $api->getAirlines();
 $airportsData   = $api->getAirports();
@@ -274,7 +265,27 @@ if ($profileIncomplete && $activeTab !== 'profile') {
     header('Location: ?tab=profile');
     exit;
 }
+function formatPhone($phone) {
+  $phoneDigits = preg_replace('/\D/', '', $phone);
 
+  if ($phoneDigits === '') return null;
+
+  if (strlen($phoneDigits) === 11) {
+      return '+' . $phoneDigits[0] . ' (' .
+          substr($phoneDigits, 1, 3) . ') ' .
+          substr($phoneDigits, 4, 3) . '-' .
+          substr($phoneDigits, 7, 4);
+  }
+
+  if (strlen($phoneDigits) === 10) {
+      return '(' .
+          substr($phoneDigits, 0, 3) . ') ' .
+          substr($phoneDigits, 3, 3) . '-' .
+          substr($phoneDigits, 6, 4);
+  }
+
+  return $phone;
+}
 $updateMsg  = $_SESSION['flash_msg']          ?? null;
 $guestMsg   = $_SESSION['flash_guest_msg']    ?? null;
 $guestError = $_SESSION['flash_guest_error']  ?? null;
@@ -284,7 +295,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     if ($_POST['action'] === 'update_profile') {
         $email      = trim($_POST['email']      ?? '');
-        $phone      = trim($_POST['phone']       ?? '');
+        $phone = formatPhone($_POST['phone'] ?? '');
         $street     = trim($_POST['street']      ?? '');
         $city       = trim($_POST['city']        ?? '');
         $state      = trim($_POST['state']       ?? '');
@@ -294,13 +305,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $confirmPass = trim($_POST['confirm_password'] ?? '');
 
         $errors = [];
-        if ($email === '')  $errors[] = 'Email is required.';
-      //  if ($phone === '')  $errors[] = 'Phone is required.';
-        if ($street === '') $errors[] = 'Street address is required.';
-        if ($city === '')   $errors[] = 'City is required.';
-        if ($state === '')  $errors[] = 'State is required.';
-        if ($zip === '')    $errors[] = 'ZIP code is required.';
-        if ($dob === '')    $errors[] = 'Date of birth is required.';
+
+        $requiredFields = [
+            'Email' => $email,
+            'Street address' => $street,
+            'City' => $city,
+            'State' => $state,
+            'ZIP code' => $zip,
+            'Date of birth' => $dob,
+        ];
+
+        foreach ($requiredFields as $label => $value) {
+            if (trim((string)$value) === '') {
+                $errors[] = "$label is required.";
+            }
+        }
 
         if ($missingPassword) {
             if ($newPass === '' || $confirmPass === '') {
@@ -314,6 +333,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         if (!empty($errors)) {
             $_SESSION['flash_profile_error'] = implode(' ', $errors);
+            header('Location: ?tab=profile');
+            exit;
+        }
+
+        $check = $pdo->prepare('SELECT user_id FROM "Users" WHERE email = ? AND user_id != ? LIMIT 1');
+        $check->execute([$email, $_SESSION['user_id']]);
+        $existing = $check->fetch(PDO::FETCH_ASSOC);
+
+        if ($existing) {
+            $_SESSION['flash_profile_error'] = 'Email is already in use by another account.';
             header('Location: ?tab=profile');
             exit;
         }
@@ -432,10 +461,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $billing    = htmlspecialchars(trim($_POST['billing_address']  ?? ''));
         $zip        = htmlspecialchars(trim($_POST['billing_zip']      ?? ''));
 
-        $cardName = trim($_POST['card_name'] ?? '');
-        if ($cardName === '') {
-            $cardName = $currentUser['name'];
+        $cardholderName = trim($_POST['cardholder_name'] ?? '');
+
+        if ($cardholderName === '') {
+            $_SESSION['flash_msg'] = 'Cardholder name is required.';
+            header('Location: ?tab=payment');
+            exit;
         }
+
+        $cardName = trim($_POST['card_name'] ?? '');
+
+        if ($cardName === '') {
+            $cardName = $cardholderName;
+        }
+
         $cardName = htmlspecialchars($cardName);
         $rawCard = preg_replace('/\D/', '', $_POST['card_number'] ?? '');
 
@@ -539,6 +578,9 @@ body { font-family: 'Inter', sans-serif; }
 .tab-inactive { color: rgb(156 163 175); }
 .tab-inactive:hover { color: white; background: rgb(55 65 81); }
 .tab-disabled { color: rgb(75 85 99); pointer-events: none; cursor: not-allowed; }
+#profileSubmitBtn:disabled:hover + .tooltip {
+  opacity: 1;
+}
 </style>
 </head>
 <body class="bg-gray-900 min-h-screen text-white">
@@ -1028,15 +1070,13 @@ function fmtTs(ts) {
             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div>
-        <label class="block text-sm text-gray-400 mb-1">Phone Number*</label>
-        <input 
-          type="text" 
-          name="phone" 
-          required 
-          maxlength="15"
-          inputmode="tel"
+        <label class="block text-sm text-gray-400 mb-1">Phone Number</label>
+        <input
+          type="tel"
+          id="phone"
+          name="phone"
+          maxlength="20"
           value="<?= htmlspecialchars($currentUser['phone']) ?>"
-          oninput="this.value = this.value.replace(/[^0-9()-]/g, '').slice(0, 15)"
           class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         </div>
@@ -1086,12 +1126,27 @@ function fmtTs(ts) {
         </div>
         <?php endif; ?>
 
-        <button type="submit" class="w-full h-10 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition">
-          Save Changes
-        </button>
+  
+  <div class="relative inline-block w-full">
+  
+  <button
+    type="submit"
+    id="profileSubmitBtn"
+    disabled
+    class="w-full h-10 rounded-lg text-sm font-semibold transition bg-gray-600 text-gray-300 cursor-not-allowed"
+  >
+    Save Changes
+  </button>
+
+  <div class="tooltip absolute left-1/2 -translate-x-1/2 -top-12 w-64 
+              bg-gray-900 border border-gray-700 text-xs text-gray-300 
+              rounded-lg p-3 shadow-lg opacity-0 pointer-events-none transition">
+    Please fill in all required fields before saving changes.
+  </div>
+
+</div>
       </form>
     </div>
-
     <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
   <h2 class="text-lg font-bold mb-5">Account Details ⚙️</h2>
 
@@ -1120,42 +1175,54 @@ function fmtTs(ts) {
     <?php endforeach; ?>
   </div>
 </div>
-  <script>
-  const profileForm = document.getElementById('profile-form');
-  profileForm?.addEventListener('submit', function (e) {
-      const required = profileForm.querySelectorAll('[required]');
-      let firstInvalid = null;
-      for (const field of required) {
-          if (!field.value || !field.value.trim()) {
-              if (!firstInvalid) firstInvalid = field;
-          }
-      }
-      const newPass = profileForm.querySelector('[name="new_password"]');
-      const confirmPass = profileForm.querySelector('[name="confirm_password"]');
-      if (newPass && confirmPass && newPass.value !== confirmPass.value) {
-          e.preventDefault();
-          alert('Passwords do not match.');
-          confirmPass.focus();
-          return;
-      }
-      if (firstInvalid) {
-          e.preventDefault();
-          firstInvalid.focus();
-          firstInvalid.classList.add('ring-2', 'ring-red-500');
-      }
-  });
-  </script>
+<script>
+const profileForm = document.getElementById('profile-form');
+const submitBtn = document.getElementById('profileSubmitBtn');
 
-  <?php endif; ?>
+function checkProfileForm() {
+    const requiredFields = profileForm.querySelectorAll('[required]');
+    let valid = true;
 
+    requiredFields.forEach(field => {
+        if (!field.value || !field.value.trim()) {
+            valid = false;
+        }
+    });
+
+    const newPass = profileForm.querySelector('[name="new_password"]');
+    const confirmPass = profileForm.querySelector('[name="confirm_password"]');
+
+    if (newPass && confirmPass) {
+        if (newPass.value || confirmPass.value) {
+            if (newPass.value !== confirmPass.value || newPass.value.length < 8) {
+                valid = false;
+            }
+        }
+    }
+
+    submitBtn.disabled = !valid;
+
+    if (valid) {
+        submitBtn.className =
+            "w-full h-10 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition";
+    } else {
+        submitBtn.className =
+            "w-full h-10 bg-gray-600 text-gray-300 cursor-not-allowed rounded-lg text-sm font-semibold";
+    }
+}
+
+profileForm.addEventListener('input', checkProfileForm);
+window.addEventListener('load', checkProfileForm);
+</script>
+<?php endif; ?>
   <?php if ($activeTab === 'payment'): ?>
 
   <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-6">
     <h2 class="text-lg font-bold mb-5">Saved Cards 🏦</h2>
     <div class="space-y-3 mb-6" id="saved-cards-list">
       <?php foreach ($savedCards as $card): ?>
-        <div class="flex items-center justify-between bg-gray-700/50 border border-gray-600 rounded-lg px-5 py-4 transition-all duration-200 ease-in-out hover:bg-gray-700/80 hover:border-gray-500 hover:-translate-y-0.5 hover:shadow-md">
-        <div class="flex items-center gap-4">
+        <div class="saved-card-item flex items-center justify-between bg-gray-700/50 border border-gray-600 rounded-lg px-5 py-4 transition-all duration-300 ease-in-out hover:-translate-y-1 hover:bg-gray-700/70 hover:border-gray-400 hover:shadow-lg">
+          <div class="flex items-center gap-4">
           <div class="w-10 h-7 bg-gray-600 rounded flex items-center justify-center text-xs font-bold text-gray-300">
             💳
           </div>
@@ -1186,7 +1253,7 @@ function fmtTs(ts) {
         <input type="hidden" name="action" value="add_card">
         <div class="sm:col-span-2">
           <label class="block text-xs text-gray-400 mb-1">Cardholder Name</label>
-          <input type="text" name="card_name" placeholder="Name on card"
+          <input type="text" name="cardholder_name" placeholder="Name on card"
             value="<?= htmlspecialchars($currentUser['name']) ?>"
             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
@@ -1389,10 +1456,52 @@ document.getElementById('delete-account-form')?.addEventListener('submit', funct
         e.preventDefault();
     }
 });
+
 </script>
 
 <?php endif; ?>
 </main>
+<script>
+const phoneInput = document.getElementById('phone');
 
+phoneInput.addEventListener('input', function () {
+    let digits = this.value.replace(/\D/g, '');
+
+    if (digits.length > 11) {
+        digits = digits.slice(0, 11);
+    }
+
+    if (digits.length === 0) {
+        this.value = '';
+        return;
+    }
+
+    if (digits.length <= 10) {
+        if (digits.length <= 3) {
+            this.value = '(' + digits;
+        } else if (digits.length <= 6) {
+            this.value = '(' + digits.slice(0, 3) + ') ' + digits.slice(3);
+        } else {
+            this.value =
+                '(' + digits.slice(0, 3) + ') ' +
+                digits.slice(3, 6) + '-' +
+                digits.slice(6);
+        }
+        return;
+    }
+
+    if (digits.length === 11) {
+        if (digits[0] !== '1') {
+            digits = '1' + digits.slice(0, 10);
+        }
+
+        this.value =
+            '+1 (' +
+            digits.slice(1, 4) + ') ' +
+            digits.slice(4, 7) + '-' +
+            digits.slice(7);
+    }
+});
+</script>
 </body>
 </html>
