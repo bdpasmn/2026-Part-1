@@ -320,6 +320,10 @@ document.addEventListener('click', (e) => {
 });
 
 document.addEventListener('submit', (e) => {
+    if (e.submitter?.hasAttribute('data-skip-loader')) {
+        return;
+    }
+
     Loader.show();
 });
 </script>
