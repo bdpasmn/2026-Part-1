@@ -293,7 +293,7 @@ unset($_SESSION['flash_msg'], $_SESSION['flash_guest_msg'], $_SESSION['flash_gue
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
-    if ($_POST['action'] === 'update_profile') {
+if ($_POST['action'] === 'update_profile') {
         $email      = trim($_POST['email']      ?? '');
         $phone = formatPhone($_POST['phone'] ?? '');
         $street     = trim($_POST['street']      ?? '');
@@ -301,6 +301,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $state      = trim($_POST['state']       ?? '');
         $zip        = trim($_POST['zip']         ?? '');
         $dob        = trim($_POST['date_birth']  ?? '');
+        $title      = trim($_POST['title']       ?? '');
+        $suffix     = trim($_POST['suffix']      ?? '');
+        $country    = trim($_POST['country']     ?? '');
+        $sex        = trim($_POST['sex']         ?? '');
         $newPass    = trim($_POST['new_password']     ?? '');
         $confirmPass = trim($_POST['confirm_password'] ?? '');
 
@@ -349,14 +353,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         if ($missingPassword && $newPass !== '') {
             $upd = $pdo->prepare(
-                'UPDATE "Users" SET email=?, phone=?, street_address=?, city=?, state=?, zip_code=?, date_birth=?, password=? WHERE user_id=?'
+                'UPDATE "Users" SET email=?, phone=?, street_address=?, city=?, state=?, zip_code=?, date_birth=?, title=?, suffix=?, country=?, sex=?, password=? WHERE user_id=?'
             );
-            $upd->execute([$email, $phone, $street, $city, $state, $zip, $dob, $newPass, $_SESSION['user_id']]);
+            $upd->execute([$email, $phone, $street, $city, $state, $zip, $dob, $title ?: null, $suffix ?: null, $country ?: null, $sex ?: null, $newPass, $_SESSION['user_id']]);
         } else {
             $upd = $pdo->prepare(
-                'UPDATE "Users" SET email=?, phone=?, street_address=?, city=?, state=?, zip_code=?, date_birth=? WHERE user_id=?'
+                'UPDATE "Users" SET email=?, phone=?, street_address=?, city=?, state=?, zip_code=?, date_birth=?, title=?, suffix=?, country=?, sex=? WHERE user_id=?'
             );
-            $upd->execute([$email, $phone, $street, $city, $state, $zip, $dob, $_SESSION['user_id']]);
+            $upd->execute([$email, $phone, $street, $city, $state, $zip, $dob, $title ?: null, $suffix ?: null, $country ?: null, $sex ?: null, $_SESSION['user_id']]);
         }
 
         $_SESSION['flash_msg'] = 'Profile updated successfully.';
@@ -1063,6 +1067,38 @@ function fmtTs(ts) {
           <label class="block text-sm text-gray-400 mb-1">Full Name</label>
           <input type="text" value="<?= htmlspecialchars($currentUser['name']) ?>" disabled
             class="w-full h-10 bg-gray-700/50 border border-gray-600 rounded-lg px-4 text-gray-400 text-sm cursor-not-allowed">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm text-gray-400 mb-1">Title</label>
+            <input type="text" name="title" value="<?= htmlspecialchars($dbUser['title'] ?? '') ?>"
+              class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-sm text-gray-400 mb-1">Suffix</label>
+            <input type="text" name="suffix" value="<?= htmlspecialchars($dbUser['suffix'] ?? '') ?>"
+              class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-400 mb-1">Sex/Gender</label>
+          <select name="sex" class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <?php
+            $sexOptions = [
+              '' => 'Select',
+              'male' => 'Male',
+              'female' => 'Female',
+              'nonbinary' => 'Non-binary',
+              'other' => 'Other',
+              'prefer-not-to-say' => 'Prefer not to say',
+            ];
+            $currentSex = $dbUser['sex'] ?? '';
+            foreach ($sexOptions as $val => $label):
+              $sel = ($currentSex === $val) ? 'selected' : '';
+            ?>
+            <option value="<?= htmlspecialchars($val) ?>" <?= $sel ?>><?= htmlspecialchars($label) ?></option>
+            <?php endforeach; ?>
+          </select>
         </div>
         <div>
           <label class="block text-sm text-gray-400 mb-1">Email Address*</label>

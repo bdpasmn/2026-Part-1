@@ -240,19 +240,25 @@ $isAjax = isset($_POST['ajax']) && $_POST['ajax'] === '1';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     if ($_POST['action'] === 'create_customer') {
-        $fn     = trim($_POST['first_name']  ?? '');
-        $mn     = trim($_POST['middle_name'] ?? '');
-        $ln     = trim($_POST['last_name']   ?? '');
-        $email  = trim($_POST['email']       ?? '');
-        $phone  = trim($_POST['phone']       ?? '');
-        $pw     = trim($_POST['password']    ?? '');
-        $dob    = trim($_POST['dob']         ?? '');
-        $sex    = trim($_POST['sex']         ?? '');
-        $street = trim($_POST['street']      ?? '');
-        $city   = trim($_POST['city']        ?? '');
-        $state  = trim($_POST['state']       ?? '');
-        $zip    = trim($_POST['zip']         ?? '');
-        $country= trim($_POST['country']     ?? '');
+        $fn        = trim($_POST['first_name']  ?? '');
+        $mn        = trim($_POST['middle_name'] ?? '');
+        $ln        = trim($_POST['last_name']   ?? '');
+        $email     = trim($_POST['email']       ?? '');
+        $phone     = trim($_POST['phone']       ?? '');
+        $pw        = trim($_POST['password']    ?? '');
+        $dob       = trim($_POST['dob']         ?? '');
+        $sex       = trim($_POST['sex']         ?? '');
+        $street    = trim($_POST['street']      ?? '');
+        $city      = trim($_POST['city']        ?? '');
+        $state     = trim($_POST['state']       ?? '');
+        $zip       = trim($_POST['zip']         ?? '');
+        $country   = trim($_POST['country']     ?? '');
+        $question1 = trim($_POST['question1']   ?? '');
+        $answer1   = trim($_POST['answer1']     ?? '');
+        $question2 = trim($_POST['question2']   ?? '');
+        $answer2   = trim($_POST['answer2']     ?? '');
+        $question3 = trim($_POST['question3']   ?? '');
+        $answer3   = trim($_POST['answer3']     ?? '');
 
       if (!$fn || !$ln || !$email) {
           $errorMsg = 'First name, last name, and email are required.';
@@ -262,6 +268,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
           $errorMsg = 'Phone number cannot contain letters.';
       } elseif (strlen($pw) < 8) {
           $errorMsg = 'Password must be at least 8 characters.';
+      } elseif (!$question1 || !$answer1 || !$question2 || !$answer2 || !$question3 || !$answer3) {
+          $errorMsg = 'All three security questions and answers are required.';
       } else {
           $emailCheck = $pdo->prepare('SELECT 1 FROM "Users" WHERE LOWER(email) = LOWER(?)');
           $emailCheck->execute([$email]);
@@ -279,7 +287,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                      date_birth, sex, street_address, city, state, zip_code, country)
                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
             );
-           
+
             $ins->execute([
                 $fn, $mn ?: null, $ln, $email,
                 $phoneFormatted, $hashed, 'Customer',
@@ -287,6 +295,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $street ?: null, $city ?: null, $state ?: null,
                 $zip ?: null, $country ?: null,
             ]);
+
+            $qIns = $pdo->prepare(
+                'INSERT INTO "User Security Questions"
+                    (email, question1, question1_answer, question2, question2_answer, question3, question3_answer)
+                 VALUES (?,?,?,?,?,?,?)'
+            );
+            $qIns->execute([
+                $email,
+                $question1, password_hash($answer1, PASSWORD_BCRYPT),
+                $question2, password_hash($answer2, PASSWORD_BCRYPT),
+                $question3, password_hash($answer3, PASSWORD_BCRYPT),
+            ]);
+
             $updateMsg = "Customer {$fn} {$ln} created successfully.";
             $usersStmt = $pdo->query('SELECT * FROM "Users" WHERE LOWER(role) = \'customer\' ORDER BY user_id ASC');
             $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -407,7 +428,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
                 if ($isAjax) {
                     header('Content-Type: application/json');
-                    echo json_encode(['success' => true, 'message' => $updateMsg, 'confirmation_code' => $code]);
+                    echo json_encode([
+                        'success' => true,
+                        'message' => $updateMsg,
+                        'confirmation_code' => $code,
+                        'redirect' => '../../../booking/confirmation.php?confirmation=' . urlencode($code)
+                    ]);
                     exit;
                 }
             }
@@ -734,6 +760,32 @@ $filteredUsers = array_slice(
               Password strength: <span id="cpw-hint">—</span>
           </p>
       </div>
+
+        <p class="section-label">Security Questions (used for account recovery)</p>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Question 1*</label>
+          <input type="text" name="question1" required class="field">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Answer 1*</label>
+          <input type="text" name="answer1" required class="field">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Question 2*</label>
+          <input type="text" name="question2" required class="field">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Answer 2*</label>
+          <input type="text" name="answer2" required class="field">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Question 3*</label>
+          <input type="text" name="question3" required class="field">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Answer 3*</label>
+          <input type="text" name="answer3" required class="field">
+        </div>
 
         <p class="section-label">Optional Fields</p>
         <div>
@@ -1441,13 +1493,17 @@ document.getElementById('ticketForm')?.addEventListener('submit', async function
     });
     const data = await res.json();
     if (data.success) {
-      showFlash(data.message);
-      this.reset();
-      document.getElementById('flightInfo').classList.add('hidden');
-      document.getElementById('priceSeatBase').textContent = '$0.00';
-      document.getElementById('priceBagFees').textContent = '$0.00';
-      document.getElementById('priceTotal').textContent = '$0.00';
-      setTimeout(() => window.location.reload(), 900);
+      if (data.redirect) {
+        window.location.href = data.redirect;
+      } else {
+        showFlash(data.message);
+        this.reset();
+        document.getElementById('flightInfo').classList.add('hidden');
+        document.getElementById('priceSeatBase').textContent = '$0.00';
+        document.getElementById('priceBagFees').textContent = '$0.00';
+        document.getElementById('priceTotal').textContent = '$0.00';
+        setTimeout(() => window.location.reload(), 900);
+      }
     } else {
       showError(data.message || 'Something went wrong.');
     }

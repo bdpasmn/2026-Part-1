@@ -157,7 +157,7 @@ foreach ($allTickets as $t) {
 }
 
 function validSeat(string $seat): bool {
-    return (bool)preg_match('/^[1-9][A-Ia-i]$/', $seat);
+    return (bool)preg_match('/^([1-9]|9)[A-Ia-i]$/', $seat);
 }
 
 function isOnNoFlyList(string $fn, string $ln, array $noFlyList): bool {
@@ -342,6 +342,83 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $activeTab = 'admins';
     }
 
+    if ($_POST['action'] === 'create_customer') {
+        $fn        = trim($_POST['first_name']  ?? '');
+        $mn        = trim($_POST['middle_name'] ?? '');
+        $ln        = trim($_POST['last_name']   ?? '');
+        $email     = trim($_POST['email']       ?? '');
+        $phone     = trim($_POST['phone']       ?? '');
+        $pw        = trim($_POST['password']    ?? '');
+        $dob       = trim($_POST['dob']         ?? '');
+        $sex       = trim($_POST['sex']         ?? '');
+        $street    = trim($_POST['street']      ?? '');
+        $city      = trim($_POST['city']        ?? '');
+        $state     = trim($_POST['state']       ?? '');
+        $zip       = trim($_POST['zip']         ?? '');
+        $country   = trim($_POST['country']     ?? '');
+        $question1 = trim($_POST['question1']   ?? '');
+        $answer1   = trim($_POST['answer1']     ?? '');
+        $question2 = trim($_POST['question2']   ?? '');
+        $answer2   = trim($_POST['answer2']     ?? '');
+        $question3 = trim($_POST['question3']   ?? '');
+        $answer3   = trim($_POST['answer3']     ?? '');
+
+        if (!$fn || !$ln || !$email) {
+            $errorMsg = 'First name, last name, and email are required.';
+        } elseif (!isValidEmail($email)) {
+            $errorMsg = 'Please enter a valid email address (must contain "@" and ".").';
+        } elseif ($phone !== '' && phoneHasLetters($phone)) {
+            $errorMsg = 'Phone number cannot contain letters.';
+        } elseif (strlen($pw) < 8) {
+            $errorMsg = 'Password must be at least 8 characters.';
+        } elseif (!$question1 || !$answer1 || !$question2 || !$answer2 || !$question3 || !$answer3) {
+            $errorMsg = 'All three security questions and answers are required.';
+        } else {
+            $emailCheck = $pdo->prepare('SELECT 1 FROM "Users" WHERE LOWER(email) = LOWER(?)');
+            $emailCheck->execute([$email]);
+
+            if ($emailCheck->fetch()) {
+                $errorMsg = 'That email address is already in use.';
+            } elseif (isOnNoFlyList($fn, $ln, $noFlyList)) {
+                $errorMsg = "{$fn} {$ln} is on the no-fly list and cannot be registered.";
+            } else {
+                $phoneFormatted = $phone ? formatPhone($phone) : null;
+                $hashed = password_hash($pw, PASSWORD_BCRYPT);
+                $ins = $pdo->prepare(
+                    'INSERT INTO "Users"
+                        (first_name, middle_name, last_name, email, phone, password, role,
+                         date_birth, sex, street_address, city, state, zip_code, country)
+                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+                );
+                $ins->execute([
+                    $fn, $mn ?: null, $ln, $email,
+                    $phoneFormatted, $hashed, 'Customer',
+                    $dob ?: null, $sex ?: null,
+                    $street ?: null, $city ?: null, $state ?: null,
+                    $zip ?: null, $country ?: null,
+                ]);
+
+                $qIns = $pdo->prepare(
+                    'INSERT INTO "User Security Questions"
+                        (email, question1, question1_answer, question2, question2_answer, question3, question3_answer)
+                     VALUES (?,?,?,?,?,?,?)'
+                );
+                $qIns->execute([
+                    $email,
+                    $question1, password_hash($answer1, PASSWORD_BCRYPT),
+                    $question2, password_hash($answer2, PASSWORD_BCRYPT),
+                    $question3, password_hash($answer3, PASSWORD_BCRYPT),
+                ]);
+
+                $updateMsg = "Customer {$fn} {$ln} created successfully.";
+            }
+        }
+        $usersStmt = $pdo->query('SELECT * FROM "Users"');
+        $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
+        $customers = array_values(array_filter($allUsers, fn($u) => strtolower($u['role'] ?? '') === 'customer'));
+        $activeTab = 'customers';
+    }
+
     if ($_POST['action'] === 'create_ticket') {
         $fid       = trim($_POST['flight_id']  ?? '');
         $nameFirst = trim($_POST['name_first'] ?? '');
@@ -362,7 +439,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } elseif ($seat === '') {
             $errorMsg = 'Seat is required.';
         } elseif (!validSeat($seat)) {
-            $errorMsg = 'Invalid seat. Must be row 1–9 and column A–I (Ex. 5A, 9I).';
+            $errorMsg = 'Invalid seat. Must be row 1-9 and column A–I (Ex. 5A, 9I).';
         } elseif ($email !== '' && !isValidEmail($email)) {
             $errorMsg = 'Please enter a valid email address (must contain "@" and ".").';
         } elseif ($phone !== '' && phoneHasLetters($phone)) {
@@ -459,23 +536,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $zip     = trim($_POST['zip']    ?? '');
         $country = trim($_POST['country']?? '');
 
-        $phoneFormatted = $phone ? formatPhone($phone) : null;
+        if ($email !== '' && !isValidEmail($email)) {
+            $errorMsg = 'Please enter a valid email address (must contain "@" and ".").';
+        } elseif ($phone !== '' && phoneHasLetters($phone)) {
+            $errorMsg = 'Phone number cannot contain letters.';
+        } else {
+            $phoneFormatted = $phone ? formatPhone($phone) : null;
 
-        $upd = $pdo->prepare(
-            'UPDATE "Users"
-             SET email=?, phone=?, street_address=?, city=?, state=?, zip_code=?, country=?
-             WHERE user_id=? AND LOWER(role)=\'customer\''
-        );
-        $upd->execute([$email, $phoneFormatted, $street, $city, $state, $zip, $country, $uid]);
-        $updateMsg = 'Customer updated successfully.';
+            $upd = $pdo->prepare(
+                'UPDATE "Users"
+                 SET email=?, phone=?, street_address=?, city=?, state=?, zip_code=?, country=?
+                 WHERE user_id=? AND LOWER(role)=\'customer\''
+            );
+            $upd->execute([$email, $phoneFormatted, $street, $city, $state, $zip, $country, $uid]);
+            $updateMsg = 'Customer updated successfully.';
 
-        $usersStmt = $pdo->query('SELECT * FROM "Users"');
-        $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
-        $customers = array_values(array_filter($allUsers, fn($u) => strtolower($u['role'] ?? '') === 'customer'));
+            $usersStmt = $pdo->query('SELECT * FROM "Users"');
+            $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
+            $customers = array_values(array_filter($allUsers, fn($u) => strtolower($u['role'] ?? '') === 'customer'));
+        }
 
         if ($isAjax) {
             header('Content-Type: application/json');
-            echo json_encode(['success' => true, 'message' => $updateMsg]);
+            if ($errorMsg) {
+                echo json_encode(['success' => false, 'message' => $errorMsg]);
+            } else {
+                echo json_encode(['success' => true, 'message' => $updateMsg]);
+            }
             exit;
         }
 
@@ -633,7 +720,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
     <a href="?tab=customers" class="bg-gray-800 border border-gray-700 rounded-lg p-6 overflow-hidden transition duration-300 hover:shadow-xl hover:border-blue-600 block group">
       <div class="text-2xl mb-3">👤</div>
       <h3 class="font-bold group-hover:text-blue-400 transition">Customers</h3>
-      <p class="text-gray-500 text-sm mt-1">View and manage all customer accounts.</p>
+      <p class="text-gray-500 text-sm mt-1">Create, view and manage all customer accounts.</p>
     </a>
     <a href="?tab=tickets" class="bg-gray-800 border border-gray-700 rounded-lg p-6 overflow-hidden transition duration-300 hover:shadow-xl hover:border-blue-600 block group">
       <div class="text-2xl mb-3">🎫</div>
@@ -728,7 +815,10 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
         </div>
         <div>
           <label class="block text-sm text-gray-400 mb-1">Password* <span class="text-gray-600">(min 11 chars)</span></label>
-          <input type="password" name="password" required minlength="11" class="field">
+          <input type="password" id="password" name="password" required minlength="11" class="field" oninput="checkPw(this.value)">
+          <p class="mt-2 text-sm text-gray-400">
+              Password strength: <span id="cpw-hint">—</span>
+          </p>
         </div>
         <button type="submit" class="w-full h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg">
           Create Administrator
@@ -885,6 +975,118 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
   ?>
 
   <div class="grid lg:grid-cols-2 gap-5">
+
+    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 shadow-sm">
+      <h2 class="text-xl font-bold mb-1">Create Customer📝</h2>
+      <p class="text-sm text-gray-400 mb-5">Register a new customer account and profile information.</p>
+      <form method="POST" class="space-y-3">
+        <input type="hidden" name="action" value="create_customer">
+
+        <p class="section-label">Required</p>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">First Name*</label>
+            <input type="text" name="first_name" required class="field">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Middle Name (Optional)</label>
+            <input type="text" name="middle_name" class="field">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Last Name*</label>
+          <input type="text" name="last_name" required class="field">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Email Address*</label>
+          <input type="email" name="email" required pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+            title="Email must contain &quot;@&quot; and &quot;.&quot;" class="field">
+        </div>
+        <div>
+          <label class="block text-sm text-gray-400 mb-1">Password</label>
+          <input type="password" id="customer-password" name="password" class="field" oninput="checkPw(this.value)" required>
+          <p class="mt-2 text-sm text-gray-400">
+              Password strength: <span id="cpw-hint-customer">—</span>
+          </p>
+        </div>
+
+        <p class="section-label">Security Questions (used for account recovery)</p>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Question 1*</label>
+          <input type="text" name="question1" required class="field">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Answer 1*</label>
+          <input type="text" name="answer1" required class="field">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Question 2*</label>
+          <input type="text" name="question2" required class="field">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Answer 2*</label>
+          <input type="text" name="answer2" required class="field">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Question 3*</label>
+          <input type="text" name="question3" required class="field">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Answer 3*</label>
+          <input type="text" name="answer3" required class="field">
+        </div>
+
+        <p class="section-label">Optional Fields</p>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Phone Number</label>
+          <input type="tel" name="phone" placeholder="" class="field"
+            inputmode="numeric" oninput="autoFormatPhone(this)">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Date of Birth</label>
+            <input type="date" name="dob" class="field">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Sex/Gender</label>
+            <select name="sex" class="field">
+              <option value="">Select</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="nonbinary">Non-binary</option>
+              <option value="other">Other</option>
+              <option value="prefer-not-to-say">Prefer not to say</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Street Address</label>
+          <input type="text" name="street" class="field">
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">City</label>
+            <input type="text" name="city" class="field">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">State</label>
+            <input type="text" name="state" class="field">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">ZIP</label>
+            <input type="text" name="zip" class="field">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Country</label>
+          <input type="text" name="country" class="field">
+        </div>
+
+        <button type="submit" class="w-full h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg">
+          Create Customer
+        </button>
+      </form>
+    </div>
 
     <?php if ($editCustomer): ?>
     <div class="bg-gray-800 border border-blue-600 rounded-lg p-6 shadow-sm">
@@ -1132,11 +1334,12 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
         <div>
           <label class="block text-xs text-gray-400 mb-1">Phone</label>
           <input type="tel" name="phone" class="field"
-            oninput="autoFormatPhone(this)">
+            inputmode="numeric" oninput="autoFormatPhone(this)">
         </div>
         <div>
           <label class="block text-xs text-gray-400 mb-1">Email</label>
-          <input type="email" name="email" class="field">
+          <input type="email" name="email" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+            title="Email must contain &quot;@&quot; and &quot;.&quot;" class="field">
         </div>
         <div>
           <label class="block text-xs text-gray-400 mb-1">User ID (If Customer) <span class="text-gray-600">(optional)</span></label>
@@ -1322,6 +1525,27 @@ function autoFormatPhone(el) {
   el.value = '+' + d[0] + ' (' + d.slice(1,4) + ') ' + d.slice(4,7) + '-' + d.slice(7);
 }
 
+function checkPw(val) {
+    const hint = document.getElementById('cpw-hint') || document.getElementById('cpw-hint-customer');
+    if (!hint) return;
+
+    if (val.length <= 10) {
+        hint.className = 'text-xs mt-1 text-red-400';
+        hint.textContent = 'Weak password (10 characters or fewer)';
+        hint.classList.remove('hidden');
+
+    } else if (val.length <= 17) {
+        hint.className = 'text-xs mt-1 text-yellow-400';
+        hint.textContent = 'Medium password';
+        hint.classList.remove('hidden');
+
+    } else {
+        hint.className = 'text-xs mt-1 text-emerald-400';
+        hint.textContent = 'Strong password';
+        hint.classList.remove('hidden');
+    }
+}
+
 const knownFlights = <?= json_encode(array_keys($flightMap)) ?>;
 const takenSeats    = <?= json_encode($takenSeatsByFlight) ?>;
 const dbTakenSeats  = <?php
@@ -1403,7 +1627,7 @@ function onSeatBlur(val) {
   const errEl   = document.getElementById('seatErr');
   const flightId = document.getElementById('tFlightId').value.trim();
   if (!val) { errEl.classList.add('hidden'); return; }
-  if (!/^[1-9][A-Ia-i]$/.test(val)) {
+  if (!/^([1-9]|9)[A-Ia-i]$/.test(val)) {
     errEl.textContent = 'Invalid seat. Must be row 1–9, column A–I (Ex. 5A, 9I).';
     errEl.classList.remove('hidden'); return;
   }
