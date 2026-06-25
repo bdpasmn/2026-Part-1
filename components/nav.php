@@ -23,6 +23,24 @@
     $isLoggedIn = isset($_SESSION['user_id']);
     $userFullName = "Guest";
     $role = $_SESSION['role'] ?? 'guest';
+
+    if ($isLoggedIn && ($role == 'Customer' || $role == 'customer')) {
+
+        $currentFile = basename($_SERVER['PHP_SELF']);
+        $currentTab = $_GET['tab'] ?? '';
+    
+        if ($_SESSION['profile_incomplete'] ?? false) {
+            if ($currentFile !== 'customer.php' || $currentTab !== 'profile') {
+                header('Location: ' . BASE_URL . '/pages/dashboard/customer/customer.php?tab=profile');
+                exit;
+            }
+        } else {
+            if ($currentFile == 'customer.php' && $currentTab == 'profile') {
+                header('Location: ' . BASE_URL . '/pages/dashboard/customer/customer.php?tab=overview');
+                exit;
+            }
+        }
+    }
     
     if ($isLoggedIn) {
         $stmt = $pdo->prepare('SELECT first_name, last_name FROM "Users" WHERE user_id = ?');
@@ -42,6 +60,11 @@
     } elseif ($role == "Root") {
         $dashboardLink = BASE_URL . "/pages/dashboard/root/root.php";
     }
+
+    $profileLocked = $isLoggedIn && strtolower($role) === 'customer' && ($_SESSION['profile_incomplete'] ?? false);
+
+    $disabledClass = $profileLocked ? 'pointer-events-none opacity-50 cursor-not-allowed': '';
+    $disabledHref = $profileLocked ? 'javascript:void(0)': null;
 ?>
 
 <head>
@@ -73,7 +96,7 @@
             <span class="tracking-wide">DPA Airports</span>
         </a>
 
-        <nav class="hidden xl:flex items-center gap-4 lg:gap-6 text-sm text-gray-300 flex-nowrap">
+        <nav class="hidden xl:flex items-center gap-4 lg:gap-6 text-sm text-gray-300 flex-nowrap <?= $profileLocked ? 'pointer-events-none opacity-50' : '' ?>">
             <?php if (!$isLoggedIn): ?>
                 <?php $active = isActivePath(BASE_URL . '/pages/auth/create.php'); ?>
                 <?php $active = isActivePath(BASE_URL . '/pages/auth/create.php'); ?>

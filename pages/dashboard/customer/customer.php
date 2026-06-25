@@ -94,7 +94,10 @@ foreach ($requiredProfileFields as $key => $val) {
     }
 }
 $missingPassword = trim((string)($dbUser['password'] ?? '')) === '';
+
 $profileIncomplete = !empty($missingProfileFields) || $missingPassword;
+$_SESSION['profile_incomplete'] = $profileIncomplete;
+$_SESSION['profile_complete'] = !$profileIncomplete;
 
 $activeTab = $_GET['tab'] ?? 'overview';
 $needsFlightDetails = in_array($activeTab, ['overview', 'flights'], true);
