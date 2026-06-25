@@ -154,11 +154,11 @@
                 $stmt->execute([
                     ':email' => $email,
                     ':question1' => $question1,
-                    ':question1_answer' => hash($question1_answer),
+                    ':question1_answer' => hash('sha256', $question1_answer),
                     ':question2' => $question2,
-                    ':question2_answer' => hash($question2_answer),
+                    ':question2_answer' => hash('sha256', $question2_answer),
                     ':question3' => $question3,
-                    ':question3_answer' => hash($question3_answer),
+                    ':question3_answer' => hash('sha256', $question3_answer),
                 ]);
                 $pdo->commit();
                 $_SESSION["email"] = $email;
