@@ -154,11 +154,11 @@
                 $stmt->execute([
                     ':email' => $email,
                     ':question1' => $question1,
-                    ':question1_answer' => hash($question1_answer),
+                    ':question1_answer' => password_hash($question1_answer, PASSWORD_DEFAULT),
                     ':question2' => $question2,
-                    ':question2_answer' => hash($question2_answer),
+                    ':question2_answer' => password_hash($question2_answer, PASSWORD_DEFAULT),
                     ':question3' => $question3,
-                    ':question3_answer' => hash($question3_answer),
+                    ':question3_answer' => password_hash($question3_answer, PASSWORD_DEFAULT),
                 ]);
                 $pdo->commit();
                 $_SESSION["email"] = $email;
@@ -453,6 +453,7 @@
                                 <option value="Switzerland"> Switzerland </option>
                                 <option value="Syria"> Syria </option>
                                 <option value="Tajikistan"> Tajikistan </option>
+                                <option value="Tanzania"> Tanzania </option>
                                 <option value="Thailand"> Thailand </option>
                                 <option value="Timor Leste"> Timor Leste </option>
                                 <option value="Togo"> Togo </option>
@@ -466,7 +467,6 @@
                                 <option value="Ukraine"> Ukraine </option>
                                 <option value="United Arab Emirates"> United Arab Emirates </option>
                                 <option value="United Kingdom"> United Kingdom </option>
-                                <option value="Tanzania"> Tanzania </option>
                                 <option value="United States"> United States </option>
                                 <option value="Uruguay"> Uruguay </option>
                                 <option value="Uzbekistan"> Uzbekistan </option>
@@ -537,7 +537,7 @@
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">* ZIP</label>
-                            <input required type="text" name="zip" id="zip" value="<?= htmlspecialchars($zip) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <input required type="number" name="zip" id="zip" value="<?= htmlspecialchars($zip) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">Phone Number</label>

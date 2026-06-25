@@ -833,7 +833,7 @@ $filteredUsers = array_slice(
           <input type="text" name="country" class="field">
         </div>
 
-        <button type="submit" class="w-full h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg">
+        <button type="submit" class="w-full h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg" data-skip-loader>
           Create Customer
         </button>
       </form>

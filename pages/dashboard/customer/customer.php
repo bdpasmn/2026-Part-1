@@ -94,7 +94,10 @@ foreach ($requiredProfileFields as $key => $val) {
     }
 }
 $missingPassword = trim((string)($dbUser['password'] ?? '')) === '';
+
 $profileIncomplete = !empty($missingProfileFields) || $missingPassword;
+$_SESSION['profile_incomplete'] = $profileIncomplete;
+$_SESSION['profile_complete'] = !$profileIncomplete;
 
 $activeTab = $_GET['tab'] ?? 'overview';
 $needsFlightDetails = in_array($activeTab, ['overview', 'flights'], true);
@@ -1169,6 +1172,7 @@ function fmtTs(ts) {
     type="submit"
     id="profileSubmitBtn"
     disabled
+    data-skip-loader
     class="w-full h-10 rounded-lg text-sm font-semibold transition bg-gray-600 text-gray-300 cursor-not-allowed"
   >
     Save Changes
@@ -1343,7 +1347,7 @@ window.addEventListener('load', checkProfileForm);
             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
         <div class="sm:col-span-2">
-          <button type="submit" class="w-full h-10 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition">
+          <button type="submit" class="w-full h-10 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition" data-skip-loader>
             Save Card
           </button>
         </div>

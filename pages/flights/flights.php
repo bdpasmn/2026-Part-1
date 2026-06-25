@@ -2,51 +2,57 @@
 session_start();
 
 if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
+
     ob_start();
+
     try {
         header('Content-Type: application/json');
-        
+
         require_once __DIR__ . '/../../api/api.php';
         require_once __DIR__ . '/../../api/key.php';
 
         $api = new AirportsAPI(AIRPORTS_API_KEY);
 
-        $after = null;
+        $after = "6a41edc0413de93518a3b150";
+
+        $response = $api->getAllFlights($after);
+
         $flights = [];
 
-        while (true) {
-            $response = $api->getAllFlights($after);
-            if (!is_array($response)) break;
-
-            foreach (($response['flights'] ?? []) as $f) {
-                $flights[] = [
-                    "flight_id" => $f['flight_id'] ?? null,
-                    "status" => $f['status'] ?? '',
-                    "gate" => $f['gate'] ?? ''
-                ];
-            }
-
-            $after = $response['nextCursor'] ?? null;
-            if (!$after) break;
+        foreach (($response['flights'] ?? []) as $f) {
+            $flights[] = [
+                "flight_id" => $f['flight_id'] ?? null,
+                "status"    => $f['status'] ?? '',
+                "gate"      => $f['gate'] ?? ''
+            ];
         }
 
         ob_end_clean();
-        echo json_encode(["flights" => $flights]);
+
+        echo json_encode([
+            "flights" => $flights,
+        ]);
+
         exit;
+
     } catch (Exception $e) {
+
         ob_end_clean();
-        header('Content-Type: application/json');
         http_response_code(500);
+
         echo json_encode([
             "error" => $e->getMessage(),
             "flights" => []
         ]);
+
         exit;
     }
 }
 
+
 require_once __DIR__ . '/../../api/api.php';
 require_once __DIR__ . '/../../api/key.php';
+require_once __DIR__ . '/../../database/db.php';
 
 
 set_time_limit(1800);
@@ -107,36 +113,28 @@ if ($mode === 'time' && $search !== '') {
 }
 
 
+$flights = [];
+$after = '6a41edc0413de93518a3b150';
+
+
 if ($statusTab === 'all' && empty($match['departFromSender'])) {
-    // Fetch all flights from API
-    $after = null;
-    $flights = [];
 
-    while (true) {
-        $response = $api->getAllFlights($after);
+    $response = $api->getAllFlights($after);
 
-        if (!is_array($response)) {
-            break;
-        }
-
-        $flightsData = $response['flights'] ?? [];
-        $after = $response['nextCursor'] ?? null;
-
-        if (!is_array($flightsData)) {
-            $flightsData = [];
-        }
-
-        foreach ($flightsData as $f) {
-            $flights[] = $f;
-        }
-
-        if (!$after) {
-            break;
-        }
+    if (is_array($response)) {
+        $flights = $response['flights'] ?? [];
+        $nextCursor = $response['nextCursor'] ?? null;
+    } else {
+        $flights = [];
+        $nextCursor = null;
     }
+
 } else {
+
     $apiResult = $api->searchFlights($match);
+
     $flights = $apiResult['flights'] ?? [];
+    $nextCursor = $apiResult['nextCursor'] ?? null ?? null;
 }
 
 $allowedStatuses = [
@@ -517,7 +515,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
                                     <p class="text-sm text-gray-200 font-semibold"
                                        data-flight-id="<?= htmlspecialchars($f['flight_id'] ?? '') ?>"
                                        data-field="gate">
-                                        <?= isset($f['gate']) ? strtoupper(htmlspecialchars($f['gate'])) : '—' ?>
+                                        <?= isset($f['gate']) ? strtoupper(htmlspecialchars($f['gate'])) : 'TBD' ?>
                                     </p>
                                 <?php endif; ?>
                             </div>
