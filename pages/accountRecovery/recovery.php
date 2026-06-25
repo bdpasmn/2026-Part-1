@@ -41,9 +41,9 @@
             header("Location: " . $_SERVER['PHP_SELF']);
             exit;
         } 
-        $a1 = strtolower(trim($answers[1]));
-        $a2 = strtolower(trim($answers[2]));
-        $a3 = strtolower(trim($answers[3]));
+        $a1 =  $answers[1]));
+        $a2 =  $answers[2]));
+        $a3 =  $answers[3]));
         $db1 = $userSecurityCheck["question1_answer"] ?? "";
         $db2 = $userSecurityCheck["question2_answer"] ?? "";
         $db3 = $userSecurityCheck["question3_answer"] ?? "";
