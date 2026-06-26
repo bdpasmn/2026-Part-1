@@ -1,4 +1,5 @@
 <?php
+<<<<<<< Updated upstream
     session_start();
     require_once __DIR__ . '/../../database/db.php';
     require_once __DIR__ . '/../../components/config.php';
@@ -9,6 +10,20 @@
             header("Location: ../dashboard/{$roleLower}/{$roleLower}.php");
             exit;
         }
+=======
+session_start();
+require_once __DIR__ . '/../../database/db.php';
+require_once __DIR__ . '/../../components/config.php';
+
+if (isset($_SESSION['user_id'])) {
+    $role = strtolower($_SESSION['role']) ?? '';
+    
+    if (in_array($role, ['customer', 'admin', 'root'])) {
+        $roleLower = strtolower($role);
+
+        header("Location: ../dashboard/{$roleLower}/{$roleLower}.php");
+        exit;
+>>>>>>> Stashed changes
     }
     function regenerateCaptcha() {
         $_SESSION['captcha_num1'] = rand(1, 10);

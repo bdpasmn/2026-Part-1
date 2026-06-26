@@ -3,6 +3,10 @@
     require_once "../../database/db.php";
     if (isset($_SESSION['user_id'])) {
         $role = strtolower($_SESSION['role']) ?? '';
+<<<<<<< Updated upstream
+=======
+    
+>>>>>>> Stashed changes
         if (in_array($role, ['customer', 'admin', 'root'])) {
             header("Location: ../dashboard/{$role}/{$role}.php");
         }

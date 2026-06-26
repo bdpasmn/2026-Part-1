@@ -1,4 +1,5 @@
 <?php
+<<<<<<< Updated upstream
     session_start();
     require_once "../../database/db.php";
     require_once __DIR__ . '/../../components/config.php';
@@ -8,6 +9,72 @@
             $roleLower = strtolower($role);
             header("Location: ../dashboard/{$roleLower}/{$roleLower}.php");
             exit;
+=======
+session_start();
+require_once "../../database/db.php";
+require_once __DIR__ . '/../../components/config.php';
+
+if (isset($_SESSION['user_id'])) {
+    $role = strtolower($_SESSION['role']) ?? '';
+    
+    if (in_array($role, ['customer', 'admin', 'root'])) {
+        $roleLower = strtolower($role);
+
+        header("Location: ../dashboard/{$roleLower}/{$roleLower}.php");
+        exit;
+    }
+}
+
+$message = '';
+$first = $_POST['first'] ?? '';
+$last = $_POST['last'] ?? '';
+$email = $_POST['email'] ?? '';
+
+function getDashboardUrl($role) {
+    switch ($role) {
+        case 'Admin':
+            return BASE_URI . '/pages/dashboard/admin/admin.php';
+        case 'Root':
+            return BASE_URI . '/pages/dashboard/root/root.php';
+        case 'Customer':
+        default:
+            return BASE_URI . '/pages/dashboard/customer/customer.php';
+    }
+}
+
+if (!isset($_SESSION['user_id']) && isset($_COOKIE['remember_me'])) {
+
+    $parts = explode('|', $_COOKIE['remember_me'], 2);
+
+    if (count($parts) === 2) {
+
+        [$cookieId, $cookieToken] = $parts;
+        $expectedToken = hash_hmac('sha256', $cookieId, SECRET_KEY);
+
+        if (hash_equals($expectedToken, $cookieToken)) {
+
+            $stmt = $pdo->prepare('
+                SELECT user_id, title, role, email, first_name
+                FROM "Users"
+                WHERE user_id = ?
+            ');
+            $stmt->execute([$cookieId]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($user) {
+                session_regenerate_id(true);
+
+                $_SESSION['user_id'] = $user['user_id'];
+                $_SESSION['email'] = $user['email'];
+                $_SESSION['user'] = $user['title'];
+                $_SESSION['name'] = $user['first_name'];
+                $_SESSION['role'] = $user['role'];
+                $_SESSION['remembered'] = true;
+
+                header("Location: " . getDashboardUrl($user['role']));
+                exit();
+            }
+>>>>>>> Stashed changes
         }
     }
     $message = '';
