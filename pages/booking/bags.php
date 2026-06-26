@@ -1,11 +1,13 @@
+<!-- Baggage selection section -->
 <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Baggage selection -->
         <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
             <h2 class="text-xl font-bold mb-6 text-white">Baggage Selection 💼</h2>
             <div class="space-y-6">
+                <!-- Carry-on bag selection -->
                 <div>
                     <label class="block mb-2 text-sm font-medium text-gray-300">Carry-on Bags (Max 2)</label>
-
                     <select id="carryOnSelect" class="w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="0">0 Carry-on Bags</option>
                         <option value="1">1 Carry-on Bag (FREE)</option>
@@ -15,9 +17,9 @@
                     <p class="text-xs text-gray-400 mt-2">First carry-on is free. Second carry-on costs $30.</p>
                 </div>
 
+                <!-- Checked bag selection -->
                 <div>
                     <label class="block mb-2 text-sm font-medium text-gray-300">Checked Bags (Max 5)</label>
-
                     <select id="checkedSelect"class="w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="0">0 Checked Bags</option>
                         <option value="1">1 Checked Bag (FREE)</option>
@@ -30,10 +32,12 @@
                     <p class="text-xs text-gray-400 mt-2">1st checked bag is free. 2nd is $50. Each additional is $100.</p>
                 </div>
 
+                <!-- Calculate baggage cost -->
                 <button onclick="calculateBags()" class="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition">Calculate Baggage Cost</button>
             </div>
         </div>
 
+        <!-- Baggage summary -->
         <div class="bg-gray-700 border border-gray-600 rounded-lg p-6 transition duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-gray-500">
             <h3 class="text-lg font-bold text-white mb-4">Baggage Summary</h3>
             <div class="space-y-4 text-sm text-gray-300">
@@ -53,8 +57,8 @@
         </div>
     </div>
 </div>
-
 <script>
+    // Calculate baggage fees
     function calculateBags() {
         const carryOn = parseInt(document.getElementById("carryOnSelect").value);
         const checked = parseInt(document.getElementById("checkedSelect").value);
@@ -68,6 +72,7 @@
 
         const total = carryCost + checkedCost;
 
+        // Update the baggage summary
         document.getElementById("carrySummary").innerText = carryOn;
         document.getElementById("checkedSummary").innerText = checked;
         document.getElementById("bagCost").innerText = "$" + total;
