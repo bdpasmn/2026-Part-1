@@ -453,6 +453,7 @@
                                 <option value="Switzerland"> Switzerland </option>
                                 <option value="Syria"> Syria </option>
                                 <option value="Tajikistan"> Tajikistan </option>
+                                <option value="Tanzania"> Tanzania </option>
                                 <option value="Thailand"> Thailand </option>
                                 <option value="Timor Leste"> Timor Leste </option>
                                 <option value="Togo"> Togo </option>
@@ -466,7 +467,6 @@
                                 <option value="Ukraine"> Ukraine </option>
                                 <option value="United Arab Emirates"> United Arab Emirates </option>
                                 <option value="United Kingdom"> United Kingdom </option>
-                                <option value="Tanzania"> Tanzania </option>
                                 <option value="United States"> United States </option>
                                 <option value="Uruguay"> Uruguay </option>
                                 <option value="Uzbekistan"> Uzbekistan </option>
