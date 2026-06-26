@@ -100,6 +100,7 @@ $_SESSION['profile_incomplete'] = $profileIncomplete;
 $_SESSION['profile_complete'] = !$profileIncomplete;
 
 $activeTab = $_GET['tab'] ?? 'overview';
+
 $needsFlightDetails = in_array($activeTab, ['overview', 'flights'], true);
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
@@ -271,7 +272,7 @@ if ($profileIncomplete && $activeTab !== 'profile') {
 function formatPhone($phone) {
   $phoneDigits = preg_replace('/\D/', '', $phone);
 
-  if ($phoneDigits === '') return null;
+  if ($phoneDigits == '') return null;
 
   if (strlen($phoneDigits) === 11) {
       return '+' . $phoneDigits[0] . ' (' .
@@ -1068,7 +1069,11 @@ function fmtTs(ts) {
         <input type="hidden" name="action" value="update_profile">
         <div>
           <label class="block text-sm text-gray-400 mb-1">Full Name</label>
-          <input type="text" value="<?= htmlspecialchars($currentUser['name']) ?>" disabled
+          <input type="text" value="<?= htmlspecialchars(trim(
+              ($dbUser['first_name'] ?? '') . ' ' .
+              ($dbUser['middle_name'] ?? '') . ' ' .
+              ($dbUser['last_name'] ?? '')
+          )) ?>" disabled
             class="w-full h-10 bg-gray-700/50 border border-gray-600 rounded-lg px-4 text-gray-400 text-sm cursor-not-allowed">
         </div>
         <div class="grid grid-cols-2 gap-3">

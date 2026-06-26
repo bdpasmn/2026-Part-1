@@ -814,7 +814,6 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
           <input type="email" name="email" required class="field">
         </div>
         <div>
-          <label class="block text-sm text-gray-400 mb-1">Password* <span class="text-gray-600">(min 10 chars)</span></label>
           <input type="password" id="password" name="password" required minlength="11" class="field" oninput="checkPw(this.value)">
           <p class="mt-2 text-sm text-gray-400">
               Password strength: <span id="cpw-hint">—</span>
@@ -1167,7 +1166,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
             <th class="text-left px-5 py-3">Email</th>
             <th class="text-left px-5 py-3">Phone</th>
             <th class="text-left px-5 py-3">City</th>
-            <th class="text-left px-5 py-3">State</th>
+            <th class="text-left px-5 py-3">Country</th>
             <th class="text-left px-5 py-3">Actions</th>
           </tr>
         </thead>
@@ -1179,7 +1178,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
           <td class="px-5 py-4 text-gray-300"><?= htmlspecialchars($u['email'] ?? '—') ?></td>
           <td class="px-5 py-4 text-gray-300"><?= htmlspecialchars($u['phone'] ?? '—') ?></td>
           <td class="px-5 py-4 text-gray-300"><?= htmlspecialchars($u['city'] ?? '—') ?></td>
-          <td class="px-5 py-4 text-gray-300"><?= htmlspecialchars($u['state'] ?? '—') ?></td>
+          <td class="px-5 py-4 text-gray-300"><?= htmlspecialchars($u['country'] ?? '—') ?></td>
           <td class="px-5 py-4">
             <a href="?tab=customers&edit=<?= urlencode((string)($u['user_id'] ?? '')) ?>"
                class="text-blue-400 hover:text-blue-300 transition text-sm font-semibold">Edit</a>
