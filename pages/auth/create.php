@@ -537,7 +537,7 @@
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">* ZIP</label>
-                            <input required type="text" name="zip" id="zip" value="<?= htmlspecialchars($zip) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <input required type="number" name="zip" id="zip" value="<?= htmlspecialchars($zip) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">Phone Number</label>
