@@ -1,16 +1,4 @@
 <?php
-<<<<<<< Updated upstream
-    session_start();
-    require_once __DIR__ . '/../../database/db.php';
-    require_once __DIR__ . '/../../components/config.php';
-    if (isset($_SESSION['user_id'])) {
-        $role = $_SESSION['role'] ?? '';
-        if (in_array($role, ['Customer', 'Admin', 'Root'])) {
-            $roleLower = strtolower($role);
-            header("Location: ../dashboard/{$roleLower}/{$roleLower}.php");
-            exit;
-        }
-=======
 session_start();
 require_once __DIR__ . '/../../database/db.php';
 require_once __DIR__ . '/../../components/config.php';
@@ -23,8 +11,8 @@ if (isset($_SESSION['user_id'])) {
 
         header("Location: ../dashboard/{$roleLower}/{$roleLower}.php");
         exit;
->>>>>>> Stashed changes
     }
+}
     function regenerateCaptcha() {
         $_SESSION['captcha_num1'] = rand(1, 10);
         $_SESSION['captcha_num2'] = rand(1, 10);
@@ -237,12 +225,6 @@ if (isset($_SESSION['user_id'])) {
                             <div class="mt-3 inline-flex items-center px-3 py-1 rounded-full bg-gray-900 border border-red-700 text-red-300 text-xs">
                                 * Required fields
                             </div>   
-                            <div class="text-middle text-xs text-gray-500">
-                                Already have an account?
-                                <a href="<?= BASE_URI ?>/pages/auth/login.php" class="text-blue-400 hover:text-blue-300 ml-1">
-                                    Sign in
-                                </a>
-                            </div>
                         </div>
                     </div>
                 <div class="bg-gray-800 border border-gray-700 rounded-xl p-8 shadow-lg">
@@ -250,36 +232,37 @@ if (isset($_SESSION['user_id'])) {
                     <div class="mb-6"><?= $message ?></div>
                     <?php endif; ?>
                     <form method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="md:col-span-2">
-                            <label class="text-xs text-gray-400">Account Title</label>
-                            <input type="text" name="title" value="<?= htmlspecialchars($title) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
-                        </div>
+
                         <div class="md:col-span-2">
                             <h2 class="text-lg font-semibold text-white text-center mt-2 mb-2">Personal Information</h2>
                         </div>
+                        <div class="md:col-span-2">
+                            <label class="text-xs text-gray-400">Account Title</label>
+                            <input type="text" name="title" value="<?= htmlspecialchars($title) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
+                        </div>
                         <div>
                             <label class="text-xs text-gray-400">* First Name</label>
-                            <input required type="text" name="first" value="<?= htmlspecialchars($first) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <input required type="text" name="first" value="<?= htmlspecialchars($first) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">Middle Name</label>
-                            <input type="text" name="middle" value="<?= htmlspecialchars($middle) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <input type="text" name="middle" value="<?= htmlspecialchars($middle) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">* Last Name</label>
-                            <input required type="text" name="last" value="<?= htmlspecialchars($last) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <input required type="text" name="last" value="<?= htmlspecialchars($last) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">Suffix</label>
-                            <input type="text" name="suffix" value="<?= htmlspecialchars($suffix) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <input type="text" name="suffix" value="<?= htmlspecialchars($suffix) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">* Date of Birth</label>
-                            <input required type="date" name="birth" value="<?= htmlspecialchars($birth) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <input required type="date" name="birth" value="<?= htmlspecialchars($birth) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">* Sex/Gender</label>
-                            <select required name="gender" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <select required name="gender" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                                 <option value="" disabled <?= $gender === '' ? 'selected' : '' ?>>Select</option>
                                 <option value="male" <?= $gender === 'Male' ? 'selected' : '' ?>>Male</option>
                                 <option value="female" <?= $gender === 'Female' ? 'selected' : '' ?>>Female</option>
@@ -290,15 +273,15 @@ if (isset($_SESSION['user_id'])) {
                         </div>
                         <div class="md:col-span-2">
                             <label class="text-xs text-gray-400">* Street Address</label>
-                            <input required type="text" name="street-address" value="<?= htmlspecialchars($street) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <input required type="text" name="street-address" value="<?= htmlspecialchars($street) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">* City</label>
-                            <input required type="text" name="city" value="<?= htmlspecialchars($city) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <input required type="text" name="city" value="<?= htmlspecialchars($city) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">* Country</label>
-                            <select required name="country" id="country" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <select required name="country" id="country" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                                 <option value=""> Select Country </option>
                                 <option value="Afghanistan"> Afghanistan </option>
                                 <option value="Albania"> Albania </option>
@@ -495,7 +478,7 @@ if (isset($_SESSION['user_id'])) {
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">* State</label>
-                            <select required name="state" id="state" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <select required name="state" id="state" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                                 <option value=""> Select State </option>
                                 <option value="AL"> Alabama </option>
                                 <option value="AK"> Alaska </option>
@@ -552,19 +535,19 @@ if (isset($_SESSION['user_id'])) {
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">* ZIP</label>
-                            <input required type="number" name="zip" id="zip" value="<?= htmlspecialchars($zip) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <input required type="number" name="zip" id="zip" value="<?= htmlspecialchars($zip) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">Phone Number</label>
-                            <input type="tel" name="phone" placeholder="" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition" inputmode="numeric" oninput="autoFormatPhone(this)">
+                            <input type="tel" name="phone" placeholder="" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition" inputmode="numeric" oninput="autoFormatPhone(this)">
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">* Email</label>
-                            <input required type="email" name="email" value="<?= htmlspecialchars($email) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <input required type="email" name="email" value="<?= htmlspecialchars($email) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                         <div class="md:col-span-2">
                             <label class="text-xs text-gray-400">* Password</label>
-                            <input id="password" required type="password" name="password" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <input id="password" required type="password" name="password" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                             <p id="password-strength" class="text-xs text-gray-400 mt-2">
                                 Password must be more than 10 characters.
                             </p>
@@ -579,41 +562,50 @@ if (isset($_SESSION['user_id'])) {
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">* Question 1</label>
-                            <input required type="text" name="question1" value="<?= htmlspecialchars($question1) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <input required type="text" name="question1" value="<?= htmlspecialchars($question1) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">* Answer 1</label>
-                            <input required type="text" name="answer1" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <input required type="text" name="answer1" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">* Question 2</label>
-                            <input required type="text" name="question2" value="<?= htmlspecialchars($question2) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <input required type="text" name="question2" value="<?= htmlspecialchars($question2) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">* Answer 2</label>
-                            <input required type="text" name="answer2" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <input required type="text" name="answer2" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">* Question 3</label>
-                            <input required type="text" name="question3" value="<?= htmlspecialchars($question3) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <input required type="text" name="question3" value="<?= htmlspecialchars($question3) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                         <div>
                             <label class="text-xs text-gray-400">* Answer 3</label>
-                            <input required type="text" name="answer3" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition">
+                            <input required type="text" name="answer3" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                         <div class="md:col-span-2 text-center bg-gray-900 border border-gray-700 rounded-lg p-4">
                             <label class="text-xs text-gray-400">* CAPTCHA</label>
                             <p class="font-medium text-white mt-1">
                                 What is <?= htmlspecialchars($num1); ?> + <?= htmlspecialchars($num2); ?> ?
                             </p>
-                            <input type="text" name="captcha" value="<?= htmlspecialchars($captcha); ?>" class="mt-2 w-32 h-10 bg-gray-800 border border-gray-600 rounded-lg text-center shadow-sm hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition" required>
+                            <input type="text" name="captcha" value="<?= htmlspecialchars($captcha); ?>" class="mt-2 w-32 h-10 bg-gray-800 border border-gray-600 rounded-lg text-center shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition" required>
                             <input type="hidden" name="num1" value="<?= htmlspecialchars($num1); ?>">
                             <input type="hidden" name="num2" value="<?= htmlspecialchars($num2); ?>">
                         </div>
                         <div class="md:col-span-2 text-center">
-                            <input class="bg-blue-600 text-white px-6 py-3 rounded-lg transition hover:bg-blue-700 hover:shadow-md active:scale-95" type="submit" name="button" value="Create Account">
+                            <input class="bg-blue-600 w-full text-white px-6 py-3 rounded-lg transition hover:bg-blue-700 hover:shadow-md active:scale-95" type="submit" name="button" value="Create Account">
                         </div>
                     </form>
+                    <div class="flex items-center my-4">
+                        <div class="flex-1 h-px bg-gray-700"></div>
+                    </div>
+                    <div class="text-center text-xs text-gray-500">
+                        Already have an account?
+                        <a href="<?= BASE_URI ?>/pages/auth/login.php" class="text-blue-400 hover:text-blue-300 ml-1">
+                            Sign in
+                        </a>
+                    </div>
                 </div>
             </div>
         </main>
@@ -652,5 +644,4 @@ if (isset($_SESSION['user_id'])) {
         </script>
     </body>
 </html>
-
 
