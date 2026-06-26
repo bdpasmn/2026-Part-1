@@ -1,87 +1,169 @@
-<?php
+<?php 
 
 header('Content-Type: text/html; charset=UTF-8');
 
+$errorCode = isset($_GET['code']) ? htmlspecialchars($_GET['code'], ENT_QUOTES, 'UTF-8') : 'Uh oh...';
 
-$errorCode = isset($_GET['code']) ? htmlspecialchars($_GET['code'], ENT_QUOTES, 'UTF-8') : 'Oh no';
-
-
-$errorMessage = 'Something went wrong on our side. Please try again later';
-
-
-$errorMessages = array(
-    '400' => 'Your request has a problem. Please check and try again.',
-    '401' => 'You need to log in to access this resource.',
-    '403' => 'You don’t have permission to view this content.',
-    '404' => 'The page you’re looking for isn’t available.',
-    '413' => 'Your request is too large.',
-    '429' => 'Too many requests. Please wait a moment and try again.',
-    'Uh oh...' => 'Something went wrong on our side. Please try again later.',
+$validErrorCodes = array(
+    '400', '401', '403', '404', '409', '413', '422', '429', 
+    '500', '502', '503', '504', '999', 'Uh oh...'
 );
 
+if (!in_array($errorCode, $validErrorCodes) && !is_numeric($errorCode)) {
+    header('Location: index.php');
+    exit();
+}
+
+if (is_numeric($errorCode)) {
+    $numericCode = intval($errorCode);
+    if ($numericCode < 400 || ($numericCode > 599)) {
+        header('Location: index.php');
+        exit();
+    }
+}
+
+
+$errorMessage = 'Something went wrong with BDPA Airports. Please try again later';
+
+$errorMessages = array(
+    '401' => 'You need to authenticate to access BDPA Airports resources.',
+    '403' => 'You don\'t have permission to perform this BDPA Airports action.',
+    '404' => 'The BDPA Airports resource you\'re looking for isn\'t available.',
+    '409' => 'There\'s a conflict with your BDPA Airports request. The resource may already exist.',
+    '413' => 'Your BDPA Airports request is too large.',
+    '422' => 'Your BDPA Airports request data is invalid. Please check your input.',
+    '429' => 'Too many BPDA Airports requests. Please wait a moment and try again.',
+    '500' => 'BDPA Airports server error. Please try again later.',
+    '502' => 'BDPA Airports service is temporarily unavailable.',
+    '503' => 'BDPA Airports service is temporarily down for maintenance.',
+    '504' => 'BDPA Airports request timed out. Please try again.',
+    '999' =>  'Something is wrong with our page come back later',
+    'Uh oh...' => 'Something went wrong with BDPA Airports. Please try again later.',
+);
 
 if (is_numeric($errorCode) && $errorCode >= 500 && $errorCode <= 529) {
-    $displayMessage = 'Something happened on our side that is outside of our control. Please try again later.';
+    $displayMessage = 'Something happened on the BDPA Airports server that is outside of our control. Please try again later.';
 } else {
-    error_log("Received Error Code: " . $errorCode);
+    error_log("BDPA Airports API Error Code: " . $errorCode);
     $displayMessage = isset($errorMessages[$errorCode]) ? $errorMessages[$errorCode] : $errorMessage;
-    error_log("Display Message: " . $displayMessage);
+    error_log("BDPA Airports Display Message: " . $displayMessage);
 }
-if (array_key_exists($errorCode, $errorMessages)) {
-    $errorMessage = $errorMessages[$errorCode];
-}
-?> 
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Error <?= $errorCode ?></title>
+    <title>Uh Oh - Error</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .error-icon-filter {
+            filter: brightness(0) invert(1);
+        }
+        .text-shadow {
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .text-shadow-sm {
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+    </style>
 </head>
+<body class="bg-gray-900 text-white min-h-screen font-sans">
+    <div class="min-h-screen flex items-center">
+        <div class="max-w-4xl w-full px-5">
 
-<body class="bg-gray-900 min-h-screen flex items-center justify-center p-6">
+        <div class="flex items-center justify-start flex-row mb-5 ml-8">
+                <div class="mr-5">
+                    <img src="https://static.thenounproject.com/png/1648939-200.png"
+                         alt="Question Mark Error Icon"
+                         class="w-28 h-auto error-icon-filter lg:w-32 md:w-25 sm:w-20">
+                </div>
 
-    <div class="max-w-lg w-full bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl p-8 text-center">
+                <h1 class="text-8xl font-bold text-white m-0 text-shadow lg:text-9xl md:text-7xl sm:text-5xl">
+                    <?php echo $errorCode; ?>
+                </h1>
+            </div>
 
-        <div class="mx-auto w-20 h-20 rounded-full bg-red-600/20 flex items-center justify-center mb-6">
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 class="h-10 w-10 text-red-500"
-                 fill="none"
-                 viewBox="0 0 24 24"
-                 stroke="currentColor">
-                <path stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/>
-            </svg>
-        </div>
+            <p class="text-2xl my-5 text-white ml-12 text-shadow-sm leading-relaxed lg:text-2xl md:text-xl sm:text-lg sm:ml-5">
+                <?php echo $displayMessage; ?>
+            </p>
 
-        <h1 class="text-5xl font-bold text-white mb-2">
-            <?= $errorCode ?>
-        </h1>
+            <?php if (is_numeric($errorCode)): ?>
+            <div class="bg-gray-800 p-4 rounded-xl ml-12 mt-5 border border-gray-700 shadow-lg sm:ml-5">
+                <p class="my-1 text-gray-300 text-base">
+                    <strong class="text-white">What happened:</strong>
+                </p>
+  
+                <?php if ($errorCode == '400'): ?>
+                        <p class="my-1 text-gray-300 text-base">• Your request couldn't be processed because it contains invalid information.</p>
+                        <p class="my-1 text-gray-300 text-base">• Please review your input and try again later.</p>
 
-        <h2 class="text-2xl font-semibold text-white mb-4">
-            Something Went Wrong
-        </h2>
+                    <?php elseif ($errorCode == '401'): ?>
+                        <p class="my-1 text-gray-300 text-base">• You must be signed in to access this resource.</p>
+                        <p class="my-1 text-gray-300 text-base">• Please sign in again and try again later.</p>
 
-        <p class="text-gray-300 mb-8">
-            <?= htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') ?>
-        </p>
+                    <?php elseif ($errorCode == '403'): ?>
+                        <p class="my-1 text-gray-300 text-base">• You don't have permission to perform this action.</p>
+                        <p class="my-1 text-gray-300 text-base">• Contact an administrator if you believe this is an error, or try again later.</p>
 
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="javascript:history.back()"
-               class="px-6 py-3 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-medium transition">
-                Try again
-            </a>
+                    <?php elseif ($errorCode == '404'): ?>
+                        <p class="my-1 text-gray-300 text-base">• The page or resource you're looking for couldn't be found.</p>
+                        <p class="my-1 text-gray-300 text-base">• It may have been moved or deleted. Please try again later.</p>
 
-            <a href="/index.php"
-               class="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition">
-                Return Home
-            </a>
+                    <?php elseif ($errorCode == '409'): ?>
+                        <p class="my-1 text-gray-300 text-base">• Your request conflicts with existing data.</p>
+                        <p class="my-1 text-gray-300 text-base">• Please try again later or refresh the page before trying again.</p>
+
+                    <?php elseif ($errorCode == '413'): ?>
+                        <p class="my-1 text-gray-300 text-base">• Your request is too large to be processed.</p>
+                        <p class="my-1 text-gray-300 text-base">• Please reduce the size of your request and try again later.</p>
+
+                    <?php elseif ($errorCode == '422'): ?>
+                        <p class="my-1 text-gray-300 text-base">• Some of the information you submitted is invalid.</p>
+                        <p class="my-1 text-gray-300 text-base">• Please review your input and try again later.</p>
+
+                    <?php elseif ($errorCode == '429'): ?>
+                        <p class="my-1 text-gray-300 text-base">• Too many requests have been made in a short period of time.</p>
+                        <p class="my-1 text-gray-300 text-base">• Please wait a few moments and try again later.</p>
+
+                    <?php elseif ($errorCode == '999'): ?>
+                        <p class="my-1 text-gray-300 text-base">• An unexpected error has occurred.</p>
+                        <p class="my-1 text-gray-300 text-base">• Please try again later.</p>
+
+                    <?php elseif ($errorCode >= 500): ?>
+                        <p class="my-1 text-gray-300 text-base">• BDPA Airports is currently experiencing a temporary server issue.</p>
+                        <p class="my-1 text-gray-300 text-base">• Your data is safe. Please try again later.</p>
+                    <?php endif; ?>
+                </p>
+                <p class="my-1 mt-0 text-gray-300 text-base">
+                    • <a href="/bdpa_airports/2026-Part-1/index.php"
+                        class="text-blue-400 hover:text-blue-300 underline">
+                        Try returning to home?
+                    </a>
+                </p>
+            <?php endif; ?>
         </div>
 
     </div>
 
+    <style>
+        @media (max-width: 500px) {
+            .flex-row {
+                flex-direction: column !important;
+                text-align: center !important;
+            }
+
+            .mr-5 {
+                margin-right: 0 !important;
+                margin-bottom: 0.625rem !important;
+            }
+
+            .ml-12,
+            .sm\:ml-5 {
+                margin-left: 0 !important;
+                text-align: center !important;
+            }
+        }
+    </style>
 </body>
 </html>
