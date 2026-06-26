@@ -112,24 +112,6 @@ function parseTicketPrice($rawPrice): float {
     return $p;
 }
 
-if (isset($_GET['debug_price'])) {
-    header('Content-Type: text/plain');
-    echo "ticket_id | status | raw price (var_export) | gettype | parsed\n";
-    echo str_repeat('-', 70) . "\n";
-    foreach ($allTickets as $t) {
-        $raw = $t['price'] ?? null;
-        printf(
-            "%-10s| %-10s| %-25s| %-10s| %s\n",
-            $t['ticket_id'] ?? '?',
-            $t['status'] ?? '?',
-            var_export($raw, true),
-            gettype($raw),
-            parseTicketPrice($raw)
-        );
-    }
-    exit;
-}
-
 foreach ($allTickets as $t) {
     if (strtolower($t['status'] ?? '') === 'cancelled') continue;
 
@@ -157,7 +139,7 @@ foreach ($allTickets as $t) {
 }
 
 function validSeat(string $seat): bool {
-    return (bool)preg_match('/^([1-9]|9)[A-Ia-i]$/', $seat);
+    return (bool)preg_match('/^([1-9]|10)[A-Ia-i]$/', $seat);
 }
 
 function isOnNoFlyList(string $fn, string $ln, array $noFlyList): bool {
@@ -212,7 +194,7 @@ function statusBadge(string $status): string {
 
 function roleBadge(string $role): string {
     $cls = match(strtolower($role)) {
-        'root'  => 'bg-blue-600/20 text-blue-400 border border-blue-700',
+        'root'  => 'bg-purple-600/20 text-purple-400 border border-purple-700',
         'admin' => 'bg-blue-600/20 text-blue-400 border border-blue-700',
         default => 'bg-gray-600/20 text-gray-400 border border-gray-600',
     };
@@ -220,7 +202,6 @@ function roleBadge(string $role): string {
 }
 
 function flightDestination(array $f, array $airportLookup): string {
-
     $code =
         $f['departingTo']
         ?? $f['landingAt']
@@ -229,30 +210,26 @@ function flightDestination(array $f, array $airportLookup): string {
         ?? $f['arrival']
         ?? '';
 
-    if (!$code) {
-        return '—';
-    }
+    if (!$code) return '—';
 
     $airport = $airportLookup[strtolower($code)] ?? null;
-
     if ($airport) {
-        $city = $airport['city']
-             ?? $airport['cityName']
-             ?? $airport['location']
-             ?? '';
-
-        if ($city !== '') {
-            return $city . ' (' . strtoupper($code) . ')';
-        }
+        $city = $airport['city'] ?? $airport['cityName'] ?? $airport['location'] ?? '';
+        if ($city !== '') return $city . ' (' . strtoupper($code) . ')';
     }
-
     return strtoupper($code);
 }
+
 function resolveTicketDestination(?array $flight, array $airportLookup, string $postedDestination): string {
-    if ($flight) {
-        return flightDestination($flight, $airportLookup);
-    }
+    if ($flight) return flightDestination($flight, $airportLookup);
     return strtoupper(trim($postedDestination));
+}
+
+function getFlightInfo(string $fid, array $flightMap, AirportsAPI $api): ?array {
+    if (!$fid) return null;
+    if (isset($flightMap[$fid])) return $flightMap[$fid];
+    $f = $api->getFlightById($fid);
+    return $f ?: null;
 }
 
 $activeTab = $_GET['tab'] ?? 'overview';
@@ -270,7 +247,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $email = trim($_POST['email']       ?? '');
         $pw    = trim($_POST['password']    ?? '');
         if (!$fn || !$ln || !$email) {
-            $errorMsg = 'First name, last name, email, and password are required.';
+            $errorMsg = 'First name, last name, and email are required.';
         } elseif (strlen($pw) < 10) {
             $errorMsg = 'Password must be at least 10 characters.';
         } else {
@@ -291,6 +268,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $usersStmt = $pdo->query('SELECT * FROM "Users"');
         $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
         $admins    = array_values(array_filter($allUsers, fn($u) => in_array(strtolower($u['role'] ?? ''), ['admin', 'root'])));
+        $customers = array_values(array_filter($allUsers, fn($u) => strtolower($u['role'] ?? '') === 'customer'));
+
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            if ($errorMsg) echo json_encode(['success' => false, 'message' => $errorMsg]);
+            else echo json_encode(['success' => true, 'message' => $updateMsg]);
+            exit;
+        }
         $activeTab = 'admins';
     }
 
@@ -309,6 +294,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $usersStmt = $pdo->query('SELECT * FROM "Users"');
         $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
         $admins    = array_values(array_filter($allUsers, fn($u) => in_array(strtolower($u['role'] ?? ''), ['admin', 'root'])));
+        $customers = array_values(array_filter($allUsers, fn($u) => strtolower($u['role'] ?? '') === 'customer'));
+
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            if ($errorMsg) echo json_encode(['success' => false, 'message' => $errorMsg]);
+            else echo json_encode(['success' => true, 'message' => $updateMsg]);
+            exit;
+        }
         $activeTab = 'admins';
     }
 
@@ -339,6 +332,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $usersStmt = $pdo->query('SELECT * FROM "Users"');
         $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
         $admins    = array_values(array_filter($allUsers, fn($u) => in_array(strtolower($u['role'] ?? ''), ['admin', 'root'])));
+        $customers = array_values(array_filter($allUsers, fn($u) => strtolower($u['role'] ?? '') === 'customer'));
         $activeTab = 'admins';
     }
 
@@ -376,7 +370,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } else {
             $emailCheck = $pdo->prepare('SELECT 1 FROM "Users" WHERE LOWER(email) = LOWER(?)');
             $emailCheck->execute([$email]);
-
             if ($emailCheck->fetch()) {
                 $errorMsg = 'That email address is already in use.';
             } elseif (isOnNoFlyList($fn, $ln, $noFlyList)) {
@@ -415,7 +408,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
         $usersStmt = $pdo->query('SELECT * FROM "Users"');
         $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
+        $admins    = array_values(array_filter($allUsers, fn($u) => in_array(strtolower($u['role'] ?? ''), ['admin', 'root'])));
         $customers = array_values(array_filter($allUsers, fn($u) => strtolower($u['role'] ?? '') === 'customer'));
+        $activeTab = 'customers';
+    }
+
+    if ($_POST['action'] === 'update_customer') {
+        $uid     = $_POST['user_id']     ?? '';
+        $email   = trim($_POST['email']  ?? '');
+        $phone   = trim($_POST['phone']  ?? '');
+        $street  = trim($_POST['street'] ?? '');
+        $city    = trim($_POST['city']   ?? '');
+        $state   = trim($_POST['state']  ?? '');
+        $zip     = trim($_POST['zip']    ?? '');
+        $country = trim($_POST['country']?? '');
+
+        if ($email !== '' && !isValidEmail($email)) {
+            $errorMsg = 'Please enter a valid email address (must contain "@" and ".").';
+        } elseif ($phone !== '' && phoneHasLetters($phone)) {
+            $errorMsg = 'Phone number cannot contain letters.';
+        } else {
+            $phoneFormatted = $phone !== '' ? formatPhone($phone) : null;
+
+            $upd = $pdo->prepare(
+                'UPDATE "Users"
+                 SET email=?, phone=?, street_address=?, city=?, state=?, zip_code=?, country=?
+                 WHERE user_id=? AND LOWER(role)=\'customer\''
+            );
+            $upd->execute([
+                $email ?: null,
+                $phoneFormatted,
+                $street ?: null,
+                $city ?: null,
+                $state ?: null,
+                $zip ?: null,
+                $country ?: null,
+                $uid
+            ]);
+            $updateMsg = 'Customer updated successfully.';
+
+            $usersStmt = $pdo->query('SELECT * FROM "Users"');
+            $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
+            $admins    = array_values(array_filter($allUsers, fn($u) => in_array(strtolower($u['role'] ?? ''), ['admin', 'root'])));
+            $customers = array_values(array_filter($allUsers, fn($u) => strtolower($u['role'] ?? '') === 'customer'));
+        }
+
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            if ($errorMsg) echo json_encode(['success' => false, 'message' => $errorMsg]);
+            else echo json_encode(['success' => true, 'message' => $updateMsg]);
+            exit;
+        }
+        $activeTab = 'customers';
+    }
+
+    if ($_POST['action'] === 'delete_customer') {
+        $uid = $_POST['user_id'] ?? '';
+        if ($uid) {
+            $del = $pdo->prepare('DELETE FROM "Users" WHERE user_id = ? AND LOWER(role) = \'customer\'');
+            $del->execute([$uid]);
+            $updateMsg = 'Customer account deleted.';
+        }
+        $usersStmt = $pdo->query('SELECT * FROM "Users"');
+        $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
+        $admins    = array_values(array_filter($allUsers, fn($u) => in_array(strtolower($u['role'] ?? ''), ['admin', 'root'])));
+        $customers = array_values(array_filter($allUsers, fn($u) => strtolower($u['role'] ?? '') === 'customer'));
+
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => $updateMsg]);
+            exit;
+        }
         $activeTab = 'customers';
     }
 
@@ -439,7 +502,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } elseif ($seat === '') {
             $errorMsg = 'Seat is required.';
         } elseif (!validSeat($seat)) {
-            $errorMsg = 'Invalid seat. Must be row 1-9 and column A–I (Ex. 5A, 9I).';
+            $errorMsg = 'Invalid seat. Must be row 1–10 and column A–I (Ex. 5A, 10I).';
         } elseif ($email !== '' && !isValidEmail($email)) {
             $errorMsg = 'Please enter a valid email address (must contain "@" and ".").';
         } elseif ($phone !== '' && phoneHasLetters($phone)) {
@@ -525,50 +588,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         $activeTab = 'tickets';
     }
-
-    if ($_POST['action'] === 'update_customer') {
-        $uid     = $_POST['user_id']     ?? '';
-        $email   = trim($_POST['email']  ?? '');
-        $phone   = trim($_POST['phone']  ?? '');
-        $street  = trim($_POST['street'] ?? '');
-        $city    = trim($_POST['city']   ?? '');
-        $state   = trim($_POST['state']  ?? '');
-        $zip     = trim($_POST['zip']    ?? '');
-        $country = trim($_POST['country']?? '');
-
-        if ($email !== '' && !isValidEmail($email)) {
-            $errorMsg = 'Please enter a valid email address (must contain "@" and ".").';
-        } elseif ($phone !== '' && phoneHasLetters($phone)) {
-            $errorMsg = 'Phone number cannot contain letters.';
-        } else {
-            $phoneFormatted = $phone ? formatPhone($phone) : null;
-
-            $upd = $pdo->prepare(
-                'UPDATE "Users"
-                 SET email=?, phone=?, street_address=?, city=?, state=?, zip_code=?, country=?
-                 WHERE user_id=? AND LOWER(role)=\'customer\''
-            );
-            $upd->execute([$email, $phoneFormatted, $street, $city, $state, $zip, $country, $uid]);
-            $updateMsg = 'Customer updated successfully.';
-
-            $usersStmt = $pdo->query('SELECT * FROM "Users"');
-            $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
-            $customers = array_values(array_filter($allUsers, fn($u) => strtolower($u['role'] ?? '') === 'customer'));
-        }
-
-        if ($isAjax) {
-            header('Content-Type: application/json');
-            if ($errorMsg) {
-                echo json_encode(['success' => false, 'message' => $errorMsg]);
-            } else {
-                echo json_encode(['success' => true, 'message' => $updateMsg]);
-            }
-            exit;
-        }
-
-        $activeTab = 'customers';
-    }
-} 
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -609,7 +629,7 @@ tbody tr:hover { background:rgba(55,65,81,.45); }
     transition:all .15s;
 }
 .field:focus { border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.2); }
-.field-error { border-color:#ef4444 !important; }
+.field-disabled { background:#1f2937; color:#6b7280; cursor:not-allowed; }
 select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right .6rem center; background-size:1.25rem; padding-right:2.5rem; appearance:none; }
 
 .hint { font-size:.7rem; color:#6b7280; margin-top:.2rem; }
@@ -627,6 +647,8 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
     padding: .75rem 0 .4rem;
 }
 .section-label:first-child { border-top:none; margin-top:0; }
+.copy-btn { cursor:pointer; transition:color .12s; }
+.copy-btn:hover { color:#60a5fa; }
 </style>
 </head>
 <body class="bg-gray-900 min-h-screen text-white">
@@ -636,19 +658,9 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
 <main class="max-w-7xl mx-auto p-4 sm:p-6 space-y-5">
 
   <div class="rounded-lg p-8 mb-6 bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 shadow-lg">
-      <p>
-          <span class="tracking-[0.25em] text-sm text-blue-300">
-              BDPA AIRPORTS - Root Dashboard
-          </span>👑
-      </p>
-
-      <h1 class="text-4xl font-bold mt-2">
-          <?= htmlspecialchars($selfName) ?>
-      </h1>
-
-      <p class="text-gray-400 mt-4">
-          Complete access: administrators, customers, tickets, and analytics.
-      </p>
+      <p><span class="tracking-[0.25em] text-sm text-blue-300">BDPA AIRPORTS - Root Dashboard</span>👑</p>
+      <h1 class="text-4xl font-bold mt-2"><?= htmlspecialchars($selfName) ?></h1>
+      <p class="text-gray-400 mt-4">Complete access: administrators, customers, tickets, and analytics.</p>
   </div>
 
   <div id="flashMsg" class="<?= $updateMsg ? '' : 'hidden' ?> bg-emerald-950 border border-emerald-700 rounded-lg px-5 py-3 text-emerald-400 text-sm flex items-center gap-2">
@@ -659,7 +671,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
   </div>
 
   <div class="mb-6 bg-gray-800 border border-gray-700 rounded-lg p-1">
-      <div class="flex gap-2 overflow-x-auto sm:overflow-visible whitespace-nowrap sm:flex-wrap">
+    <div class="flex gap-2 overflow-x-auto sm:overflow-visible whitespace-nowrap sm:flex-wrap">
     <?php
     $tabs = [
       'overview'  => 'Overview',
@@ -672,20 +684,20 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
     ?>
     <a href="?tab=<?= $key ?>" class="px-4 py-2 rounded-md text-sm font-medium transition flex-shrink-0 <?= $cls ?>"><?= $label ?></a>
     <?php endforeach; ?>
-      </div>
+    </div>
   </div>
 
   <?php if ($activeTab === 'overview'): ?>
 
   <div class="flex gap-2 flex-wrap">
     <?php foreach (['day' => 'Today', 'week' => 'This Week', 'month' => 'This Month', 'year' => 'This Year', 'all' => 'All Time'] as $k => $label): ?>
-<button onclick="setPeriod('<?= $k ?>')" id="period-<?= $k ?>"
-    class="period-btn px-4 py-2 rounded-lg text-sm font-semibold border border-gray-700 text-gray-400 hover:bg-gray-800"
-    data-tickets="<?= $ticketStats[$k] ?>"
-    data-profit="<?= $profitStats[$k] ?>">
-  <?= $label ?>
-</button>
-<?php endforeach; ?>
+    <button onclick="setPeriod('<?= $k ?>')" id="period-<?= $k ?>"
+        class="period-btn px-4 py-2 rounded-lg text-sm font-semibold border border-gray-700 text-gray-400 hover:bg-gray-800"
+        data-tickets="<?= $ticketStats[$k] ?>"
+        data-profit="<?= $profitStats[$k] ?>">
+      <?= $label ?>
+    </button>
+    <?php endforeach; ?>
   </div>
 
   <div class="grid xl:grid-cols-4 md:grid-cols-2 gap-4">
@@ -814,10 +826,9 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
           <input type="email" name="email" required class="field">
         </div>
         <div>
-          <input type="password" id="password" name="password" required minlength="11" class="field" oninput="checkPw(this.value)">
-          <p class="mt-2 text-sm text-gray-400">
-              Password strength: <span id="cpw-hint">—</span>
-          </p>
+          <label class="block text-sm text-gray-400 mb-1">Password* <span class="text-gray-600">(min 10 chars)</span></label>
+          <input type="password" name="password" required minlength="10" class="field" oninput="checkPw(this.value)">
+          <p class="mt-2 text-sm text-gray-400">Password strength: <span id="cpw-hint">—</span></p>
         </div>
         <button type="submit" class="w-full h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg">
           Create Administrator
@@ -828,9 +839,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
     <?php if ($editAdmin): ?>
     <div class="bg-gray-800 border border-blue-600 rounded-lg p-6 shadow-sm">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-bold">
-          Edit — <?= htmlspecialchars(trim(($editAdmin['first_name'] ?? '') . ' ' . ($editAdmin['last_name'] ?? ''))) ?>✏️
-        </h2>
+        <h2 class="text-xl font-bold">Edit — <?= htmlspecialchars(trim(($editAdmin['first_name'] ?? '') . ' ' . ($editAdmin['last_name'] ?? ''))) ?>✏️</h2>
         <a href="?tab=admins" class="text-xs text-gray-500 hover:text-gray-300">✕</a>
       </div>
       <form method="POST" class="space-y-3">
@@ -858,9 +867,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
           <label class="block text-xs text-gray-400 mb-1">New Password <span class="text-gray-600">(leave blank to keep)</span></label>
           <input type="password" name="password" placeholder="Leave blank to keep current" class="field">
         </div>
-        <button type="submit" class="w-full h-10 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-semibold transition">
-          Save Changes
-        </button>
+        <button type="submit" class="w-full h-10 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-semibold transition">Save Changes</button>
       </form>
     </div>
     <?php else: ?>
@@ -873,8 +880,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
 
   <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
     <div class="p-5 border-b border-gray-700 flex flex-wrap items-center justify-between gap-4">
-      <h2 class="text-lg font-bold">All Administrators 🛡️
-      </h2>
+      <h2 class="text-lg font-bold">All Administrators 🛡️</h2>
       <form method="GET" class="flex gap-2 flex-wrap">
         <input type="hidden" name="tab" value="admins">
         <input type="text" name="asearch" value="<?= htmlspecialchars($adminSearch) ?>"
@@ -906,11 +912,11 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
           <td class="px-5 py-4 flex items-center gap-4">
             <a href="?tab=admins&edit=<?= urlencode($a['user_id'] ?? '') ?>" class="text-blue-400 hover:text-blue-300 text-sm font-semibold transition">Edit</a>
             <?php if (!$isRoot): ?>
-            <form method="POST" class="inline">
-              <input type="hidden" name="action"  value="delete_admin">
+            <form method="POST" class="inline delete-admin-form" data-user-id="<?= htmlspecialchars($a['user_id'] ?? '') ?>">
+              <input type="hidden" name="action" value="delete_admin">
               <input type="hidden" name="user_id" value="<?= htmlspecialchars($a['user_id'] ?? '') ?>">
               <button type="submit"
-                onclick="return confirm('Delete admin <?= htmlspecialchars(addslashes(trim(($a['first_name'] ?? '') . ' ' . ($a['last_name'] ?? '')))) ?>?')"
+                onclick="return confirm('Delete admin <?= htmlspecialchars(addslashes(trim(($a['first_name'] ?? '') . ' ' . ($a['last_name'] ?? '')))) ?>? This cannot be undone.')"
                 class="text-sm text-red-400 hover:text-red-300 font-semibold transition">Delete</button>
             </form>
             <?php else: ?>
@@ -926,17 +932,15 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
       </table>
     </div>
     <div class="px-5 py-4 border-t border-gray-700 flex items-center justify-between">
-        <span class="text-xs text-gray-500">Page <?= $adminPage ?> of <?= $totalAdminPages ?></span>
-        <div class="flex gap-2">
-            <?php if ($adminPage > 1): ?>
-            <a href="?tab=admins&asearch=<?= urlencode($adminSearch) ?>&apage=<?= $adminPage - 1 ?>"
-               class="px-3 py-1 bg-gray-800 rounded text-sm hover:bg-gray-700">Previous</a>
-            <?php endif; ?>
-            <?php if ($adminPage < $totalAdminPages): ?>
-            <a href="?tab=admins&asearch=<?= urlencode($adminSearch) ?>&apage=<?= $adminPage + 1 ?>"
-               class="px-3 py-1 bg-blue-600 rounded text-sm hover:bg-blue-500">Next</a>
-            <?php endif; ?>
-        </div>
+      <span class="text-xs text-gray-500">Page <?= $adminPage ?> of <?= $totalAdminPages ?></span>
+      <div class="flex gap-2">
+        <?php if ($adminPage > 1): ?>
+        <a href="?tab=admins&asearch=<?= urlencode($adminSearch) ?>&apage=<?= $adminPage - 1 ?>" class="px-3 py-1 bg-gray-800 rounded text-sm hover:bg-gray-700">Previous</a>
+        <?php endif; ?>
+        <?php if ($adminPage < $totalAdminPages): ?>
+        <a href="?tab=admins&asearch=<?= urlencode($adminSearch) ?>&apage=<?= $adminPage + 1 ?>" class="px-3 py-1 bg-blue-600 rounded text-sm hover:bg-blue-500">Next</a>
+        <?php endif; ?>
+      </div>
     </div>
   </div>
 
@@ -962,7 +966,8 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
         ($u['first_name'] ?? '') . ' ' . ($u['last_name'] ?? '') . ' ' .
         ($u['email'] ?? '') . ' ' . ($u['phone'] ?? '') . ' ' .
         ($u['city'] ?? '') . ' ' . ($u['street_address'] ?? '') . ' ' .
-        ($u['state'] ?? '') . ' ' . ($u['zip_code'] ?? '')
+        ($u['state'] ?? '') . ' ' . ($u['zip_code'] ?? '') . ' ' .
+        ($u['country'] ?? '')
       ), $q)
     );
   }
@@ -1003,10 +1008,8 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
         </div>
         <div>
           <label class="block text-sm text-gray-400 mb-1">Password</label>
-          <input type="password" id="customer-password" name="password" class="field" oninput="checkPw(this.value)" required>
-          <p class="mt-2 text-sm text-gray-400">
-              Password strength: <span id="cpw-hint-customer">—</span>
-          </p>
+          <input type="password" name="password" class="field" oninput="checkCustomerPw(this.value)" required>
+          <p class="mt-2 text-sm text-gray-400">Password strength: <span id="cpw-hint-customer">—</span></p>
         </div>
 
         <p class="section-label">Security Questions (used for account recovery)</p>
@@ -1038,8 +1041,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
         <p class="section-label">Optional Fields</p>
         <div>
           <label class="block text-xs text-gray-400 mb-1">Phone Number</label>
-          <input type="tel" name="phone" placeholder="" class="field"
-            inputmode="numeric" oninput="autoFormatPhone(this)">
+          <input type="tel" name="phone" class="field" inputmode="numeric" oninput="autoFormatPhone(this)">
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
@@ -1098,15 +1100,56 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
       <form method="POST" class="space-y-3 update-customer-form">
         <input type="hidden" name="action" value="update_customer">
         <input type="hidden" name="user_id" value="<?= htmlspecialchars((string)($editCustomer['user_id'] ?? '')) ?>">
+
+        <p class="section-label">Identity (read-only)</p>
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">First Name</label>
+            <input type="text" value="<?= htmlspecialchars($editCustomer['first_name'] ?? '') ?>" disabled class="field field-disabled">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Middle Name</label>
+            <input type="text" value="<?= htmlspecialchars($editCustomer['middle_name'] ?? '—') ?>" disabled class="field field-disabled">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Last Name</label>
+            <input type="text" value="<?= htmlspecialchars($editCustomer['last_name'] ?? '') ?>" disabled class="field field-disabled">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Date of Birth</label>
+            <input type="text" value="<?= htmlspecialchars($editCustomer['date_birth'] ?? $editCustomer['date_of_birth'] ?? '—') ?>" disabled class="field field-disabled">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Sex/Gender</label>
+            <input type="text" value="<?= htmlspecialchars($editCustomer['sex'] ?? '—') ?>" disabled class="field field-disabled">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Title</label>
+            <input type="text" value="<?= htmlspecialchars($editCustomer['title'] ?? '—') ?>" disabled class="field field-disabled">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Suffix</label>
+            <input type="text" value="<?= htmlspecialchars($editCustomer['suffix'] ?? '—') ?>" disabled class="field field-disabled">
+          </div>
+        </div>
+
+        <p class="section-label">Contact (editable)</p>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Email</label>
-          <input type="email" name="email" value="<?= htmlspecialchars($editCustomer['email'] ?? '') ?>" class="field">
+          <label class="block text-xs text-gray-400 mb-1">Email Address</label>
+          <input type="email" name="email" value="<?= htmlspecialchars($editCustomer['email'] ?? '') ?>"
+            pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Email must contain &quot;@&quot; and &quot;.&quot;" class="field">
         </div>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Phone</label>
-          <input type="tel" name="phone" value="<?= htmlspecialchars($editCustomer['phone'] ?? '') ?>" class="field"
-            oninput="autoFormatPhone(this)">
+          <label class="block text-xs text-gray-400 mb-1">Phone Number</label>
+          <input type="tel" name="phone" value="<?= htmlspecialchars($editCustomer['phone'] ?? '') ?>"
+            placeholder="(555) 555-5555" class="field" inputmode="numeric" oninput="autoFormatPhone(this)">
         </div>
+
+        <p class="section-label">Address (editable)</p>
         <div>
           <label class="block text-xs text-gray-400 mb-1">Street Address</label>
           <input type="text" name="street" value="<?= htmlspecialchars($editCustomer['street_address'] ?? '') ?>" class="field">
@@ -1129,6 +1172,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
           <label class="block text-xs text-gray-400 mb-1">Country</label>
           <input type="text" name="country" value="<?= htmlspecialchars($editCustomer['country'] ?? '') ?>" class="field">
         </div>
+
         <button type="submit" class="w-full h-10 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-semibold transition">
           Save Changes
         </button>
@@ -1145,8 +1189,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
 
   <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
     <div class="p-5 border-b border-gray-700 flex flex-wrap items-center justify-between gap-4">
-      <h2 class="text-lg font-bold">All Customers 👥
-      </h2>
+      <h2 class="text-lg font-bold">All Customers 👥</h2>
       <form method="GET" class="flex gap-2 flex-wrap">
         <input type="hidden" name="tab" value="customers">
         <input type="text" name="csearch" value="<?= htmlspecialchars($customerSearch) ?>"
@@ -1179,9 +1222,16 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
           <td class="px-5 py-4 text-gray-300"><?= htmlspecialchars($u['phone'] ?? '—') ?></td>
           <td class="px-5 py-4 text-gray-300"><?= htmlspecialchars($u['city'] ?? '—') ?></td>
           <td class="px-5 py-4 text-gray-300"><?= htmlspecialchars($u['country'] ?? '—') ?></td>
-          <td class="px-5 py-4">
+          <td class="px-5 py-4 flex items-center gap-4">
             <a href="?tab=customers&edit=<?= urlencode((string)($u['user_id'] ?? '')) ?>"
                class="text-blue-400 hover:text-blue-300 transition text-sm font-semibold">Edit</a>
+            <form method="POST" class="inline delete-customer-form" data-user-id="<?= htmlspecialchars((string)($u['user_id'] ?? '')) ?>">
+              <input type="hidden" name="action" value="delete_customer">
+              <input type="hidden" name="user_id" value="<?= htmlspecialchars((string)($u['user_id'] ?? '')) ?>">
+              <button type="submit"
+                onclick="return confirm('Delete customer <?= htmlspecialchars(addslashes(trim(($u['first_name'] ?? '') . ' ' . ($u['last_name'] ?? '')))) ?>? This cannot be undone.')"
+                class="text-sm text-red-400 hover:text-red-300 font-semibold transition">Delete</button>
+            </form>
           </td>
         </tr>
         <?php endforeach; ?>
@@ -1192,17 +1242,15 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
       </table>
     </div>
     <div class="px-5 py-4 border-t border-gray-700 flex items-center justify-between">
-        <span class="text-xs text-gray-500">Page <?= $customerPage ?> of <?= $totalCustomersPages ?></span>
-        <div class="flex gap-2">
-            <?php if ($customerPage > 1): ?>
-            <a href="?tab=customers&csearch=<?= urlencode($customerSearch) ?>&cpage=<?= $customerPage - 1 ?>"
-               class="px-3 py-1 bg-gray-800 rounded text-sm hover:bg-gray-700">Previous</a>
-            <?php endif; ?>
-            <?php if ($customerPage < $totalCustomersPages): ?>
-            <a href="?tab=customers&csearch=<?= urlencode($customerSearch) ?>&cpage=<?= $customerPage + 1 ?>"
-               class="px-3 py-1 bg-blue-600 rounded text-sm hover:bg-blue-500">Next</a>
-            <?php endif; ?>
-        </div>
+      <span class="text-xs text-gray-500">Page <?= $customerPage ?> of <?= $totalCustomersPages ?></span>
+      <div class="flex gap-2">
+        <?php if ($customerPage > 1): ?>
+        <a href="?tab=customers&csearch=<?= urlencode($customerSearch) ?>&cpage=<?= $customerPage - 1 ?>" class="px-3 py-1 bg-gray-800 rounded text-sm hover:bg-gray-700">Previous</a>
+        <?php endif; ?>
+        <?php if ($customerPage < $totalCustomersPages): ?>
+        <a href="?tab=customers&csearch=<?= urlencode($customerSearch) ?>&cpage=<?= $customerPage + 1 ?>" class="px-3 py-1 bg-blue-600 rounded text-sm hover:bg-blue-500">Next</a>
+        <?php endif; ?>
+      </div>
     </div>
   </div>
 
@@ -1220,7 +1268,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
     foreach ($allTickets as $t) {
       if (strtoupper($t['confirmation_code'] ?? '') === strtoupper($confLookup)) {
         $lookupTicket = $t;
-        $lookupFlight = $flightMap[$t['flight_id'] ?? ''] ?? null;
+        $lookupFlight = getFlightInfo($t['flight_id'] ?? '', $flightMap, $api);
         break;
       }
     }
@@ -1262,9 +1310,9 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
         <div>
           <label class="block text-xs text-gray-400 mb-1">Seat*</label>
           <input type="text" name="seat" id="tSeat" required maxlength="3"
-            placeholder="Ex. 5A, 7H"
+            placeholder="ex. 5A, 7H"
             class="field uppercase" oninput="this.value=this.value.toUpperCase()" onblur="onSeatBlur(this.value)">
-          <p class="hint">Rows 1–9 · Columns A–I</p>
+          <p class="hint">Rows 1–10 · Columns A–I</p>
           <p id="seatErr" class="text-red-400 text-xs mt-1 hidden"></p>
         </div>
 
@@ -1331,21 +1379,20 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
           </div>
         </div>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Phone</label>
-          <input type="tel" name="phone" class="field"
-            inputmode="numeric" oninput="autoFormatPhone(this)">
+          <label class="block text-xs text-gray-400 mb-1">Phone Number</label>
+          <input type="tel" name="phone" class="field" inputmode="numeric" oninput="autoFormatPhone(this)">
         </div>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Email</label>
+          <label class="block text-xs text-gray-400 mb-1">Email Address</label>
           <input type="email" name="email" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
             title="Email must contain &quot;@&quot; and &quot;.&quot;" class="field">
         </div>
         <div>
           <label class="block text-xs text-gray-400 mb-1">User ID (If Customer) <span class="text-gray-600">(optional)</span></label>
-          <input type="text" name="user_id" placeholder="Leave blank for guest" class="field">
+          <input type="text" name="user_id" placeholder="Leave blank for guest" class="field" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
         </div>
 
-        <button type="submit" class="w-full h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg" data-skip-loader>
+        <button type="submit" class="w-full h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg">
           Create Ticket
         </button>
       </form>
@@ -1355,7 +1402,8 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
       <h2 class="font-bold text-base mb-4">Lookup by Confirmation Code</h2>
       <form method="GET" class="flex gap-2 mb-4">
         <input type="hidden" name="tab" value="tickets">
-        <input type="text" name="conf" value="<?= htmlspecialchars($confLookup) ?>" class="field flex-1 h-9">
+        <input type="text" name="conf" value="<?= htmlspecialchars($confLookup) ?>"
+          class="field flex-1 h-9">
         <button type="submit" class="h-9 px-4 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-semibold transition">Look Up</button>
         <?php if ($confLookup): ?>
         <a href="?tab=tickets" class="h-9 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-semibold flex items-center transition">Clear</a>
@@ -1366,13 +1414,14 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
         <?php if ($lookupTicket): ?>
         <div class="space-y-0 text-sm divide-y divide-gray-800">
           <?php
+          $lf = $lookupFlight;
           $rows = [
-            'Confirmation' => '<a href="../../../booking/confirmation.php?confirmation=' . urlencode($lookupTicket['confirmation_code']) . '" class="bg-gray-800 px-2 py-0.5 rounded font-mono text-blue-300 hover:text-blue-200 hover:underline">' . htmlspecialchars($lookupTicket['confirmation_code']) . '</a>',
+            'Confirmation' => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-blue-300">' . htmlspecialchars($lookupTicket['confirmation_code']) . '</code>',
             'Passenger'    => htmlspecialchars(trim(($lookupTicket['name_first'] ?? '') . ' ' . ($lookupTicket['name_last'] ?? '—'))),
-            'Flight ID'    => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-xs text-gray-300">' . htmlspecialchars($lookupTicket['flight_id'] ?? '—') . '</code>',
-            'Flight #'     => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-xs text-gray-300">' . htmlspecialchars($lookupFlight['flightNumber'] ?? '—') . '</code>',
+            'Flight ID'    => '<span class="inline-flex items-center gap-2"><code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-xs text-gray-300">' . htmlspecialchars($lookupTicket['flight_id'] ?? '—') . '</code>' . (!empty($lookupTicket['flight_id']) ? '<span class="copy-btn text-gray-500 text-xs" onclick="copyToClipboard(\'' . htmlspecialchars(addslashes($lookupTicket['flight_id']), ENT_QUOTES) . '\', this)" title="Copy flight ID">📋</span>' : '') . '</span>',
+            'Flight #'     => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-xs text-gray-300">' . htmlspecialchars($lf['flightNumber'] ?? '—') . '</code>',
             'Route'        => htmlspecialchars('SMN → ' . strtoupper($lookupTicket['destination'] ?? '—')),
-            'Departure'    => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-xs text-gray-300">' . 'SMN' . '</code>',
+            'Destination'  => htmlspecialchars(strtoupper($lookupTicket['destination'] ?? '—')),
             'Seat'         => htmlspecialchars($lookupTicket['seat'] ?? '—'),
             'Price'        => '$' . number_format(parseTicketPrice($lookupTicket['price'] ?? 0), 2),
             'Status'       => statusBadge($lookupTicket['status'] ?? 'unknown'),
@@ -1396,7 +1445,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
         <?php endif; ?>
         <?php else: ?>
         <p class="text-red-400 text-sm bg-red-950 border border-red-800 rounded-lg px-4 py-3">
-          No ticket found for confirmation code "<strong><?= htmlspecialchars($confLookup) ?></strong>".
+          No ticket found for "<strong><?= htmlspecialchars($confLookup) ?></strong>".
         </p>
         <?php endif; ?>
       <?php else: ?>
@@ -1425,34 +1474,42 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
             <th class="text-left px-4 py-3">Confirmation</th>
             <th class="text-left px-4 py-3">Passenger</th>
             <th class="text-left px-4 py-3">Flight #</th>
+            <th class="text-left px-4 py-3">Flight ID</th>
             <th class="text-left px-4 py-3">Route</th>
-            <th class="text-left px-4 py-3">Departure</th>
+            <th class="text-left px-4 py-3">Destination</th>
             <th class="text-left px-4 py-3">Seat</th>
             <th class="text-left px-4 py-3">Price</th>
             <th class="text-left px-4 py-3">Status</th>
           </tr>
         </thead>
-        <tbody id="ticketsTableBody">
+        <tbody>
         <?php foreach ($filteredTickets as $t):
-          $f           = $flightMap[$t['flight_id'] ?? ''] ?? [];
+          $fid = $t['flight_id'] ?? '';
+          $f   = getFlightInfo($fid, $flightMap, $api) ?? [];
           $isCancelled = strtolower($t['status'] ?? '') === 'cancelled';
           $passenger   = trim(($t['name_first'] ?? '') . ' ' . ($t['name_last'] ?? ''));
           if (!$passenger) $passenger = '—';
-          $priceVal = parseTicketPrice($t['price'] ?? '0');
-          $safeP = '$' . number_format($priceVal, 2);
+          $safeP = '$' . number_format(parseTicketPrice($t['price'] ?? '0'), 2);
           $destination = $t['destination'] ?? '—';
           $route = 'SMN → ' . strtoupper($destination);
-          $dep = 'SMN';
         ?>
-        <tr class="border-t border-gray-700 hover:bg-gray-700/40 transition <?= $isCancelled ? 'cancelled-row' : '' ?>" data-ticket-id="<?= htmlspecialchars($t['ticket_id']) ?>">
+        <tr class="border-t border-gray-700 hover:bg-gray-700/40 transition <?= $isCancelled ? 'cancelled-row' : '' ?>"
+            data-ticket-id="<?= htmlspecialchars($t['ticket_id']) ?>">
           <td class="px-4 py-3">
-            <a href="../../../booking/confirmation.php?confirmation=<?= urlencode($t['confirmation_code'] ?? '') ?>"
-               class="text-xs bg-gray-800 px-2 py-1 rounded text-blue-300 font-mono hover:text-blue-200 hover:underline"><?= htmlspecialchars($t['confirmation_code'] ?? '—') ?></a>
+            <code class="text-xs bg-gray-800 px-2 py-1 rounded text-blue-300 font-mono"><?= htmlspecialchars($t['confirmation_code'] ?? '—') ?></code>
           </td>
           <td class="px-4 py-3 text-gray-300"><?= htmlspecialchars($passenger) ?></td>
-          <td class="px-4 py-3 font-semibold text-xs"><?= htmlspecialchars($f['flightNumber'] ?? ($t['flight_id'] ? '…' . substr($t['flight_id'], -5) : '—')) ?></td>
+          <td class="px-4 py-3 font-semibold text-xs"><?= htmlspecialchars($f['flightNumber'] ?? '—') ?></td>
+          <td class="px-4 py-3 text-xs">
+            <span class="inline-flex items-center gap-1">
+              <code class="bg-gray-800 px-1.5 py-0.5 rounded text-gray-400 font-mono"><?= htmlspecialchars($fid ?: '—') ?></code>
+              <?php if ($fid): ?>
+              <span class="copy-btn text-gray-500" onclick="copyToClipboard('<?= htmlspecialchars(addslashes($fid), ENT_QUOTES) ?>', this)" title="Copy flight ID">📋</span>
+              <?php endif; ?>
+            </span>
+          </td>
           <td class="px-4 py-3 text-gray-400 text-xs whitespace-nowrap"><?= $route ?></td>
-          <td class="px-4 py-3 text-gray-400 text-xs whitespace-nowrap"><?= $dep ?></td>
+          <td class="px-4 py-3 text-gray-400 text-xs whitespace-nowrap"><?= htmlspecialchars(strtoupper($destination)) ?></td>
           <td class="px-4 py-3 text-gray-400 text-xs"><?= htmlspecialchars($t['seat'] ?? '—') ?></td>
           <td class="px-4 py-3 text-gray-300 text-xs font-mono"><?= $safeP ?></td>
           <td class="px-4 py-3 status-cell">
@@ -1473,23 +1530,21 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
         </tr>
         <?php endforeach; ?>
         <?php if (empty($filteredTickets)): ?>
-        <tr><td colspan="8" class="px-5 py-10 text-center text-gray-600">No tickets found.</td></tr>
+        <tr><td colspan="9" class="px-5 py-10 text-center text-gray-600">No tickets found.</td></tr>
         <?php endif; ?>
         </tbody>
       </table>
     </div>
     <div class="px-5 py-4 border-t border-gray-700 flex items-center justify-between">
-        <span class="text-xs text-gray-500">Page <?= $ticketPage ?> of <?= $totalTicketPages ?></span>
-        <div class="flex gap-2">
-            <?php if ($ticketPage > 1): ?>
-            <a href="?tab=tickets&tsearch=<?= urlencode($ticketSearch) ?>&tpage=<?= $ticketPage - 1 ?>"
-               class="px-3 py-1 bg-gray-800 rounded text-sm hover:bg-gray-700">Previous</a>
-            <?php endif; ?>
-            <?php if ($ticketPage < $totalTicketPages): ?>
-            <a href="?tab=tickets&tsearch=<?= urlencode($ticketSearch) ?>&tpage=<?= $ticketPage + 1 ?>"
-               class="px-3 py-1 bg-blue-600 rounded text-sm hover:bg-blue-500">Next</a>
-            <?php endif; ?>
-        </div>
+      <span class="text-xs text-gray-500">Page <?= $ticketPage ?> of <?= $totalTicketPages ?></span>
+      <div class="flex gap-2">
+        <?php if ($ticketPage > 1): ?>
+        <a href="?tab=tickets&tsearch=<?= urlencode($ticketSearch) ?>&tpage=<?= $ticketPage - 1 ?>" class="px-3 py-1 bg-gray-800 rounded text-sm hover:bg-gray-700">Previous</a>
+        <?php endif; ?>
+        <?php if ($ticketPage < $totalTicketPages): ?>
+        <a href="?tab=tickets&tsearch=<?= urlencode($ticketSearch) ?>&tpage=<?= $ticketPage + 1 ?>" class="px-3 py-1 bg-blue-600 rounded text-sm hover:bg-blue-500">Next</a>
+        <?php endif; ?>
+      </div>
     </div>
   </div>
 
@@ -1514,49 +1569,40 @@ function setPeriod(key) {
 }
 document.addEventListener('DOMContentLoaded', () => setPeriod('day'));
 
+function copyToClipboard(text, el) {
+  navigator.clipboard.writeText(text).then(() => {
+    if (!el) return;
+    const original = el.textContent;
+    el.textContent = '✓';
+    setTimeout(() => { el.textContent = original; }, 1200);
+  });
+}
+
 function autoFormatPhone(el) {
   let d = el.value.replace(/\D/g, '');
   if (d.length > 11) d = d.slice(0, 11);
   if (d.length === 0) { el.value = ''; return; }
-  if (d.length <= 3)       { el.value = '(' + d; return; }
-  if (d.length <= 6)       { el.value = '(' + d.slice(0,3) + ') ' + d.slice(3); return; }
-  if (d.length <= 10)      { el.value = '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6); return; }
+  if (d.length <= 3)  { el.value = '(' + d; return; }
+  if (d.length <= 6)  { el.value = '(' + d.slice(0,3) + ') ' + d.slice(3); return; }
+  if (d.length <= 10) { el.value = '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6); return; }
   el.value = '+' + d[0] + ' (' + d.slice(1,4) + ') ' + d.slice(4,7) + '-' + d.slice(7);
 }
 
 function checkPw(val) {
-    const hint = document.getElementById('cpw-hint') || document.getElementById('cpw-hint-customer');
-    if (!hint) return;
-
-    if (val.length <= 10) {
-        hint.className = 'text-xs mt-1 text-red-400';
-        hint.textContent = 'Weak password (10 characters or fewer)';
-        hint.classList.remove('hidden');
-
-    } else if (val.length <= 17) {
-        hint.className = 'text-xs mt-1 text-yellow-400';
-        hint.textContent = 'Medium password';
-        hint.classList.remove('hidden');
-
-    } else {
-        hint.className = 'text-xs mt-1 text-emerald-400';
-        hint.textContent = 'Strong password';
-        hint.classList.remove('hidden');
-    }
+  const hint = document.getElementById('cpw-hint');
+  if (!hint) return;
+  if (val.length <= 10) { hint.className = 'text-xs mt-1 text-red-400'; hint.textContent = 'Weak password (10 characters or fewer)'; }
+  else if (val.length <= 17) { hint.className = 'text-xs mt-1 text-yellow-400'; hint.textContent = 'Medium password'; }
+  else { hint.className = 'text-xs mt-1 text-emerald-400'; hint.textContent = 'Strong password'; }
 }
 
-const knownFlights = <?= json_encode(array_keys($flightMap)) ?>;
-const takenSeats    = <?= json_encode($takenSeatsByFlight) ?>;
-const dbTakenSeats  = <?php
-  $dbTaken = [];
-  foreach ($allTickets as $t) {
-    if (strtolower($t['status'] ?? '') === 'cancelled') continue;
-    $fid = $t['flight_id'] ?? '';
-    if (!$fid) continue;
-    $dbTaken[$fid][] = strtoupper($t['seat'] ?? '');
-  }
-  echo json_encode($dbTaken);
-?>;
+function checkCustomerPw(val) {
+  const hint = document.getElementById('cpw-hint-customer');
+  if (!hint) return;
+  if (val.length <= 10) { hint.className = 'text-xs mt-1 text-red-400'; hint.textContent = 'Weak password (10 characters or fewer)'; }
+  else if (val.length <= 17) { hint.className = 'text-xs mt-1 text-yellow-400'; hint.textContent = 'Medium password'; }
+  else { hint.className = 'text-xs mt-1 text-emerald-400'; hint.textContent = 'Strong password'; }
+}
 
 function showFlash(msg) {
   const el = document.getElementById('flashMsg');
@@ -1573,66 +1619,78 @@ function showError(msg) {
   el.classList.remove('hidden');
 }
 
+const takenSeats   = <?= json_encode($takenSeatsByFlight) ?>;
+const dbTakenSeats = <?php
+  $dbTaken = [];
+  foreach ($allTickets as $t) {
+    if (strtolower($t['status'] ?? '') === 'cancelled') continue;
+    $fid = $t['flight_id'] ?? '';
+    if (!$fid) continue;
+    $dbTaken[$fid][] = strtoupper($t['seat'] ?? '');
+  }
+  echo json_encode($dbTaken);
+?>;
+
 async function onFlightBlur(val) {
-  const infoEl = document.getElementById('flightInfo');
+  const infoEl  = document.getElementById('flightInfo');
   const carryOn = document.getElementById('tCarryOn').value;
   const checked = document.getElementById('tChecked').value;
 
   if (!val) {
     infoEl.classList.add('hidden');
     document.getElementById('priceSeatBase').textContent = '$0.00';
-    document.getElementById('priceBagFees').textContent = '$0.00';
-    document.getElementById('priceTotal').textContent = '$0.00';
-    document.getElementById('tPrice').value = '0';
+    document.getElementById('priceBagFees').textContent  = '$0.00';
+    document.getElementById('priceTotal').textContent    = '$0.00';
+    document.getElementById('tPrice').value       = '0';
     document.getElementById('tDestination').value = '';
-    document.getElementById('tBags').value = '0';
+    document.getElementById('tBags').value        = '0';
     return;
   }
 
   try {
-    const res = await fetch(`flight_lookup.php?flight_id=${encodeURIComponent(val)}&carry_on=${carryOn}&checked=${checked}`);
+    const res  = await fetch(`flight_lookup.php?flight_id=${encodeURIComponent(val)}&carry_on=${carryOn}&checked=${checked}`);
     const data = await res.json();
 
     if (data.error) {
       infoEl.textContent = data.error;
-      infoEl.className = 'text-xs mt-1 text-red-400';
+      infoEl.className   = 'text-xs mt-1 text-red-400';
       infoEl.classList.remove('hidden');
       document.getElementById('priceSeatBase').textContent = '$0.00';
-      document.getElementById('priceBagFees').textContent = '$0.00';
-      document.getElementById('priceTotal').textContent = '$0.00';
-      document.getElementById('tPrice').value = '0';
+      document.getElementById('priceBagFees').textContent  = '$0.00';
+      document.getElementById('priceTotal').textContent    = '$0.00';
+      document.getElementById('tPrice').value       = '0';
       document.getElementById('tDestination').value = '';
       return;
     }
 
     infoEl.textContent = `${data.flightNumber} · ${data.airline} → ${data.destination}`;
-    infoEl.className = 'text-xs mt-1 text-emerald-400';
+    infoEl.className   = 'text-xs mt-1 text-emerald-400';
     infoEl.classList.remove('hidden');
 
     document.getElementById('priceSeatBase').textContent = '$' + data.seatPrice.toFixed(2);
-    document.getElementById('priceBagFees').textContent = '$' + data.bagCost.toFixed(2);
-    document.getElementById('priceTotal').textContent = '$' + data.total.toFixed(2);
-    document.getElementById('tPrice').value = data.total;
+    document.getElementById('priceBagFees').textContent  = '$' + data.bagCost.toFixed(2);
+    document.getElementById('priceTotal').textContent    = '$' + data.total.toFixed(2);
+    document.getElementById('tPrice').value       = data.total;
     document.getElementById('tDestination').value = data.destination;
-    document.getElementById('tBags').value = (parseInt(carryOn) + parseInt(checked));
+    document.getElementById('tBags').value        = (parseInt(carryOn) + parseInt(checked));
   } catch (e) {
     infoEl.textContent = 'Could not look up flight.';
-    infoEl.className = 'text-xs mt-1 text-red-400';
+    infoEl.className   = 'text-xs mt-1 text-red-400';
     infoEl.classList.remove('hidden');
   }
 }
 
 function onSeatBlur(val) {
-  const errEl   = document.getElementById('seatErr');
+  const errEl    = document.getElementById('seatErr');
   const flightId = document.getElementById('tFlightId').value.trim();
   if (!val) { errEl.classList.add('hidden'); return; }
-  if (!/^([1-9]|9)[A-Ia-i]$/.test(val)) {
-    errEl.textContent = 'Invalid seat. Must be row 1–9, column A–I (Ex. 5A, 9I).';
+  if (!/^([1-9]|10)[A-Ia-i]$/.test(val)) {
+    errEl.textContent = 'Invalid seat. Must be row 1–10, column A–I (Ex. 5A, 10I).';
     errEl.classList.remove('hidden'); return;
   }
   const apiTaken = takenSeats[flightId] || [];
   const dbTaken  = dbTakenSeats[flightId] || [];
-  const seatUp = val.toUpperCase();
+  const seatUp   = val.toUpperCase();
   if (apiTaken.includes(seatUp) || dbTaken.includes(seatUp)) {
     errEl.textContent = 'Seat ' + seatUp + ' is already taken on this flight.';
     errEl.classList.remove('hidden'); return;
@@ -1647,50 +1705,35 @@ document.getElementById('ticketForm')?.addEventListener('submit', async function
     alert('Please fix the highlighted errors before submitting.');
     return;
   }
-
   const formData = new FormData(this);
   formData.append('action', 'create_ticket');
   formData.append('ajax', '1');
-
   try {
-    const res = await fetch(window.location.pathname + '?tab=tickets', {
-      method: 'POST',
-      body: formData
-    });
+    const res  = await fetch(window.location.pathname + '?tab=tickets', { method:'POST', body:formData });
     const data = await res.json();
     if (data.success) {
-      if (data.redirect) {
-        window.location.href = data.redirect;
-      } else {
+      if (data.redirect) { window.location.href = data.redirect; }
+      else {
         showFlash(data.message);
         this.reset();
         document.getElementById('flightInfo').classList.add('hidden');
         document.getElementById('priceSeatBase').textContent = '$0.00';
-        document.getElementById('priceBagFees').textContent = '$0.00';
-        document.getElementById('priceTotal').textContent = '$0.00';
+        document.getElementById('priceBagFees').textContent  = '$0.00';
+        document.getElementById('priceTotal').textContent    = '$0.00';
         setTimeout(() => window.location.reload(), 900);
       }
-    } else {
-      showError(data.message || 'Something went wrong.');
-    }
-  } catch (err) {
-    showError('Something went wrong. Please try again.');
-  }
+    } else { showError(data.message || 'Something went wrong.'); }
+  } catch (err) { showError('Something went wrong. Please try again.'); }
 });
 
 document.querySelectorAll('.cancel-ticket-form').forEach(form => {
   form.addEventListener('submit', async function(e) {
     e.preventDefault();
     if (!confirm('Cancel this ticket? This cannot be undone.')) return;
-
     const formData = new FormData(this);
     formData.append('ajax', '1');
-
     try {
-      const res = await fetch(window.location.pathname + '?tab=tickets', {
-        method: 'POST',
-        body: formData
-      });
+      const res  = await fetch(window.location.pathname + '?tab=tickets', { method:'POST', body:formData });
       const data = await res.json();
       if (data.success) {
         showFlash(data.message);
@@ -1698,15 +1741,11 @@ document.querySelectorAll('.cancel-ticket-form').forEach(form => {
         const row = document.querySelector(`tr[data-ticket-id="${tid}"]`);
         if (row) {
           row.classList.add('cancelled-row');
-          const statusCell = row.querySelector('.status-cell');
-          if (statusCell) statusCell.innerHTML = '<span class="text-xs text-gray-700">Cancelled</span>';
+          const sc = row.querySelector('.status-cell');
+          if (sc) sc.innerHTML = '<span class="text-xs text-gray-700">Cancelled</span>';
         }
-      } else {
-        showError(data.message || 'Something went wrong.');
-      }
-    } catch (err) {
-      showError('Something went wrong. Please try again.');
-    }
+      } else { showError(data.message || 'Something went wrong.'); }
+    } catch (err) { showError('Something went wrong. Please try again.'); }
   });
 });
 
@@ -1715,22 +1754,48 @@ document.querySelectorAll('.update-customer-form').forEach(form => {
     e.preventDefault();
     const formData = new FormData(this);
     formData.append('ajax', '1');
-
     try {
-      const res = await fetch(window.location.pathname + '?tab=customers', {
-        method: 'POST',
-        body: formData
-      });
+      const res  = await fetch(window.location.pathname + '?tab=customers', { method:'POST', body:formData });
       const data = await res.json();
       if (data.success) {
         showFlash(data.message);
         setTimeout(() => window.location.href = '?tab=customers', 900);
-      } else {
-        showError(data.message || 'Something went wrong.');
-      }
-    } catch (err) {
-      showError('Something went wrong. Please try again.');
-    }
+      } else { showError(data.message || 'Something went wrong.'); }
+    } catch (err) { showError('Something went wrong. Please try again.'); }
+  });
+});
+
+document.querySelectorAll('.delete-customer-form').forEach(form => {
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    formData.append('ajax', '1');
+    try {
+      const res  = await fetch(window.location.pathname + '?tab=customers', { method:'POST', body:formData });
+      const data = await res.json();
+      if (data.success) {
+        showFlash(data.message);
+        const row = this.closest('tr');
+        if (row) row.remove();
+      } else { showError(data.message || 'Something went wrong.'); }
+    } catch (err) { showError('Something went wrong. Please try again.'); }
+  });
+});
+
+document.querySelectorAll('.delete-admin-form').forEach(form => {
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    formData.append('ajax', '1');
+    try {
+      const res  = await fetch(window.location.pathname + '?tab=admins', { method:'POST', body:formData });
+      const data = await res.json();
+      if (data.success) {
+        showFlash(data.message);
+        const row = this.closest('tr');
+        if (row) row.remove();
+      } else { showError(data.message || 'Something went wrong.'); }
+    } catch (err) { showError('Something went wrong. Please try again.'); }
   });
 });
 </script>

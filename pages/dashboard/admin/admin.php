@@ -4,23 +4,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 require_once '../../../api/key.php';
 require_once '../../../api/api.php';
 require_once '../../../database/db.php';
-/** 
-$_SESSION['user_id'] = 25;
-$_SESSION['role'] = 'customer';
 
-$stmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
-$stmt->execute([$_SESSION['user_id']]);
-$dbUser = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$dbUser) {
-    die("User not found.");
-}
-
-if (strtolower($_SESSION['role'] ?? '') !== 'customer') {
-    header('Location: ../../../index.php');
-    exit;
-}
-*/
 $sessionUserId = $_SESSION['user_id'] ?? null;
 
 if (!$sessionUserId) {
@@ -383,6 +367,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $errorMsg = 'Please enter a valid email address (must contain "@" and ".").';
         } elseif ($phone !== '' && phoneHasLetters($phone)) {
             $errorMsg = 'Phone number cannot contain letters.';
+        } elseif ($uid !== '' && !ctype_digit($uid)) {
+            $errorMsg = 'User ID must contain numbers only.';
         } elseif (isOnNoFlyList($nameFirst, $nameLast, $noFlyList)) {
             $errorMsg = "{$nameFirst} {$nameLast} is on the no-fly list.";
         } else {
@@ -465,6 +451,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $activeTab = 'tickets';
     }
 
+    if ($_POST['action'] === 'delete_customer') {
+        $uid = $_POST['user_id'] ?? '';
+        if ($uid) {
+            $del = $pdo->prepare('DELETE FROM "Users" WHERE user_id = ? AND LOWER(role) = \'customer\'');
+            $del->execute([$uid]);
+            $updateMsg = 'Customer account deleted.';
+        }
+        $usersStmt = $pdo->query('SELECT * FROM "Users" WHERE LOWER(role) = \'customer\' ORDER BY user_id ASC');
+        $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => $updateMsg]);
+            exit;
+        }
+
+        $activeTab = 'customers';
+    }
+
     if ($_POST['action'] === 'delete_unhashed_admins') {
         $delStmt = $pdo->query('SELECT user_id, password FROM "Users" WHERE LOWER(role) = \'admin\'');
         $adminsAll = $delStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -495,6 +500,13 @@ foreach ($allFlights as $f) {
         if ($s) $seats[] = strtoupper($s);
     }
     $takenSeatsByFlight[$fid] = $seats;
+}
+
+function getFlightInfo(string $fid, array $flightMap, AirportsAPI $api): ?array {
+    if (!$fid) return null;
+    if (isset($flightMap[$fid])) return $flightMap[$fid];
+    $f = $api->getFlightById($fid);
+    return $f ?: null;
 }
 ?>
 <!DOCTYPE html>
@@ -563,6 +575,8 @@ foreach ($allFlights as $f) {
     font-weight: 700;
     padding: .75rem 0 .4rem;
 }  .section-label:first-child { border-top:none; margin-top:0; }
+  .copy-btn { cursor:pointer; transition:color .12s; }
+  .copy-btn:hover { color:#60a5fa; }
 </style>
 </head>
 <body class="bg-gray-900 min-h-screen text-white">
@@ -631,7 +645,7 @@ foreach ($allFlights as $f) {
     <?php endforeach; ?>
   </div>
 
-  <div class="grid xl:grid-cols-4 md:grid-cols-2 gap-4">
+  <div class="grid xl:grid-cols-3 md:grid-cols-2 gap-4">
       <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 overflow-hidden transition duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-blue-500">
         <p class="text-gray-400 text-sm">
             Tickets Sold
@@ -654,11 +668,6 @@ foreach ($allFlights as $f) {
       <p class="text-gray-400 text-sm">Total Customers</p>
       <h2 class="text-4xl font-extrabold mt-3 tabular-nums"><?= count($allUsers) ?></h2>
       <p class="text-gray-600 text-xs mt-2">Registered customer accounts</p>
-    </div>
-    <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 overflow-hidden transition duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-blue-500">
-      <p class="text-gray-400 text-sm">Total Tickets</p>
-      <h2 class="text-4xl font-extrabold mt-3 tabular-nums"><?= count($allTickets) ?></h2>
-      <p class="text-gray-600 text-xs mt-2">All time, all statuses</p>
     </div>
   </div>
 
@@ -825,7 +834,7 @@ $filteredUsers = array_slice(
           </div>
           <div>
             <label class="block text-xs text-gray-400 mb-1">ZIP</label>
-            <input type="text" name="zip" class="field">
+            <input type="text" name="zip" class="field" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9-]/g,'')">
           </div>
         </div>
         <div>
@@ -875,7 +884,7 @@ $filteredUsers = array_slice(
           </div>
           <div>
             <label class="block text-xs text-gray-400 mb-1">ZIP</label>
-            <input type="text" name="zip" value="<?= htmlspecialchars($editUser['zip_code'] ?? '') ?>" class="field">
+            <input type="text" name="zip" value="<?= htmlspecialchars($editUser['zip_code'] ?? '') ?>" class="field" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9-]/g,'')">
           </div>
         </div>
         <div>
@@ -973,8 +982,15 @@ $filteredUsers = array_slice(
                     <?= htmlspecialchars($u['country'] ?? '—') ?>
                 </td>
 
-                <td class="px-5 py-4">
+                <td class="px-5 py-4 flex items-center gap-4">
                   <a href="?tab=customers&edit=<?= urlencode((string)($u['user_id'] ?? '')) ?>" class="text-blue-400 hover:text-blue-300 transition text-sm font-semibold">Edit</a>
+                  <form method="POST" class="inline delete-customer-form" data-user-id="<?= htmlspecialchars((string)($u['user_id'] ?? '')) ?>">
+                    <input type="hidden" name="action" value="delete_customer">
+                    <input type="hidden" name="user_id" value="<?= htmlspecialchars((string)($u['user_id'] ?? '')) ?>">
+                    <button type="submit"
+                      onclick="return confirm('Delete customer <?= htmlspecialchars(addslashes(trim(($u['first_name'] ?? '') . ' ' . ($u['last_name'] ?? '')))) ?>? This cannot be undone.')"
+                      class="text-sm text-red-400 hover:text-red-300 font-semibold transition">Delete</button>
+                  </form>
                 </td>
 
             </tr>
@@ -1029,7 +1045,7 @@ $filteredUsers = array_slice(
     foreach ($allTickets as $t) {
       if (strtoupper($t['confirmation_code'] ?? '') === strtoupper($confLookup)) {
         $lookupTicket = $t;
-        $lookupFlight = $flightMap[$t['flight_id'] ?? ''] ?? null;
+        $lookupFlight = getFlightInfo($t['flight_id'] ?? '', $flightMap, $api);
         break;
       }
     }
@@ -1163,10 +1179,10 @@ $filteredTickets = array_slice(
         </div>
         <div>
           <label class="block text-xs text-gray-400 mb-3">User ID (If Customer) <span class="text-gray-600">(optional)</span></label>
-          <input type="text" name="user_id" placeholder="Leave blank for guest" class="field">
+          <input type="text" name="user_id" id="tUserId" placeholder="Leave blank for guest" class="field" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
         </div>
 
-        <button type="submit" class="w-full h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg" data-skip-loader>
+        <button type="submit" class="w-full h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg data-skip-loader">
           Create Ticket 
         </button>
       </form>
@@ -1192,11 +1208,13 @@ $filteredTickets = array_slice(
           $rows = [
             'Confirmation' => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-blue-300">' . htmlspecialchars($lookupTicket['confirmation_code']) . '</code>',
             'Passenger'    => htmlspecialchars(trim(($lookupTicket['name_first'] ?? '') . ' ' . ($lookupTicket['name_last'] ?? '—'))),
-            'Flight ID'    => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-xs text-gray-300">' . htmlspecialchars($lookupTicket['flight_id'] ?? '—') . '</code>',
+            'Flight ID'    => '<span class="inline-flex items-center gap-2"><code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-xs text-gray-300">' . htmlspecialchars($lookupTicket['flight_id'] ?? '—') . '</code>' . (!empty($lookupTicket['flight_id']) ? '<span class="copy-btn text-gray-500 text-xs" onclick="copyToClipboard(\'' . htmlspecialchars(addslashes($lookupTicket['flight_id']), ENT_QUOTES) . '\', this)" title="Copy flight ID">📋</span>' : '') . '</span>',
+            'Flight #'     => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-xs text-gray-300">' . htmlspecialchars($lf['flightNumber'] ?? '—') . '</code>',
                 'Route' => htmlspecialchars(
                 'SMN → ' . strtoupper($lookupTicket['destination'] ?? '—')
             ),
-       'Departure' => '<code class="bg-gray-800 px-2 py-0.5 rounded font-mono text-xs text-gray-300">' . 'SMN' . '</code>',            'Seat'         => htmlspecialchars($lookupTicket['seat'] ?? '—'),
+            'Destination' => htmlspecialchars(strtoupper($lookupTicket['destination'] ?? '—')),
+            'Seat'         => htmlspecialchars($lookupTicket['seat'] ?? '—'),
             'Price'        => '$' . number_format(parseTicketPrice($lookupTicket['price'] ?? 0), 2),
             'Status'       => statusBadge($lookupTicket['status'] ?? 'unknown'),
           ];
@@ -1249,8 +1267,9 @@ $filteredTickets = array_slice(
                     <th class="text-left px-4 py-3">Confirmation</th>
             <th class="text-left px-4 py-3">Passenger</th>
             <th class="text-left px-4 py-3">Flight #</th>
+            <th class="text-left px-4 py-3">Flight ID</th>
             <th class="text-left px-4 py-3">Route</th>
-            <th class="text-left px-4 py-3">Departure</th>
+            <th class="text-left px-4 py-3">Destination</th>
             <th class="text-left px-4 py-3">Seat</th>
             <th class="text-left px-4 py-3">Price</th>
             <th class="text-left px-4 py-3">Status</th>
@@ -1258,16 +1277,14 @@ $filteredTickets = array_slice(
         </thead>
         <tbody>
         <?php foreach ($filteredTickets as $t):
-          $f           = $flightMap[$t['flight_id'] ?? ''] ?? [];
-          $depTs       = (int)($f['departureTime'] ?? 0);
+          $fid = $t['flight_id'] ?? '';
+          $f   = getFlightInfo($fid, $flightMap, $api) ?? [];
           $isCancelled = strtolower($t['status'] ?? '') === 'cancelled';
           $passenger   = trim(($t['name_first'] ?? '') . ' ' . ($t['name_last'] ?? ''));
           if (!$passenger) $passenger = '—';
           $safeP = '$' . number_format(parseTicketPrice($t['price'] ?? '0'), 2);
         $destination = $t['destination'] ?? '—';
 $route = 'SMN → ' . strtoupper($destination);
-
-$dep = 'SMN';
         ?>
 <tr class="border-t border-gray-700 hover:bg-gray-700/40 transition <?= $isCancelled ? 'cancelled-row' : '' ?>"
     data-ticket-id="<?= htmlspecialchars($t['ticket_id']) ?>">          <td class="px-4 py-3">
@@ -1275,10 +1292,18 @@ $dep = 'SMN';
           </td>
           <td class="px-4 py-3 text-gray-300"><?= htmlspecialchars($passenger) ?></td>
           <td class="px-4 py-3 font-semibold text-xs">
-            <?= htmlspecialchars($f['flightNumber'] ?? ($t['flight_id'] ? '…' . substr($t['flight_id'], -5) : '—')) ?>
+            <?= htmlspecialchars($f['flightNumber'] ?? '—') ?>
+          </td>
+          <td class="px-4 py-3 text-xs">
+            <span class="inline-flex items-center gap-1">
+              <code class="bg-gray-800 px-1.5 py-0.5 rounded text-gray-400 font-mono"><?= htmlspecialchars($fid ?: '—') ?></code>
+              <?php if ($fid): ?>
+              <span class="copy-btn text-gray-500" onclick="copyToClipboard('<?= htmlspecialchars(addslashes($fid), ENT_QUOTES) ?>', this)" title="Copy flight ID">📋</span>
+              <?php endif; ?>
+            </span>
           </td>
           <td class="px-4 py-3 text-gray-400 text-xs whitespace-nowrap"><?= $route ?></td>
-          <td class="px-4 py-3 text-gray-400 text-xs whitespace-nowrap"><?= $dep ?></td>
+          <td class="px-4 py-3 text-gray-400 text-xs whitespace-nowrap"><?= htmlspecialchars(strtoupper($destination)) ?></td>
           <td class="px-4 py-3 text-gray-400 text-xs"><?= htmlspecialchars($t['seat'] ?? '—') ?></td>
           <td class="px-4 py-3 text-gray-300 text-xs font-mono"><?= $safeP ?></td>
           <td class="px-4 py-3 status-cell">
@@ -1299,7 +1324,7 @@ $dep = 'SMN';
         </tr>
         <?php endforeach; ?>
         <?php if (empty($filteredTickets)): ?>
-        <tr><td colspan="8" class="px-5 py-10 text-center text-gray-600">No tickets found.</td></tr>
+        <tr><td colspan="9" class="px-5 py-10 text-center text-gray-600">No tickets found.</td></tr>
         <?php endif; ?>
         </tbody>
       </table>
@@ -1347,6 +1372,15 @@ function setPeriod(key) {
   if (lbl) lbl.textContent = 'Active tickets · ' + (periodLabels[key] || key);
 }
 document.addEventListener('DOMContentLoaded', () => setPeriod('day'));
+
+function copyToClipboard(text, el) {
+  navigator.clipboard.writeText(text).then(() => {
+    if (!el) return;
+    const original = el.textContent;
+    el.textContent = '✓';
+    setTimeout(() => { el.textContent = original; }, 1200);
+  });
+}
 
 function autoFormatPhone(el) {
   let d = el.value.replace(/\D/g, '');
@@ -1559,6 +1593,31 @@ document.querySelectorAll('.update-customer-form').forEach(form => {
       if (data.success) {
         showFlash(data.message);
         setTimeout(() => window.location.href = '?tab=customers', 900);
+      } else {
+        showError(data.message || 'Something went wrong.');
+      }
+    } catch (err) {
+      showError('Something went wrong. Please try again.');
+    }
+  });
+});
+
+document.querySelectorAll('.delete-customer-form').forEach(form => {
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    formData.append('ajax', '1');
+
+    try {
+      const res = await fetch(window.location.pathname + '?tab=customers', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        showFlash(data.message);
+        const row = this.closest('tr');
+        if (row) row.remove();
       } else {
         showError(data.message || 'Something went wrong.');
       }
