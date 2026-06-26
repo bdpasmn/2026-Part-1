@@ -23,7 +23,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
             $flights[] = [
                 "flight_id" => $f['flight_id'] ?? null,
                 "status"    => $f['status'] ?? '',
-                "gate"      => $f['gate'] ?? ''
+                "gate"      => $f['gate'] ?? 'TBD'
             ];
         }
 
