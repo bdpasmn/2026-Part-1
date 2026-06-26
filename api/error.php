@@ -72,7 +72,7 @@ if (array_key_exists($errorCode, $errorMessages)) {
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
             <a href="javascript:history.back()"
                class="px-6 py-3 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-medium transition">
-                Go Back
+                Try again
             </a>
 
             <a href="/index.php"

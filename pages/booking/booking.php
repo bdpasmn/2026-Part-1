@@ -244,7 +244,7 @@
                 }
 
                 if (checked > 2) {
-                    bagCost + (checked - 2) * 100;
+                    bagCost = bagCost + (checked - 2) * 100;
                 }
 
                 const total = seatPrice + bagCost;
@@ -377,6 +377,47 @@
             });
 
             validateSaveCardOption();
+
+            window.addEventListener("pageshow", function (event) {
+                if (event.persisted || performance.getEntriesByType("navigation")[0]?.type === "back_forward") {
+
+                    closeReviewModal();
+
+                    selectedSeat = null;
+
+                    document.getElementById("seatInput").value = "";
+                    document.getElementById("modalSeatInput").value = "";
+
+                    document.getElementById("selectedSeat").innerText = "None selected";
+                    document.getElementById("selectedPrice").innerText = "$0";
+
+                    document.querySelectorAll(".seat-btn").forEach(btn => {
+                        btn.classList.remove("bg-blue-500");
+                        btn.classList.remove("border-blue-300");
+
+                        btn.classList.add("bg-slate-600");
+                        btn.classList.add("border-gray-500");
+                    });
+
+                    const saveCardCheckbox = document.getElementById("saveCardCheckbox");
+                    const cardNameContainer = document.getElementById("cardNameContainer");
+                    const cardName = document.getElementById("cardName");
+
+                    if (saveCardCheckbox) {
+                        saveCardCheckbox.checked = false;
+                    }
+
+                    if (cardNameContainer) {
+                        cardNameContainer.classList.add("hidden");
+                    }
+
+                    if (cardName) {
+                        cardName.value = "";
+                    }
+
+                    validateBooking();
+                }
+            });
         </script>
     </body>
 </html>

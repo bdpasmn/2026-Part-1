@@ -418,11 +418,8 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
                 </p>
             </div>
         <?php else: ?>
-            <div class="mb-4 text-sm text-gray-400">
-                Showing <?= ($offset + 1) ?> to <?= min($offset + $perPage, $totalFlights) ?> of <?= $totalFlights ?> flights
-            </div>
 
-            <div id="flightContainer" class="space-y-4">
+            <div id="flightContainer" class="space-y-4 mt-3">
                 <?php foreach ($paginatedFlights as $f): ?>
                     <?php
                         $flightTime = $getTime($f);
