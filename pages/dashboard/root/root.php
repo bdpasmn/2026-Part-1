@@ -579,7 +579,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         'success' => true,
                         'message' => $updateMsg,
                         'confirmation_code' => $code,
-                        'redirect' => '../../../booking/confirmation.php?confirmation=' . urlencode($code)
+                        'redirect' => '../../booking/confirmation.php?confirmation=' . urlencode($code)
                     ]);
                     exit;
                 }

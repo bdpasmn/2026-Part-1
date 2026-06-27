@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 - Server Error</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        .icon-filter {
+            filter: brightness(0) invert(1);
+        }
+
+        .text-shadow {
+            text-shadow: 2px 2px 4px rgba(0,0,0,.5);
+        }
+
+        .text-shadow-sm {
+            text-shadow: 1px 1px 2px rgba(0,0,0,.5);
+        }
+
+        @media (max-width: 500px) {
+            .flex-row {
+                flex-direction: column !important;
+                text-align: center !important;
+            }
+
+            .mr-5 {
+                margin-right: 0 !important;
+                margin-bottom: .625rem !important;
+            }
+
+            .ml-12,
+            .sm\:ml-5 {
+                margin-left: 0 !important;
+                text-align: center !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white min-h-screen font-sans">
+
+<?php include "./components/nav.php"; ?>
+
+<div class="mt-10 flex items-center justify-center px-5">
+
+    <div class="max-w-4xl w-full text-center">
+
+        <div class="p-10 flex items-center justify-center flex-row mb-6">
+
+            <div class="mr-5">
+                <img src="https://static.thenounproject.com/png/1648939-200.png"
+                     alt="Error"
+                     class="w-28 h-auto icon-filter lg:w-32 md:w-24 sm:w-20">
+            </div>
+
+            <h1 class="text-8xl font-bold text-shadow lg:text-9xl md:text-7xl sm:text-5xl">
+                500
+            </h1>
+
+        </div>
+
+        <p class="text-2xl text-shadow-sm leading-relaxed lg:text-2xl md:text-xl sm:text-lg">
+            Something went wrong on our side.
+        </p>
+
+        <div class="bg-gray-800 p-6 rounded-xl mt-6 border border-gray-700 shadow-lg text-left max-w-2xl mx-auto">
+
+            <p class="text-white font-semibold mb-2">
+                What happened:
+            </p>
+
+            <p class="text-gray-300">• The server encountered an unexpected error.</p>
+            <p class="text-gray-300">• This is not your fault.</p>
+            <p class="text-gray-300">• Please try again later.</p>
+
+            <p class="mt-0 text-gray-300">
+                • <a href="/smn/index.php"
+                     class="text-blue-400 hover:text-blue-300 underline">
+                    Return Home
+                </a>
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>

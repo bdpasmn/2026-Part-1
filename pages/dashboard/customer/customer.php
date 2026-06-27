@@ -94,6 +94,8 @@ $requiredProfileFields = [
     'state'          => $dbUser['state']           ?? '',
     'zip_code'       => $dbUser['zip_code']         ?? '',
     'date_birth'     => $dbUser['date_birth']       ?? ($dbUser['date_of_birth'] ?? ''),
+    'country'        => $dbUser['country']        ?? '',
+    'sex'            => $dbUser['sex']            ?? '',
 ];
 $missingProfileFields = [];
 foreach ($requiredProfileFields as $key => $val) {
@@ -1124,8 +1126,8 @@ function fmtTs(ts) {
           </div>
         </div>
         <div>
-          <label class="block text-sm text-gray-400 mb-1">Sex/Gender</label>
-          <select name="sex" class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <label class="block text-sm text-gray-400 mb-1">Sex/Gender*</label>
+          <select required name="sex" class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             <?php
             $sexOptions = [
               '' => 'Select',
@@ -1180,12 +1182,18 @@ function fmtTs(ts) {
             <input type="text" name="state" required value="<?= htmlspecialchars($dbUser['state'] ?? '') ?>"
               class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
+        <div>
+          <label class="block text-sm text-gray-400 mb-1">Country*</label>
+          <input required type="text" name="country" value="<?= htmlspecialchars($dbUser['country'] ?? '') ?>"
+            class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        </div>
+        
           <div>
             <label class="block text-sm text-gray-400 mb-1">ZIP Code*</label>
             <input type="text" name="zip" required value="<?= htmlspecialchars($dbUser['zip_code'] ?? '') ?>"
-              class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+             class="w-full h-10 bg-gray-700 border border-gray-600 rounded-lg px-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
-        </div>
 
         <?php if ($missingPassword): ?>
         <div class="border-t border-gray-700 pt-4 mt-2">

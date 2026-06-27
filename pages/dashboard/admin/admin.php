@@ -459,7 +459,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         'success' => true,
                         'message' => $updateMsg,
                         'confirmation_code' => $code,
-                        'redirect' => '/pages/booking/confirmation.php?confirmation=' . urlencode($code)
+                        'redirect' => '../../booking/confirmation.php?confirmation=' . urlencode($code)
                     ]);
                     exit;
                 }
@@ -806,7 +806,7 @@ $filteredUsers = array_slice(
           <input type="text" name="last_name" required class="field">
         </div>
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Emai Address*</label>
+          <label class="block text-xs text-gray-400 mb-1">Email Address*</label>
           <input type="email" name="email" required pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
             title="Email must contain &quot;@&quot; and &quot;.&quot;" class="field">
         </div>

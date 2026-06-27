@@ -7,7 +7,7 @@
 
     $parts = explode('/', trim($_SERVER['SCRIPT_NAME'], '/'));
     $baseUrl = '/' . $parts[0] . '/' . $parts[1];
-    define('BASE_URL', $baseUrl);
+    define('BASE_URL', "\smn");
 
     $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     $currentTab = $_GET['tab'] ?? null;
@@ -34,12 +34,7 @@
                 header('Location: ' . BASE_URL . '/pages/dashboard/customer/customer.php?tab=profile');
                 exit;
             }
-        } else {
-            if ($currentFile == 'customer.php' && $currentTab == 'profile') {
-                header('Location: ' . BASE_URL . '/pages/dashboard/customer/customer.php?tab=overview');
-                exit;
-            }
-        }
+        } 
     }
     
     if ($isLoggedIn) {
@@ -68,7 +63,7 @@
 ?>
 
 <head>
-<link rel="icon" href="<?= BASE_URL ?>/favicon.ico">
+<link rel="icon" href="/smn/favicon.ico">
 </head>
 
 <div id="loading-overlay" class="fixed inset-0 z-50 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center">
@@ -161,7 +156,7 @@
             <?php if ($role == 'admin' || $role == 'root'): ?>
                 <?php $active = $currentTab == 'customers'; ?>
                 <a href="<?= BASE_URL ?>/pages/dashboard/<?= $role ?>/<?= $role ?>.php?tab=customers" class="relative group">
-                    <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">customers</span>
+                    <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Customers</span>
                     <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
                 </a>
 

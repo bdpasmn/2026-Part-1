@@ -136,7 +136,7 @@ if (is_numeric($errorCode) && $errorCode >= 500 && $errorCode <= 529) {
                     <?php endif; ?>
                 </p>
                 <p class="my-1 mt-0 text-gray-300 text-base">
-                    • <a href="/bdpa_airports/2026-Part-1/index.php"
+                    • <a href="/index.php"
                         class="text-blue-400 hover:text-blue-300 underline">
                         Try returning to home?
                     </a>

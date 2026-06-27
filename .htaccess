@@ -1,0 +1,3 @@
+AddType application/x-httpd-php .shtml
+ErrorDocument 404 /smn/404.shtml
+ErrorDocument 500 /smn/500.shtml

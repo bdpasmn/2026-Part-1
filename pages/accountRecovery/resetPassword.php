@@ -1,9 +1,8 @@
-```php
 <?php
     // Start the session and connect to the database/api
     session_start();
     require_once "../../database/db.php";
-    require_once '/../../api/api.php';
+    require_once __DIR__ . "/../../api/api.php";
     
     // Redirect users who are already logged in
     if (isset($_SESSION['user_id'])) {
