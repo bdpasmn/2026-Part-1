@@ -2,8 +2,8 @@
     // Session start and database connection
     session_start();
 
-    require_once  "../../database/db.php";
-    require_once __DIR__ . '/../../api/api.php';
+    require_once "../../database/db.php";
+    require_once '/../../api/api.php';
 
     // Get user role from session (used for redirect protection)
     $role = $_SESSION['role'] ?? null;
