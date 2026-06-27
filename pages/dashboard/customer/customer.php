@@ -5,6 +5,7 @@ require_once '../../../api/key.php';
 require_once '../../../api/api.php';
 require_once '../../../database/db.php';
 
+// Only logged-in customers can view this dashboard
 if (strtolower($_SESSION['role'] ?? '') !== 'customer') {
   header('Location: ../../../index.php');
   exit;
@@ -14,6 +15,7 @@ if (!$_SESSION['user_id']) {
 header('Location: ../../../index.php');
 exit;
 }
+// Load the current user's row from the database
 $stmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
 $stmt->execute([$_SESSION['user_id']]);
 $dbUser = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -21,6 +23,8 @@ $dbUser = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$dbUser) {
     die("User not found.");
 }
+
+// Format a raw card number into groups of 4 digits for display
 function formatCard($num) {
   $num = preg_replace('/\D/', '', $num); // safety 
   return trim(chunk_split($num, 4, ' '));
@@ -30,7 +34,7 @@ if (!$dbUser) {
     die("User not found.");
 }
 
-
+// Determine the visitor's IP address, checking proxy headers first
 function getUserIp() {
     $keys = [
         'HTTP_CF_CONNECTING_IP',
@@ -48,11 +52,13 @@ function getUserIp() {
     return '0.0.0.0';
 }
 
+// Stamp the IP/time of this login once per session
 if (!isset($_SESSION['last_login_ip'])) {
     $_SESSION['last_login_ip'] = getUserIp();
     $_SESSION['last_login_datetime'] = date('Y-m-d H:i:s');
 }
 
+// Decode the user's saved preferences JSON, falling back to defaults
 function decodePrefs($raw): array {
     $defaults = [
         'flight_sort'  => 'time_asc',
@@ -66,6 +72,7 @@ function decodePrefs($raw): array {
 
 $prefs = decodePrefs($dbUser['sort_preference'] ?? null);
 
+// Build a normalized view of the current user for use throughout the page
 $currentUser = [
     'id'                  => $_SESSION['user_id'],
     'name'                => trim(($dbUser['first_name'] ?? '') . ' ' . ($dbUser['last_name'] ?? '')),
@@ -79,6 +86,7 @@ $currentUser = [
     'flight_sort'         => $prefs['flight_sort'],
 ];
 
+// Check which profile fields are still missing to decide if the profile is complete
 $requiredProfileFields = [
     'email'          => $dbUser['email']          ?? '',
     'street_address' => $dbUser['street_address']  ?? '',
@@ -95,21 +103,24 @@ foreach ($requiredProfileFields as $key => $val) {
 }
 $missingPassword = trim((string)($dbUser['password'] ?? '')) === '';
 
+// Profile is "incomplete" if any required field or the password is missing
 $profileIncomplete = !empty($missingProfileFields) || $missingPassword;
 $_SESSION['profile_incomplete'] = $profileIncomplete;
 $_SESSION['profile_complete'] = !$profileIncomplete;
 
 $activeTab = $_GET['tab'] ?? 'overview';
 
+// Only fetch live flight data when the active tab actually needs it (perf optimization)
 $needsFlightDetails = in_array($activeTab, ['overview', 'flights'], true);
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
-
+// Pull airline/airport reference data, and flight data only if needed
 $airlinesData   = $api->getAirlines();
 $airportsData   = $api->getAirports();
 $allFlightsData = $needsFlightDetails ? $api->getAllFlights() : null;
 
+// Build a quick lookup map of airline ID -> airline name
 $airlinesMap = [];
 if ($airlinesData && isset($airlinesData['airlines'])) {
     foreach ($airlinesData['airlines'] as $a) {
@@ -118,6 +129,7 @@ if ($airlinesData && isset($airlinesData['airlines'])) {
     }
 }
 
+// Build a quick lookup map of airport code -> airport name
 $airportsMap = [];
 if ($airportsData && isset($airportsData['airports'])) {
     foreach ($airportsData['airports'] as $ap) {
@@ -126,6 +138,7 @@ if ($airportsData && isset($airportsData['airports'])) {
     }
 }
 
+// Normalize all flights and index them by flight_id for fast lookup
 $allFlights = [];
 $flightMap  = [];
 if ($allFlightsData && isset($allFlightsData['flights'])) {
@@ -137,14 +150,17 @@ if ($allFlightsData && isset($allFlightsData['flights'])) {
     }
 }
 
+// Load this customer's saved payment cards
 $cardsStmt = $pdo->prepare('SELECT * FROM "Saved Cards" WHERE user_id = ?');
 $cardsStmt->execute([$_SESSION['user_id']]);
 $savedCards = $cardsStmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Load this customer's tickets
 $ticketsStmt = $pdo->prepare('SELECT * FROM "Tickets" WHERE user_id = ?');
 $ticketsStmt->execute([$_SESSION['user_id']]);
 $userTickets = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Map raw API flight fields into a consistent shape used across the dashboard
 function normalizeFlight(array $f): array {
   return [
       'flight_id'     => $f['flight_id'] ?? '',
@@ -160,6 +176,7 @@ function normalizeFlight(array $f): array {
   ];
 }
 
+// Look up a single flight's live details by flight ID via the API
 function getFlightById(AirportsAPI $api, $flightId) {
   if (!$flightId) return null;
 
@@ -178,6 +195,7 @@ $upcomingFlights = [];
 $pastFlights = [];
 $linkedFlightIds = [];
 
+// Attach live flight info to each ticket and bucket into upcoming vs past
 if ($needsFlightDetails) {
     foreach ($userTickets as $ticket) {
         if (strtolower($ticket['status'] ?? '') === 'cancelled') {
@@ -227,6 +245,7 @@ if ($needsFlightDetails) {
 
 $sortKey = $currentUser['flight_sort'];
 
+// Sort upcoming flight rows by the user's chosen preference (time, airline, or gate)
 function sortFlightRows(array $rows, string $sortKey): array {
     usort($rows, function ($a, $b) use ($sortKey) {
         $fa = $a['flight'];
@@ -260,15 +279,18 @@ function sortFlightRows(array $rows, string $sortKey): array {
 
 $upcomingFlights = sortFlightRows($upcomingFlights, $sortKey);
 
+// Past flights are always sorted most-recent-first
 usort($pastFlights, function ($a, $b) {
   return ($b['flight']['departureTime'] ?? 0)
       <=> ($a['flight']['departureTime'] ?? 0);
 });
 
+// Force the user to the Profile tab until required fields are filled in
 if ($profileIncomplete && $activeTab !== 'profile') {
     header('Location: ?tab=profile');
     exit;
 }
+// Format a raw phone number string into a display-friendly US format
 function formatPhone($phone) {
   $phoneDigits = preg_replace('/\D/', '', $phone);
 
@@ -295,8 +317,10 @@ $guestMsg   = $_SESSION['flash_guest_msg']    ?? null;
 $guestError = $_SESSION['flash_guest_error']  ?? null;
 unset($_SESSION['flash_msg'], $_SESSION['flash_guest_msg'], $_SESSION['flash_guest_error']);
 
+// Handle all form submissions for this dashboard, dispatched by "action"
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
+// Update profile info, and set a password if one was never set
 if ($_POST['action'] === 'update_profile') {
         $email      = trim($_POST['email']      ?? '');
         $phone = formatPhone($_POST['phone'] ?? '');
@@ -372,6 +396,7 @@ if ($_POST['action'] === 'update_profile') {
         exit;
     }
 
+    // Update flight sort order and auto-logout timer preferences
     if ($_POST['action'] === 'update_preferences') {
         $newPrefs = $prefs;
 
@@ -391,6 +416,7 @@ if ($_POST['action'] === 'update_profile') {
         exit;
     }
 
+    // Link a guest booking (no user_id) to this account via confirmation code
     if ($_POST['action'] === 'add_guest_flight') {
         $conf = trim($_POST['confirmation_number'] ?? '');
 
@@ -417,6 +443,7 @@ if ($_POST['action'] === 'update_profile') {
         exit;
     }
 
+    // Delete a saved card belonging to this user
     if ($_POST['action'] === 'remove_card') {
         $removeId = $_POST['card_id'] ?? '';
         $del = $pdo->prepare('DELETE FROM "Saved Cards" WHERE card_id = ? AND user_id = ?');
@@ -426,6 +453,7 @@ if ($_POST['action'] === 'update_profile') {
         exit;
     }
 
+    // Validate and save a new payment card
     if ($_POST['action'] === 'add_card') {
       $cardNumber = formatCard($_POST['card_number'] ?? '');
             $expiry     = htmlspecialchars(trim($_POST['card_expiry']     ?? ''));
@@ -514,6 +542,7 @@ if ($_POST['action'] === 'update_profile') {
         exit;
     }
 
+    // Permanently delete the account and all related data in one transaction
     if ($_POST['action'] === 'delete_account') {
         $uid = $_SESSION['user_id'];
 
@@ -540,6 +569,7 @@ if ($_POST['action'] === 'update_profile') {
 $profileError = $_SESSION['flash_profile_error'] ?? null;
 unset($_SESSION['flash_profile_error']);
 
+// Format a unix timestamp (handles both seconds and milliseconds) for display
 function dashFormatTs($ts): string {
   if (!$ts) return '—';
 
@@ -550,6 +580,7 @@ function dashFormatTs($ts): string {
   return date('Y-m-d H:i', $ts);
 }
 
+// Build a passenger's display name from a ticket row
 function ticketPassengerName($ticket): string {
   $first = $ticket['name_first'] ?? '';
   $last  = $ticket['name_last'] ?? '';
@@ -559,11 +590,13 @@ function ticketPassengerName($ticket): string {
   return $full !== '' ? $full : ($ticket['passenger_name'] ?? '—');
 }
 
+// Resolve a flight's airline ID to its display name
 function dashFlightAirline(array $flight, array $airlinesMap): string {
     $id = $flight['airline'] ?? $flight['airlineId'] ?? '';
     return htmlspecialchars($airlinesMap[$id] ?? $id ?: '—');
 }
 
+// Find this user's ticket matching a given flight ID, if any
 function getTicketForFlight(string $fid, array $userTickets): ?array {
     foreach ($userTickets as $t) {
         if (($t['flight_id'] ?? '') === $fid) return $t;
@@ -958,6 +991,7 @@ window.__autoLogoutMinutes = <?= (int)$currentUser['auto_logout'] ?>;
   ) ?>;
 
   
+// Format a timestamp (seconds or ms) for inline display in JS
 function fmtTs(ts) {
   if (!ts) return '—';
 
@@ -966,6 +1000,7 @@ function fmtTs(ts) {
   return d.toISOString().slice(0, 16).replace('T', ' ');
 }
 
+  // Periodically refresh departure/arrival times for upcoming flights
   async function pollUpcoming() {
     if (!upcomingIds.length) return;
     try {

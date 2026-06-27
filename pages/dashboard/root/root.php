@@ -12,6 +12,7 @@ if (!$sessionUserId) {
     exit;
 }
 
+// Load the logged-in user's own record to confirm role and display name
 $selfStmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
 $selfStmt->execute([$sessionUserId]);
 $selfUser = $selfStmt->fetch(PDO::FETCH_ASSOC);
@@ -21,6 +22,7 @@ if (!$selfUser) {
     exit;
 }
 
+// Only the Root role can access this dashboard
 if (($selfUser['role'] ?? '') !== 'Root') {
     header('Location: ../../../index.php');
     exit;
@@ -31,6 +33,7 @@ if ($selfName === '') $selfName = 'Root';
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
+// Build a lookup of airport short name -> full airport record
 $airportResults = $api->getAirports();
 $airports = $airportResults['airports'] ?? [];
 $airportLookup = [];
@@ -38,9 +41,11 @@ foreach ($airports as $airport) {
     $airportLookup[strtolower($airport['shortName'])] = $airport;
 }
 
+// Load all live flights from the API
 $allFlightsData = $api->getAllFlights();
 $allFlights     = $allFlightsData['flights'] ?? [];
 
+// Normalize the no-fly list into lowercase first/last name pairs for matching
 $noFlyData = $api->getNoFlyList();
 $noFlyList = [];
 if ($noFlyData && isset($noFlyData['noFlyList'])) {
@@ -52,6 +57,7 @@ if ($noFlyData && isset($noFlyData['noFlyList'])) {
     }
 }
 
+// Index all flights by flight ID for fast lookup
 $flightMap = [];
 foreach ($allFlights as $f) {
     $fid = $f['flight_id']
@@ -61,6 +67,7 @@ foreach ($allFlights as $f) {
     if ($fid) $flightMap[$fid] = $f;
 }
 
+// Build a map of flight ID -> list of seats already taken according to the API
 $takenSeatsByFlight = [];
 foreach ($allFlights as $f) {
     $fid = $f['flight_id']
@@ -76,12 +83,14 @@ foreach ($allFlights as $f) {
     $takenSeatsByFlight[$fid] = $seats;
 }
 
+// Load all tickets and users from the database
 $ticketsStmt = $pdo->query('SELECT * FROM "Tickets"');
 $allTickets  = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $usersStmt = $pdo->query('SELECT * FROM "Users"');
 $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Split users into admin/root accounts vs customer accounts
 $admins    = array_values(array_filter($allUsers, fn($u) => in_array(strtolower($u['role'] ?? ''), ['admin', 'root'])));
 $customers = array_values(array_filter($allUsers, fn($u) => strtolower($u['role'] ?? '') === 'customer'));
 
@@ -97,6 +106,7 @@ $utc = new DateTimeZone('UTC');
 $nowUtc = new DateTime('now', $utc);
 $now = $nowUtc->getTimestamp();
 
+// Parse a ticket's price column into a safe, bounded float
 function parseTicketPrice($rawPrice): float {
     if ($rawPrice === null) return 0.0;
     if (is_int($rawPrice) || is_float($rawPrice)) {
@@ -112,6 +122,7 @@ function parseTicketPrice($rawPrice): float {
     return $p;
 }
 
+// Tally ticket counts and gross profit for each rolling time period (day/week/month/year/all)
 foreach ($allTickets as $t) {
     if (strtolower($t['status'] ?? '') === 'cancelled') continue;
 
@@ -138,10 +149,12 @@ foreach ($allTickets as $t) {
     if ($age >= 0 && $age <= $yearSec)  { $ticketStats['year']++;  $profitStats['year']  += $price; }
 }
 
+// Check that a seat string matches row 1-10, column A-I
 function validSeat(string $seat): bool {
     return (bool)preg_match('/^([1-9]|10)[A-Ia-i]$/', $seat);
 }
 
+// Check whether a first/last name combo appears on the no-fly list
 function isOnNoFlyList(string $fn, string $ln, array $noFlyList): bool {
     $fn = strtolower(trim($fn));
     $ln = strtolower(trim($ln));
@@ -151,6 +164,7 @@ function isOnNoFlyList(string $fn, string $ln, array $noFlyList): bool {
     return false;
 }
 
+// Check our own Tickets table for an active ticket already using this seat
 function isSeatTakenInDb(string $flightId, string $seat, array $allTickets): bool {
     $seat = strtoupper($seat);
     foreach ($allTickets as $t) {
@@ -161,6 +175,7 @@ function isSeatTakenInDb(string $flightId, string $seat, array $allTickets): boo
     return false;
 }
 
+// Format a raw digit string into a US phone display format
 function formatPhone(string $raw): string {
     $d = preg_replace('/\D/', '', $raw);
     if (strlen($d) === 10) return '(' . substr($d,0,3) . ') ' . substr($d,3,3) . '-' . substr($d,6);
@@ -168,21 +183,25 @@ function formatPhone(string $raw): string {
     return $raw;
 }
 
+// Reject phone numbers that contain alphabetic characters
 function phoneHasLetters(string $raw): bool {
     return (bool)preg_match('/[A-Za-z]/', $raw);
 }
 
+// Basic email shape check (must contain "@" and ".") plus PHP's built-in filter
 function isValidEmail(string $email): bool {
     if ($email === '') return false;
     if (!str_contains($email, '@') || !str_contains($email, '.')) return false;
     return (bool)filter_var($email, FILTER_VALIDATE_EMAIL);
 }
 
+// Format a timestamp (numeric or string) into a short readable date
 function fmtTs($ts): string {
     if (!$ts) return '—';
     return is_numeric($ts) ? date('M j, Y H:i', (int)$ts) : date('M j, Y H:i', strtotime((string)$ts));
 }
 
+// Render a colored pill for a ticket status (active/cancelled/other)
 function statusBadge(string $status): string {
     $cls = match(strtolower($status)) {
         'active'               => 'badge-active',
@@ -192,6 +211,7 @@ function statusBadge(string $status): string {
     return "<span class=\"badge {$cls}\">" . htmlspecialchars(ucfirst($status)) . "</span>";
 }
 
+// Render a colored pill for a user's role (root/admin/other)
 function roleBadge(string $role): string {
     $cls = match(strtolower($role)) {
         'root'  => 'bg-purple-600/20 text-purple-400 border border-purple-700',
@@ -201,6 +221,7 @@ function roleBadge(string $role): string {
     return "<span class=\"px-3 py-1 rounded-full text-xs font-semibold {$cls}\">" . htmlspecialchars($role) . "</span>";
 }
 
+// Resolve a flight's destination code to "City (CODE)" using the airport lookup
 function flightDestination(array $f, array $airportLookup): string {
     $code =
         $f['departingTo']
@@ -220,11 +241,13 @@ function flightDestination(array $f, array $airportLookup): string {
     return strtoupper($code);
 }
 
+// Prefer destination derived from live flight data; fall back to the posted form value
 function resolveTicketDestination(?array $flight, array $airportLookup, string $postedDestination): string {
     if ($flight) return flightDestination($flight, $airportLookup);
     return strtoupper(trim($postedDestination));
 }
 
+// Look up a flight's details, checking the in-memory map first, then the API
 function getFlightInfo(string $fid, array $flightMap, AirportsAPI $api): ?array {
     if (!$fid) return null;
     if (isset($flightMap[$fid])) return $flightMap[$fid];

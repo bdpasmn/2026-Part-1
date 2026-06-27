@@ -1,25 +1,33 @@
 <?php
+// Start session if one is not already active
+
 if (session_status() === PHP_SESSION_NONE) session_start();
+// Load API key, Airports API class, and database connection
 
 require_once '../../../api/key.php';
 require_once '../../../api/api.php';
 require_once '../../../database/db.php';
+// Get currently logged in user ID from session
 
 $sessionUserId = $_SESSION['user_id'] ?? null;
+// Redirect to login page if user is not logged in
 
 if (!$sessionUserId) {
     header('Location: ../../../index.php');
     exit;
 }
+// Retrieve current user's information from database
 
 $selfStmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
 $selfStmt->execute([$sessionUserId]);
 $selfUser = $selfStmt->fetch(PDO::FETCH_ASSOC);
+// Redirect if user does not exist
 
 if (!$selfUser) {
     header('Location: ../../../index.php');
     exit;
 }
+// Only admins may access this page
 
 if (($selfUser['role'] ?? '') !== 'Admin') {
     header('Location: ../../../index.php');
@@ -27,11 +35,14 @@ if (($selfUser['role'] ?? '') !== 'Admin') {
 }
 $selfName = trim(($selfUser['first_name'] ?? '') . ' ' . ($selfUser['last_name'] ?? ''));
 if ($selfName === '') $selfName = 'Admin';
+// Create API object
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
+// Retrieve all airports and flights
 
 $airportResults = $api->getAirports();
 $airports = $airportResults['airports'] ?? [];
+// Create airport lookup table for quick searches
 
 $airportLookup = [];
 foreach ($airports as $airport) {
@@ -40,6 +51,7 @@ foreach ($airports as $airport) {
 
 $allFlightsData = $api->getAllFlights();
 $allFlights     = $allFlightsData['flights'] ?? [];
+// Retrieve no-fly list from API and normalize names
 
 
 $noFlyData = $api->getNoFlyList();
@@ -52,6 +64,7 @@ if ($noFlyData && isset($noFlyData['noFlyList'])) {
         ];
     }
 }
+// Store flights by flight ID for quick access
 
 $flightMap = [];
 foreach ($allFlights as $f) {
@@ -61,17 +74,20 @@ $fid = $f['flight_id']
     ?? '';    
     if ($fid) $flightMap[$fid] = $f;
 }
+// Retrieve all tickets
 
 $ticketsStmt = $pdo->query('SELECT * FROM "Tickets"');
 $allTickets  = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $usersStmt = $pdo->query('SELECT * FROM "Users" WHERE LOWER(role) = \'customer\' ORDER BY user_id ASC');
 $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
+// CALCULATE DASHBOARD STATISTICS
 
 $daySec   = 86400;
 $weekSec  = 7  * $daySec;
 $monthSec = 30 * $daySec;
 $yearSec  = 365 * $daySec;
+// Store ticket and profit statistics
 
 $ticketStats = ['day' => 0, 'week' => 0, 'month' => 0, 'year' => 0, 'all' => 0];
 $profitStats = ['day' => 0.0, 'week' => 0.0, 'month' => 0.0, 'year' => 0.0, 'all' => 0.0];
@@ -79,7 +95,9 @@ $profitStats = ['day' => 0.0, 'week' => 0.0, 'month' => 0.0, 'year' => 0.0, 'all
 $utc = new DateTimeZone('UTC');
 $nowUtc = new DateTime('now', $utc);
 $now = $nowUtc->getTimestamp();
-
+/**
+ * Safely convert price into float.
+ */
 function parseTicketPrice($rawPrice): float {
     if ($rawPrice === null) return 0.0;
     if (is_int($rawPrice) || is_float($rawPrice)) {
@@ -121,10 +139,16 @@ foreach ($allTickets as $t) {
     if ($age >= 0 && $age <= $yearSec)  { $ticketStats['year']++;  $profitStats['year']  += $price; }
 }
 
+/**
+ * Verify seat format is valid.
+ * Example: 5A, 10I
+ */
 function validSeat(string $seat): bool {
     return (bool)preg_match('/^([1-9]|10)[A-Ia-i]$/', $seat);
 }
-
+/**
+ * Check whether a seat already exists in database.
+ */
 function isSeatTakenInDb(string $flightId, string $seat, array $allTickets): bool {
     $seat = strtoupper($seat);
     foreach ($allTickets as $t) {
@@ -134,7 +158,9 @@ function isSeatTakenInDb(string $flightId, string $seat, array $allTickets): boo
     }
     return false;
 }
-
+/**
+ * Check if passenger appears on no-fly list.
+ */
 function isOnNoFlyList(string $fn, string $ln, array $noFlyList): bool {
     $fn = strtolower(trim($fn));
     $ln = strtolower(trim($ln));
@@ -143,7 +169,9 @@ function isOnNoFlyList(string $fn, string $ln, array $noFlyList): bool {
     }
     return false;
 }
-
+/**
+ * Format phone number into US format.
+ */
 function formatPhone(string $raw): string {
     $d = preg_replace('/\D/', '', $raw);
     if (strlen($d) === 10) return '(' . substr($d,0,3) . ') ' . substr($d,3,3) . '-' . substr($d,6);
@@ -152,22 +180,30 @@ function formatPhone(string $raw): string {
 }
 
 
+/**
+ * Detect letters inside phone number.
+ */
 function phoneHasLetters(string $raw): bool {
     return (bool)preg_match('/[A-Za-z]/', $raw);
 }
-
-
+/**
+ * Validate email address.
+ */
 function isValidEmail(string $email): bool {
     if ($email === '') return false;
     if (!str_contains($email, '@') || !str_contains($email, '.')) return false;
     return (bool)filter_var($email, FILTER_VALIDATE_EMAIL);
 }
-
+/**
+ * Format timestamps for display.
+ */
 function fmtTs($ts): string {
     if (!$ts) return '—';
     return is_numeric($ts) ? date('M j, Y H:i', (int)$ts) : date('M j, Y H:i', strtotime((string)$ts));
 }
-
+/**
+ * Format timestamps for display.
+ */
 function statusBadge(string $status): string {
     $cls = match(strtolower($status)) {
         'active'               => 'badge-active',
@@ -176,7 +212,9 @@ function statusBadge(string $status): string {
     };
     return "<span class=\"badge {$cls}\">" . htmlspecialchars(ucfirst($status)) . "</span>";
 }
-
+/**
+ * Resolve airport destination from flight data.
+ */
 function flightDestination(array $f, array $airportLookup): string {
 
     $code =
@@ -206,7 +244,9 @@ function flightDestination(array $f, array $airportLookup): string {
 
     return strtoupper($code);
 }
-
+/**
+ * Determine ticket destination.
+ */
 
 function resolveTicketDestination(?array $flight, array $airportLookup, string $postedDestination): string {
     if ($flight) {
@@ -220,6 +260,7 @@ $errorMsg  = null;
 $activeTab = $_GET['tab'] ?? 'overview';
 
 $isAjax = isset($_POST['ajax']) && $_POST['ajax'] === '1';
+    // CREATE CUSTOMER
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
@@ -299,7 +340,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
         $activeTab = 'customers';
     }
-
+// update customer info 
     if ($_POST['action'] === 'update_customer') {
         $uid     = $_POST['user_id']     ?? '';
         $email   = trim($_POST['email']  ?? '');
@@ -433,6 +474,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         $activeTab = 'tickets';
     }
+        // Mark ticket as cancelled
 
     if ($_POST['action'] === 'cancel_ticket') {
         $tid = $_POST['ticket_id'] ?? '';
@@ -450,6 +492,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         $activeTab = 'tickets';
     }
+        // Permanently remove customer account
 
     if ($_POST['action'] === 'delete_customer') {
         $uid = $_POST['user_id'] ?? '';
@@ -582,6 +625,7 @@ function getFlightInfo(string $fid, array $flightMap, AirportsAPI $api): ?array 
 <body class="bg-gray-900 min-h-screen text-white">
   <?php include_once __DIR__ . '/../../../components/nav.php'; ?>
 <main class="max-w-7xl mx-auto p-4 sm:p-6 space-y-5">
+<!-- Dashboard Header -->
 
   <div class="rounded-lg p-8 mb-6 bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 shadow-lg">
       <p>
@@ -608,6 +652,7 @@ function getFlightInfo(string $fid, array $flightMap, AirportsAPI $api): ?array 
 
   <div class="mb-6 bg-gray-800 border border-gray-700 rounded-lg p-1">
       <div class="flex gap-2 overflow-x-auto sm:overflow-visible whitespace-nowrap sm:flex-wrap">
+<!-- Overview Statistics -->
 
           <?php
           $tabs = [
@@ -670,6 +715,7 @@ function getFlightInfo(string $fid, array $flightMap, AirportsAPI $api): ?array 
       <p class="text-gray-600 text-xs mt-2">Registered customer accounts</p>
     </div>
   </div>
+<!-- Customer Management -->
 
   <div class="grid md:grid-cols-3 gap-4">
     <a href="?tab=customers" class="bg-gray-800 border border-gray-700 rounded-lg p-6 overflow-hidden transition duration-300 hover:shadow-xl hover:border-blue-600 block group">
@@ -677,6 +723,8 @@ function getFlightInfo(string $fid, array $flightMap, AirportsAPI $api): ?array 
       <h3 class="font-bold group-hover:text-blue-400 transition">Customers</h3>
       <p class="text-gray-500 text-sm mt-1">View, create, and modify customer accounts.</p>
     </a>
+    <!-- Ticket Management -->
+
     <a href="?tab=tickets" class="bg-gray-800 border border-gray-700 rounded-lg p-6 overflow-hidden transition duration-300 hover:shadow-xl hover:border-blue-600 block group">
       <div class="text-2xl mb-3">🎫</div>
       <h3 class="font-bold group-hover:text-blue-400 transition">Tickets</h3>
@@ -729,6 +777,7 @@ $filteredUsers = array_slice(
   ?>
 
   <div class="grid lg:grid-cols-2 gap-5">
+    <!-- Create Customer Form -->
 
     <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 shadow-sm">
     <h2 class="text-xl font-bold mb-1">
@@ -847,6 +896,7 @@ $filteredUsers = array_slice(
         </button>
       </form>
     </div>
+<!-- Edit User -->
 
     <?php if ($editUser): ?>
       <div class="bg-gray-800 border border-blue-600 rounded-lg p-6 shadow-sm">
@@ -905,6 +955,7 @@ $filteredUsers = array_slice(
     </div>
     <?php endif; ?>
   </div>
+<!-- Search Forms -->
 
   <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
 
@@ -1032,6 +1083,7 @@ $filteredUsers = array_slice(
 
 </div>
 
+<!-- Search Forms -->
   <?php endif; ?>
 
   <?php if ($activeTab === 'tickets'): ?>
@@ -1083,6 +1135,7 @@ $filteredTickets = array_slice(
     $ticketsPerPage
 );
   ?>
+<!-- Create New Tickets -->
 
 <div class="grid lg:grid-cols-2 gap-5">
 
@@ -1188,6 +1241,7 @@ $filteredTickets = array_slice(
         </button>
       </form>
     </div>
+<!-- Search Forms -->
 
     <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 shadow-sm">
           <h2 class="font-bold text-base mb-4">Lookup by Confirmation Code</h2>
@@ -1246,6 +1300,7 @@ $filteredTickets = array_slice(
       <?php endif; ?>
     </div>
   </div>
+<!-- Search Forms -->
 
   <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
   <div class="p-5 border-b border-gray-700 flex flex-wrap items-center justify-between gap-4">
@@ -1359,6 +1414,7 @@ $route = 'SMN → ' . strtoupper($destination);
 
 <script>
 const periodLabels = { day:'Today', week:'This Week', month:'This Month', year:'This Year', all:'All Time' };
+// Dashboard period selector
 
 function setPeriod(key) {
   document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('period-active'));
@@ -1373,6 +1429,7 @@ function setPeriod(key) {
   if (lbl) lbl.textContent = 'Active tickets · ' + (periodLabels[key] || key);
 }
 document.addEventListener('DOMContentLoaded', () => setPeriod('day'));
+// Copy text to clipboard
 
 function copyToClipboard(text, el) {
   navigator.clipboard.writeText(text).then(() => {
@@ -1382,6 +1439,7 @@ function copyToClipboard(text, el) {
     setTimeout(() => { el.textContent = original; }, 1200);
   });
 }
+// Auto-format phone numbers
 
 function autoFormatPhone(el) {
   let d = el.value.replace(/\D/g, '');
@@ -1392,6 +1450,7 @@ function autoFormatPhone(el) {
   if (d.length <= 10)      { el.value = '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6); return; }
   el.value = '+' + d[0] + ' (' + d.slice(1,4) + ') ' + d.slice(4,7) + '-' + d.slice(7);
 }
+// Password strength indicator
 
 function checkPw(val) {
     const hint = document.getElementById('cpw-hint');
@@ -1413,6 +1472,7 @@ function checkPw(val) {
         hint.classList.remove('hidden');
     }
 }
+// Display success message
 
 function showFlash(msg) {
   const el = document.getElementById('flashMsg');
@@ -1421,6 +1481,8 @@ function showFlash(msg) {
   txt.textContent = msg;
   el.classList.remove('hidden');
 }
+// Display error message
+
 function showError(msg) {
   const el = document.getElementById('errorMsgBox');
   const txt = document.getElementById('errorMsgText');
@@ -1441,6 +1503,7 @@ const dbTakenSeats  = <?php
   }
   echo json_encode($dbTaken);
 ?>;
+// Look up flight details and calculate ticket price
 
 async function onFlightBlur(val) {
   const infoEl = document.getElementById('flightInfo');
@@ -1490,6 +1553,7 @@ async function onFlightBlur(val) {
     infoEl.classList.remove('hidden');
   }
 }
+// Validate that the selected seat is available
 
 function onSeatBlur(val) {
   const errEl   = document.getElementById('seatErr');
@@ -1508,6 +1572,7 @@ function onSeatBlur(val) {
   }
   errEl.classList.add('hidden');
 }
+// Submit a new ticket request using AJAX
 
 document.getElementById('ticketForm')?.addEventListener('submit', async function(e) {
   e.preventDefault();
@@ -1546,6 +1611,7 @@ document.getElementById('ticketForm')?.addEventListener('submit', async function
     showError('Something went wrong. Please try again.');
   }
 });
+// Cancel a ticket without reloading the page
 
 document.querySelectorAll('.cancel-ticket-form').forEach(form => {
   form.addEventListener('submit', async function(e) {
@@ -1578,6 +1644,7 @@ document.querySelectorAll('.cancel-ticket-form').forEach(form => {
     }
   });
 });
+// Update customer information using AJAX
 
 document.querySelectorAll('.update-customer-form').forEach(form => {
   form.addEventListener('submit', async function(e) {
@@ -1602,6 +1669,7 @@ document.querySelectorAll('.update-customer-form').forEach(form => {
     }
   });
 });
+// Delete a customer account without refreshing the page
 
 document.querySelectorAll('.delete-customer-form').forEach(form => {
   form.addEventListener('submit', async function(e) {
