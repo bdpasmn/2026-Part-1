@@ -291,7 +291,7 @@
                             <div class="flex items-center gap-2">
                                 <!-- Previous page -->
                                 <?php if ($page > 1): ?>
-                                    <a href="?destination=<?= urlencode($destination) ?>&date=<?= urlencode($date) ?>&page=<?= $page - 1 ?>"class="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600">Previous
+                                    <a href="?destination=<?= urlencode($destination) ?>&date=<?= urlencode($date) ?>&page=<?= $page - 1 ?>"class="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600">Previous</a>
                                 <?php endif; ?>
 
                                 <!-- Current page indicator -->
