@@ -508,10 +508,9 @@ if ($_POST['action'] === 'update_profile') {
         $cardName = trim($_POST['card_name'] ?? '');
 
         if ($cardName === '') {
-            $cardName = $cardholderName;
+          $cardName = html_entity_decode($cardholderName, ENT_QUOTES, 'UTF-8') . "'s card";
         }
 
-        $cardName = htmlspecialchars($cardName);
         $rawCard = preg_replace('/\D/', '', $_POST['card_number'] ?? '');
 
         if (strlen($rawCard) < 13 || strlen($rawCard) > 19) {
@@ -524,12 +523,13 @@ if ($_POST['action'] === 'update_profile') {
 
 
         $ins = $pdo->prepare(
-            'INSERT INTO "Saved Cards" (user_id, card_number, expiration_date, cvc, billing_address, zip_code, card_name)
-            VALUES (?,?,?,?,?,?,?)'
+            'INSERT INTO "Saved Cards" (user_id, cardholder_name, card_number, expiration_date, cvc, billing_address, zip_code, card_name)
+            VALUES (?,?,?,?,?,?,?,?)'
         );
         
         $ins->execute([
             $_SESSION['user_id'],
+            $cardholderName,
             $cardNumber, 
             $expiry,
             $cvc,

@@ -61,12 +61,6 @@
         exit;
     }
 
-    // Validate the ZIP code
-    if (!preg_match('/^\d{5}(-\d{4})?$/', $zipCode)) {
-        header("Location: bookingFailed.php?" . http_build_query(['message' => 'Please enter a valid ZIP code.']));
-        exit;
-    }
-
     // Passenger information
     $first = strtolower(trim($_POST['first_name'] ?? ''));
     $middle = strtolower(trim($_POST['middle_name'] ?? ''));
