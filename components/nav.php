@@ -22,9 +22,9 @@
 
     $isLoggedIn = isset($_SESSION['user_id']);
     $userFullName = "Guest";
-    $role = $_SESSION['role'] ?? 'guest';
+    $role = strtolower($_SESSION['role'] ?? 'guest');
 
-    if ($isLoggedIn && ($role == 'Customer' || $role == 'customer')) {
+    if ($isLoggedIn && $role == 'customer') {
 
         $currentFile = basename($_SERVER['PHP_SELF']);
         $currentTab = $_GET['tab'] ?? '';
@@ -55,9 +55,9 @@
 
     $dashboardLink = BASE_URL . "/pages/dashboard/customer/customer.php";
 
-    if ($role == "Admin") {
+    if ($role == "admin") {
         $dashboardLink = BASE_URL . "/pages/dashboard/admin/admin.php";
-    } elseif ($role == "Root") {
+    } elseif ($role == "root") {
         $dashboardLink = BASE_URL . "/pages/dashboard/root/root.php";
     }
 
@@ -117,7 +117,7 @@
                 </a>
             <?php endif; ?>
 
-            <?php if ($role == 'Customer'): ?>
+            <?php if ($role == 'customer'): ?>
                 <?php $active = str_contains($currentPath, '/customer/customer.php') && $currentTab == 'flights';?>
 
                 <a href="<?= BASE_URL ?>/pages/dashboard/customer/customer.php?tab=flights"
@@ -135,7 +135,7 @@
                 <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
             </a>
 
-            <?php if (!$isLoggedIn || $role == 'Customer'): ?>
+            <?php if (!$isLoggedIn || $role == 'customer'): ?>
                 <?php $active = str_contains($currentPath, '/booking/searchFlights.php'); ?>
                 <?php $active = str_contains($currentPath, '/booking/searchFlights.php'); ?>
                 <a href="<?= BASE_URL ?>/pages/booking/searchFlights.php" class="relative group">
@@ -150,7 +150,7 @@
                 </a>
             <?php endif; ?>
 
-            <?php if ($role == 'Root'): ?>
+            <?php if ($role == 'root'): ?>
                 <?php $active = $currentTab == 'admins'; ?>
                 <a href="<?= BASE_URL ?>/pages/dashboard/root/root.php?tab=admins" class="relative group">
                     <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Administrators</span>
@@ -158,10 +158,10 @@
                 </a>
             <?php endif; ?>
 
-            <?php if ($role == 'Admin' || $role == 'Root'): ?>
+            <?php if ($role == 'admin' || $role == 'root'): ?>
                 <?php $active = $currentTab == 'customers'; ?>
                 <a href="<?= BASE_URL ?>/pages/dashboard/<?= $role ?>/<?= $role ?>.php?tab=customers" class="relative group">
-                    <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Customers</span>
+                    <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">customers</span>
                     <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
                 </a>
 
@@ -225,7 +225,7 @@
                    href="<?= $dashboardLink ?>">Dashboard</a>
             <?php endif; ?>
 
-            <?php if ($role == 'Customer'): ?>
+            <?php if ($role == 'customer'): ?>
                 <a class="px-6 py-3 hover:bg-gray-700"
                    href="<?= BASE_URL ?>/pages/dashboard/customer/customer.php?tab=flights">My Flights</a>
             <?php endif; ?>
@@ -233,7 +233,7 @@
             <a class="px-6 py-3 hover:bg-gray-700"
                href="<?= BASE_URL ?>/pages/flights/flights.php">Browse Flights</a>
 
-            <?php if (!$isLoggedIn || $role == 'Customer'): ?>
+            <?php if (!$isLoggedIn || $role == 'customer'): ?>
                 <a class="px-6 py-3 hover:bg-gray-700"
                    href="<?= BASE_URL ?>/pages/booking/searchFlights.php">Book Flight</a>
 
@@ -241,12 +241,12 @@
                    href="<?= BASE_URL ?>/pages/ticket/viewTicket.php">View Tickets</a>
             <?php endif; ?>
 
-            <?php if ($role == 'Root'): ?>
+            <?php if ($role == 'root'): ?>
                 <a class="px-6 py-3 hover:bg-gray-700"
                    href="<?= BASE_URL ?>/pages/dashboard/root/root.php?tab=admins">Administrators</a>
             <?php endif; ?>
 
-            <?php if ($role == 'Admin' || $role == 'Root'): ?>
+            <?php if ($role == 'admin' || $role == 'root'): ?>
                 <a class="px-6 py-3 hover:bg-gray-700"
                    href="<?= BASE_URL ?>/pages/dashboard/<?= $role ?>/<?= $role ?>.php?tab=customers">Customers</a>
 
