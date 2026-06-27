@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
+if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {// ajax fetch
 
     ob_start();
 
@@ -610,7 +610,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
 </div>
 
 <script>
-    async function updateFlights() {
+    async function updateFlights() { //ajax
         try {
             const res = await fetch(window.location.pathname + '?ajax=1');
             

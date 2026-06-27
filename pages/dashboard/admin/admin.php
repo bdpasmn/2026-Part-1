@@ -418,7 +418,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         'success' => true,
                         'message' => $updateMsg,
                         'confirmation_code' => $code,
-                        'redirect' => '../../../booking/confirmation.php?confirmation=' . urlencode($code)
+                        'redirect' => '/pages/booking/confirmation.php?confirmation=' . urlencode($code)
                     ]);
                     exit;
                 }
@@ -988,6 +988,7 @@ $filteredUsers = array_slice(
                     <input type="hidden" name="action" value="delete_customer">
                     <input type="hidden" name="user_id" value="<?= htmlspecialchars((string)($u['user_id'] ?? '')) ?>">
                     <button type="submit"
+                      data-skip-loader
                       onclick="return confirm('Delete customer <?= htmlspecialchars(addslashes(trim(($u['first_name'] ?? '') . ' ' . ($u['last_name'] ?? '')))) ?>? This cannot be undone.')"
                       class="text-sm text-red-400 hover:text-red-300 font-semibold transition">Delete</button>
                   </form>
@@ -1182,7 +1183,7 @@ $filteredTickets = array_slice(
           <input type="text" name="user_id" id="tUserId" placeholder="Leave blank for guest" class="field" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
         </div>
 
-        <button type="submit" class="w-full h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg data-skip-loader">
+        <button type="submit" class="w-full h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg" data-skip-loader>
           Create Ticket 
         </button>
       </form>

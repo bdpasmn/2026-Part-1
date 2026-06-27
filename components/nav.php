@@ -84,14 +84,18 @@
 <header class="h-16 bg-gray-800 border-b border-gray-700 relative z-50">
     <div class="h-full px-8 flex items-center justify-between relative">
         <a href="<?php 
-            if (!$isLoggedIn) { 
-                echo BASE_URL . '/index.php'; 
-            } else {
-                $role = $_SESSION['role'] ?? '';
-                if (in_array($role, ['Customer', 'Admin', 'Root'])) {
-                    echo "../dashboard/{$role}/{$role}.php";
-                }
-            }?>" class="flex items-center text-white font-bold text-xl hover:text-blue-300 transition">
+    if (!$isLoggedIn) {
+        echo BASE_URL . '/index.php';
+    } else {
+        $role = strtolower($_SESSION['role'] ?? '');
+
+        if (in_array($role, ['customer', 'admin', 'root'])) {
+            echo BASE_URL . "/pages/dashboard/{$role}/{$role}.php";
+        } else {
+            echo BASE_URL . '/index.php';
+        }
+    }
+            ?>" class="flex items-center text-white font-bold text-xl hover:text-blue-300 transition">
             <img src="<?= BASE_URL ?>/favicon.ico" alt="B" class="w-7 h-7" style="margin-right:-2px;">
             <span class="tracking-wide">DPA Airports</span>
         </a>

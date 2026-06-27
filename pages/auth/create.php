@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../database/db.php';
 require_once __DIR__ . '/../../components/config.php';
 
 if (isset($_SESSION['user_id'])) {
-    $role = strtolower($_SESSION['role']) ?? '';
+    $role = strtolower($_SESSION['role']) ?? ''; //sign in redirection
     
     if (in_array($role, ['customer', 'admin', 'root'])) {
         $roleLower = strtolower($role);
@@ -13,7 +13,7 @@ if (isset($_SESSION['user_id'])) {
         exit;
     }
 }
-    function regenerateCaptcha() {
+    function regenerateCaptcha() { //captcha regeneration
         $_SESSION['captcha_num1'] = rand(1, 10);
         $_SESSION['captcha_num2'] = rand(1, 10);
     } 
@@ -44,7 +44,7 @@ if (isset($_SESSION['user_id'])) {
     $captcha = trim($_POST['captcha'] ?? '');
     $message = '';
     $redirect = false;
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) { //error handling
         $captchaValid =
         ((int)$captcha ===
         ($_SESSION['captcha_num1'] + $_SESSION['captcha_num2']));
@@ -157,7 +157,7 @@ if (isset($_SESSION['user_id'])) {
                 $stmt->execute([
                     ':email' => $email,
                     ':question1' => $question1,
-                    ':question1_answer' => password_hash($question1_answer, PASSWORD_DEFAULT),
+                    ':question1_answer' => password_hash($question1_answer, PASSWORD_DEFAULT), //NEW: question hashing(courtesy of sam)
                     ':question2' => $question2,
                     ':question2_answer' => password_hash($question2_answer, PASSWORD_DEFAULT),
                     ':question3' => $question3,
@@ -279,7 +279,7 @@ if (isset($_SESSION['user_id'])) {
                             <label class="text-xs text-gray-400">* City</label>
                             <input required type="text" name="city" value="<?= htmlspecialchars($city) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                         </div>
-                        <div>
+                        <div> <!-- Country list -->
                             <label class="text-xs text-gray-400">* Country</label>
                             <select required name="country" id="country" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                                 <option value=""> Select Country </option>
@@ -476,7 +476,7 @@ if (isset($_SESSION['user_id'])) {
                                 <option value="Zimbabwe">Zimbabwe </option>
                             </select>
                         </div>
-                        <div>
+                        <div><!-- State list -->
                             <label class="text-xs text-gray-400">* State</label>
                             <select required name="state" id="state" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
                                 <option value=""> Select State </option>
@@ -610,7 +610,7 @@ if (isset($_SESSION['user_id'])) {
             </div>
         </main>
         <script>
-            function autoFormatPhone(el) {
+            function autoFormatPhone(el) { //phone autoformater(taken from dashboard pages)
                 let d = el.value.replace(/\D/g, '');
                 if (d.length > 11) d = d.slice(0, 11);
                 if (d.length === 0) { el.value = ''; return; }
@@ -619,7 +619,7 @@ if (isset($_SESSION['user_id'])) {
                 if (d.length <= 10)      { el.value = '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6); return; }
                 el.value = '+' + d[0] + ' (' + d.slice(1,4) + ') ' + d.slice(4,7) + '-' + d.slice(7);
             }
-            document.addEventListener('DOMContentLoaded', function () {
+            document.addEventListener('DOMContentLoaded', function () { //password strength checker
                 var passwordInput = document.getElementById('password');
                 var strengthText = document.getElementById('password-strength');
                 function updateStrength() {

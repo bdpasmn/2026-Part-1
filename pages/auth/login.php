@@ -4,7 +4,7 @@
     require_once __DIR__ . '/../../components/config.php';
     if (isset($_SESSION['user_id'])) {
         $role = $_SESSION['role'] ?? '';
-        if (in_array($role, ['Customer', 'Admin', 'Root'])) {
+        if (in_array($role, ['Customer', 'Admin', 'Root'])) { //no sign in allowed of already signed in
             $roleLower = strtolower($role);
             header("Location: ../dashboard/{$roleLower}/{$roleLower}.php");
             exit;
@@ -16,12 +16,12 @@
     $email = $_POST['email'] ?? '';
     function getDashboardUrl($role) {
         switch ($role) {
-            case 'Admin': return BASE_URI . '/pages/dashboard/admin/admin.php';
+            case 'Admin': return BASE_URI . '/pages/dashboard/admin/admin.php'; //redirect
             case 'Root': return BASE_URI . '/pages/dashboard/root/root.php';
             case 'Customer': default: return BASE_URI . '/pages/dashboard/customer/customer.php';
         }
     }
-    if (!isset($_SESSION['user_id']) && isset($_COOKIE['remember_me'])) {
+    if (!isset($_SESSION['user_id']) && isset($_COOKIE['remember_me'])) { //remember me auto signin
         $parts = explode('|', $_COOKIE['remember_me'], 2);
         if (count($parts) === 2) {
             [$cookieId, $cookieToken] = $parts;
@@ -69,7 +69,7 @@
             } else {
                 $userId = $row['user_id'];
                 $now = time();
-                if ($row['lock_until'] && strtotime($row['lock_until']) > $now) {
+                if ($row['lock_until'] && strtotime($row['lock_until']) > $now) { //lockout handling
                     $minutesLeft = ceil((strtotime($row['lock_until']) - $now) / 60);
                     $message = "Too many failed attempts. Try again in $minutesLeft minute(s).";
                 } else {
@@ -99,7 +99,7 @@
                             WHERE user_id = ?
                         ')->execute([$newAttempts, $lockUntil, $userId]);
                     } else {
-                        session_regenerate_id(true);
+                        session_regenerate_id(true);//session setting
                         $_SESSION['email'] = $row['email'];
                         $_SESSION['user'] = $row['title'];
                         $_SESSION['name'] = $row['first_name'];
@@ -109,7 +109,7 @@
                             UPDATE "Users"
                             SET failed_attempts = 0, lock_until = NULL
                             WHERE user_id = ?
-                        ')->execute([$userId]);
+                        ')->execute([$userId]); //remember me functionality
                         if (isset($_POST['remember'])) {
                             $_SESSION['remembered'] = true;
                             $token = hash_hmac('sha256', $userId, SECRET_KEY);
