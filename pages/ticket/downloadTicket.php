@@ -1,12 +1,14 @@
 <?php
+// Initialize dependencies
 require_once __DIR__ . '/../../api/key.php';
 require_once __DIR__ . '/../../api/api.php';
 require_once __DIR__ . '/../../database/db.php';
 require_once __DIR__ . '/qrcode.php';
 
+// Get confirmation code from query string
 $confirmation = $_GET['confirmation'] ?? null;
 
-
+// Validate confirmation code exists
 if (!$confirmation) {
     http_response_code(400);
     header('Content-Type: text/html; charset=utf-8');
@@ -21,18 +23,22 @@ if (!$confirmation) {
     exit;
 }
 
+// Fetch ticket from database
 $stmt = $pdo->prepare('SELECT * FROM "Tickets" WHERE confirmation_code = ? LIMIT 1');
 $stmt->execute([$confirmation]);
 $ticketRow = $stmt->fetch();
 
+// Ticket not found
 if (!$ticketRow) {
     http_response_code(404);
     echo '';
     exit;
 }
 
-$qrData = 'pages/ticket/ticket.php?code=' . urlencode($confirmation); //CHANGE FOR PRODUCTION!!!
+// QR code data
+$qrData = 'Your confirmation code is ' . $confirmation; 
 
+// Fetch flight details from API
 $flightId = $ticketRow['flight_id'] ?? null;
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
@@ -45,6 +51,7 @@ if (!empty($flightId)) {
     }
 }
 
+// Build passenger name from parts
 $passengerName = trim(
     ($ticketRow['name_first'] ?? '') . ' ' .
     ($ticketRow['name_middle'] ?? '') . ' ' .
@@ -55,6 +62,7 @@ if ($passengerName === '') $passengerName = 'Passenger';
 
 date_default_timezone_set('America/New_York');
 
+// Format milliseconds to time string
 function fmtTime($ms) {
     if (!$ms) return 'TBD';
     return date('h:i A', $ms / 1000);
@@ -63,6 +71,7 @@ function fmtTime($ms) {
 $dest = $flight['landingAt'];
 $generated = date('d-m-Y h:i A');
 
+// Extract flight times
 $ticket = [
     'departure_time' => $flight['departFromSender']
         ? date('h:i A', $flight['departFromSender'] / 1000)
@@ -71,6 +80,8 @@ $ticket = [
         ? date('h:i A', $flight['arriveAtReceiver'] / 1000)
         : 'TBD',
       ];
+
+// Generate HTML ticket (fallback format)
 $html = <<<HTML
 <!doctype html>
 <html>
@@ -133,28 +144,27 @@ $html = <<<HTML
 </body>
 </html>
 HTML;
-//html debug statement
+
+// Return HTML if requested via query parameter
 if (isset($_GET['format']) && $_GET['format'] === 'html') {
     header('Content-Type: text/html; charset=utf-8');
     echo $html;
     exit;
 }
 
-//GD is cool
+// Fallback to HTML if GD image library unavailable
 if (!function_exists('imagecreatetruecolor')) {
-    //HTML fallback if GD doest exist
     header('Content-Type: text/html; charset=utf-8');
     header('Content-Disposition: attachment; filename="ticket-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $confirmation) . '.html"');
     echo $html;
     exit;
 }
 
-// bitmap font for compatability
-
+// Create PNG image for ticket
 $w = 1400; $h = 520;
 $img = imagecreatetruecolor($w, $h);
 
-// hex 2 rgb yaaaaayyyy
+// Convert hex color to RGB values
 function hex2rgb($hex) {
     $hex = ltrim($hex, '#');
     if (strlen($hex) === 3) {
@@ -169,7 +179,7 @@ function hex2rgb($hex) {
     return [$r,$g,$b];
 }
 
-//slight gradient background cuz its cool
+// Draw gradient background
 $top = hex2rgb('#ffffff');
 $bottom = hex2rgb('#b6deff');
 for ($y=0;$y<$h;$y++) {
@@ -181,27 +191,26 @@ for ($y=0;$y<$h;$y++) {
     imageline($img, 0, $y, $w, $y, $col);
 }
 
-// main card rectangle
+// Draw main card background
 $cardCol = imagecolorallocate($img, 15, 23, 36);
 imagefilledrectangle($img, 30, 40, $w-30, $h-60, $cardCol);
 
-// thin divider to separate sections to make it look more like a ticket
+// Draw vertical divider line
 $black = imagecolorallocate($img,0,0,0);
 $dividerX = 180;
 $dividerColor = imagecolorallocate($img,60,70,80);
 imageline($img, $dividerX, 80, $dividerX, $h-100, $dividerColor);
 
-// colors 
+// Define text colors
 $blue = imagecolorallocate($img, 38, 131, 255);
 $orange = imagecolorallocate($img, 255, 140, 40);
-
-// Draw main text areas
 $textWhite = imagecolorallocate($img, 240,245,250);
 $muted = imagecolorallocate($img, 150,165,180);
 
+// Column positions
 $leftCol = 200; $center = 700; $rightCol = 980;
 
-// draw bitmap font
+// Bitmap font scaling function
 function draw_scaled_text($dst, $text, $x, $y, $scale, $color) {
     $font = 5;
     $fw = imagefontwidth($font);
@@ -209,7 +218,6 @@ function draw_scaled_text($dst, $text, $x, $y, $scale, $color) {
     $tw = max(1, $fw * strlen($text));
     $th = $fh;
     $tmp = imagecreatetruecolor($tw, $th);
-    // match background to card color
     $bg = imagecolorallocate($tmp, 15, 23, 36);
     imagefilledrectangle($tmp, 0, 0, $tw, $th, $bg);
     $fg = imagecolorallocate($tmp, 255, 255, 255);
@@ -217,14 +225,13 @@ function draw_scaled_text($dst, $text, $x, $y, $scale, $color) {
     $sw = max(1, (int)($tw * $scale));
     $sh = max(1, (int)($th * $scale));
     $scaled = imagecreatetruecolor($sw, $sh);
-    // preserve background
     imagecopyresampled($scaled, $tmp, 0,0,0,0, $sw, $sh, $tw, $th);
     imagecopy($dst, $scaled, $x, $y, 0, 0, $sw, $sh);
     imagedestroy($tmp);
     imagedestroy($scaled);
 }
 
-// left column big title and info
+// Draw left column text
 $y = 100;
 draw_scaled_text($img, 'BOARDING PASS', $leftCol, $y, 3.2, $textWhite); $y += 90;
 draw_scaled_text($img, ($flight['airline'] ?? ''), $leftCol, $y, 2.2, $muted); $y += 70;
@@ -232,19 +239,19 @@ draw_scaled_text($img, 'Passenger: ' . $passengerName, $leftCol, $y, 1.6, $textW
 draw_scaled_text($img, 'From: ' . ($flight['comingFrom'] ?? ''), $leftCol, $y, 1.4, $textWhite); $y += 48;
 draw_scaled_text($img, 'To: ' . $dest, $leftCol, $y, 1.4, $textWhite); $y += 48;
 
-// right column large fields
+// Draw center and right columns
 $ry = 160;
 draw_scaled_text($img, 'Confirmation #: ' . ($confirmation ?? 'TBD'), $center, $ry, 1.8, $textWhite);
 draw_scaled_text($img, 'Gate: ' . (strtoupper($flight['gate'] ?? 'TBD')), $center, $ry+80, 2.6, $textWhite);
 draw_scaled_text($img, 'Seat: ' . ($ticketRow['seat'] ?? 'TBD'), $rightCol, $ry+80, 2.6, $textWhite);
 
-// footer
+// Draw footer timestamp
 draw_scaled_text($img, 'Generated: ' . $generated, $leftCol, $h-60, 1.0, $muted);
 
-
-
-if (ob_get_length()) ob_end_clean(); // little cleanup cuz whitespace in neccesary files was causing png corrupti
+// Output PNG with QR code
+if (ob_get_length()) ob_end_clean();
 try { 
+    // Generate and embed QR code
     $qrGen = new QRCode($qrData, ['s' => 'qr-m', 'sf' => 8, 'p' => 1]);
     $qrGd  = $qrGen->render_image();
 
@@ -255,11 +262,13 @@ try {
     imagecopyresampled($img, $qrGd, $qrX, $qrY, 0, 0, $qrSize, $qrSize, imagesx($qrGd), imagesy($qrGd));
     imagedestroy($qrGd);
 
+    // Send PNG response
     header('Content-Type: image/png');
     header('Content-Disposition: attachment; filename="ticket-' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $passengerName) . '.png"');
     imagepng($img);
     imagedestroy($img);
 } catch (Throwable $e) {
+    // Error handling on QR generation
     http_response_code(500);
     header('Content-Type: text/html; charset=utf-8');
     echo '<!doctype html><html><head><meta charset="utf-8"><title>Error</title>

@@ -1,4 +1,5 @@
 <?php
+// Initialize dependencies
 require_once __DIR__ . "/../../api/key.php";
 require_once __DIR__ . "/../../api/api.php";
 require_once __DIR__ . "/../../database/db.php";
@@ -6,14 +7,17 @@ require_once __DIR__ . "/../../components/config.php";
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
+// Get confirmation code from query string
 $confirmation = $_GET["confirmation"] ?? null;
 
+// Fetch ticket from database
 $stmt = $pdo->prepare(
     'SELECT * FROM "Tickets" WHERE confirmation_code = ? LIMIT 1'
 );
 $stmt->execute([$confirmation]);
 $ticketRow = $stmt->fetch();
 
+// Check if ticket is cancelled
 $isCancelled =
     $ticketRow && strtolower($ticketRow["status"] ?? "") === "cancelled";
 
@@ -25,6 +29,7 @@ $flightNotFound = false;
 $flightIsPast = false;
 $pageError = null;
 
+// AJAX: Get live flight status
 if (isset($_GET["xhr"]) && $_GET["xhr"] === "flight-status") {
     header("Content-Type: application/json");
 
@@ -62,6 +67,7 @@ if (isset($_GET["xhr"]) && $_GET["xhr"] === "flight-status") {
     exit();
 }
 
+// AJAX: Cancel ticket and free up seat
 if (isset($_GET["xhr"]) && $_GET["xhr"] === "delete-ticket") {
     header("Content-Type: application/json");
     $confirmation = $_GET["confirmation"] ?? null;
@@ -75,6 +81,7 @@ if (isset($_GET["xhr"]) && $_GET["xhr"] === "delete-ticket") {
     try {
         $pdo->beginTransaction();
 
+        // Get flight and seat info
         $stmtGet = $pdo->prepare(
             'SELECT flight_id, seat FROM "Tickets" WHERE confirmation_code = ? LIMIT 1'
         );
@@ -85,6 +92,7 @@ if (isset($_GET["xhr"]) && $_GET["xhr"] === "delete-ticket") {
             $fId = $ticketData["flight_id"];
             $seatToRemove = $ticketData["seat"];
 
+            // Remove seat from flight's taken_seats
             $stmtFlight = $pdo->prepare('
                 UPDATE "Flights"
                 SET taken_seats = taken_seats - :seat::text
@@ -97,6 +105,7 @@ if (isset($_GET["xhr"]) && $_GET["xhr"] === "delete-ticket") {
             ]);
         }
 
+        // Mark ticket as cancelled
         $stmtUpdate = $pdo->prepare(
             'UPDATE "Tickets" SET status = ? WHERE confirmation_code = ?'
         );
@@ -114,6 +123,7 @@ if (isset($_GET["xhr"]) && $_GET["xhr"] === "delete-ticket") {
     exit();
 }
 
+// Page load: fetch flight and build ticket display
 if ($ticketRow) {
     $flightsResponse = $api->searchFlights(
         ["flight_id" => $flightId],
@@ -137,6 +147,7 @@ if ($ticketRow) {
         $pageError = "flight_past";
     }
 
+    // Build passenger name from parts
     $passengerName = trim(
         ($ticketRow["name_first"] ?? "") .
         " " .
@@ -151,6 +162,7 @@ if ($ticketRow) {
 
     date_default_timezone_set("America/New_York");
 
+    // Assemble ticket data for display
     if ($flight && !$pageError) {
 
         $dest_airport_name = "";
@@ -159,6 +171,7 @@ if ($ticketRow) {
         $dest_state = "";
         $dest_country = "";
 
+        // Lookup destination airport details
         $dest_airport_code =
             $flight["departingTo"] ?? ($flight["landingAt"] ?? "");
 
@@ -187,6 +200,7 @@ if ($ticketRow) {
             }
         }
 
+        // Build ticket display object
         $ticket = [
             "flight_id" => $flight["flight_id"],
             "departure_airport" =>
@@ -223,6 +237,7 @@ if ($ticketRow) {
                     : strtoupper($flight["gate"] ?? "TBD"),
         ];
 
+        // Format destination display string
         $destinationParts = array_filter([
             $ticket["destination_city"] ?? "",
             $ticket["destination_state"] ?? "",
@@ -235,6 +250,7 @@ if ($ticketRow) {
     }
 }
 
+// Map status to Tailwind class
 $status = $ticket ? strtolower($ticket["status"]) : "";
 
 $statusClass = match ($status) {
@@ -268,6 +284,7 @@ $statusClass = match ($status) {
  
     <main class="w-full p-10">
  
+<!-- Ticket not found error state -->
 <?php if (!$ticketRow): ?>
 
 <div class="max-w-lg mx-auto">
@@ -314,6 +331,7 @@ $statusClass = match ($status) {
     </div>
 </div>
 
+<!-- Flight not found error state -->
 <?php elseif ($pageError === "flight_not_found"): ?>
 
 <div class="max-w-lg mx-auto">
@@ -345,6 +363,7 @@ $statusClass = match ($status) {
     </div>
 </div>
 
+<!-- Flight already departed error state -->
 <?php elseif ($pageError === "flight_past"): ?>
 
 <div class="max-w-lg mx-auto">
@@ -378,6 +397,7 @@ $statusClass = match ($status) {
     </div>
 </div>
 
+<!-- Cancelled ticket error state -->
 <?php elseif ($isCancelled): ?>
 
 <div class="max-w-lg mx-auto">
@@ -417,16 +437,16 @@ $statusClass = match ($status) {
     </div>
 </div>
 
+<!-- Valid ticket display -->
 <?php else: ?>
 
- 
             <!-- ticket card -->
             <div class="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
  
-                <!-- top half -->
+                <!-- top half: route and key info -->
                 <div class="p-6 md:p-10">
  
-                    <!-- status/headline -->
+                    <!-- status and clock -->
                     <div class="flex justify-between items-center mb-8">
                         <div class="flex flex-col gap-1">
                             <p class="text-sm tracking-widest text-blue-400 uppercase">BDPA Airports &middot; Ticket View 🎫</p>
@@ -437,7 +457,7 @@ $statusClass = match ($status) {
                         </span>
                     </div>
  
-                    <!-- route -->
+                    <!-- departure and arrival airports -->
                     <div class="flex items-center gap-6 mb-10">
                         <div>
                             <p class="text-5xl md:text-7xl font-semibold text-white leading-none"><?= htmlspecialchars(
@@ -462,7 +482,7 @@ $statusClass = match ($status) {
                         </div>
                     </div>
  
-                    <!-- key info pills -->
+                    <!-- seat, gate, times -->
                     <div class="grid grid-cols-2 md:flex justify-center gap-4">
                        <div class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-6 py-6 text-center hover:shadow-xl hover:-translate-y-1 hover:border-blue-500 transition duration-300">
                             <p class="text-xs tracking-widest text-slate-500 uppercase mb-3">Seat</p>
@@ -493,23 +513,23 @@ $statusClass = match ($status) {
                     </div>
                 </div>
  
-                <!-- cool tear line -->
+                <!-- decorative tear line divider -->
                 <div class="flex items-center">
                     <div class="w-6 h-6 rounded-full bg-gray-900 border border-slate-700 -ml-3 flex-shrink-0"></div>
                     <div class="flex-1 border-t-2 border-dashed border-slate-700"></div>
                     <div class="w-6 h-6 rounded-full bg-gray-900 border border-slate-700 -mr-3 flex-shrink-0"></div>
                 </div>
  
-                <!-- bottom half -->
+                <!-- bottom half: passenger and details -->
                 <div class="p-6 md:p-10">
  
-                    <!-- Passenger -->
+                    <!-- passenger name -->
                     <p class="text-xs tracking-widest text-slate-500 uppercase mb-2">Passenger 👤</p>
                     <p class="text-2xl font-semibold text-white mb-6"><?= htmlspecialchars(
                         $ticket["passenger_name"]
                     ) ?></p>
  
-                    <!-- Detail rows -->
+                    <!-- detail rows -->
                     <div>
                         <div class="flex justify-between py-3 border-b border-slate-700/50">
                             <span class="text-sm text-slate-500">Airline / Flight</span>
@@ -552,7 +572,7 @@ $statusClass = match ($status) {
                         </div>
                     </div>
  
-                    <!-- footer -->
+                    <!-- confirmation code and action buttons -->
                     <div class="flex justify-between items-center mt-8 pt-6 border-t border-slate-700">
                         <div>
                             <p class="text-xs tracking-widest text-slate-500 uppercase mb-2">Confirmation</p>
@@ -561,11 +581,13 @@ $statusClass = match ($status) {
                             ) ?></p>
                         </div>
                         
+                        <!-- cancel ticket button -->
                         <button onclick="confirmDeleteTicket()" 
                                 class="px-4 py-2 bg-slate-900 hover:bg-red-900/30 text-slate-500 hover:text-red-400 text-xs rounded-lg transition duration-150 border border-slate-700/50">
                             Delete Ticket
                         </button>
 
+                        <!-- download ticket button -->
                         <a href="downloadTicket.php?confirmation=<?= urlencode(
                             $ticket["confirmation_number"]
                         ) ?>"  
@@ -587,7 +609,7 @@ $statusClass = match ($status) {
     </main>
 </div>
 <script>
-//clock
+// Update local time display
 function updateLocalClock() {
     const el = document.getElementById('local-clock');
     if (!el) return;
@@ -601,7 +623,7 @@ function updateLocalClock() {
         });
 }
 
-//flight format
+// Format milliseconds to time and date
 function formatFlightTime(ms) {
     if (!ms) return { time: 'TBD', date: '' };
 
@@ -618,7 +640,7 @@ function formatFlightTime(ms) {
     };
 }
 
-//flight refresh
+// Fetch and update live flight status from API
 async function refreshTicketFlightStatus() {
     try {
         const url = new URL(window.location.href);
@@ -632,6 +654,7 @@ async function refreshTicketFlightStatus() {
 
         const data = await res.json();
 
+        // Update departure time and date
         const departureEl = document.getElementById('departure-time');
         const departureDateEl = document.getElementById('departure-date');
         const arrivalEl = document.getElementById('arrival-time');
@@ -645,12 +668,14 @@ async function refreshTicketFlightStatus() {
             if (departureDateEl) departureDateEl.textContent = fmt.date;
         }
 
+        // Update arrival time and date
         if (arrivalEl) {
             const fmt = formatFlightTime(data.arrival);
             arrivalEl.textContent = fmt.time;
             if (arrivalDateEl) arrivalDateEl.textContent = fmt.date;
         }
 
+        // Update gate and status
         if (gateEl) gateEl.textContent = data.gate || 'TBD';
         if (statusEl && data.status) statusEl.textContent = data.status;
 
@@ -659,7 +684,7 @@ async function refreshTicketFlightStatus() {
     }
 }
 
-//ticket deletion
+// Delete (cancel) ticket with confirmation
 async function confirmDeleteTicket() {
     const confirmation = "<?= $ticket["confirmation_number"] ?? "" ?>";
     if (!confirmation) return;
@@ -691,7 +716,7 @@ async function confirmDeleteTicket() {
     }
 }
 
-//init
+// Initialize live updates
 <?php if ($ticketRow): ?>
 updateLocalClock();
 setInterval(updateLocalClock, 1000);

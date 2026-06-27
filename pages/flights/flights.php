@@ -1,8 +1,9 @@
 <?php
+// Initialize session
 session_start();
 
-if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {// ajax fetch
-
+// Handle AJAX requests for real-time flight updates
+if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
     ob_start();
 
     try {
@@ -15,10 +16,12 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {// ajax fetch
 
         $after = "6a41edc0413de93518a3b150";
 
+        // Fetch all flights via API
         $response = $api->getAllFlights($after);
 
         $flights = [];
 
+        // Extract relevant flight fields for response
         foreach (($response['flights'] ?? []) as $f) {
             $flights[] = [
                 "flight_id" => $f['flight_id'] ?? null,
@@ -49,23 +52,25 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {// ajax fetch
     }
 }
 
-
+// Page load: fetch and initialize data
 require_once __DIR__ . '/../../api/api.php';
 require_once __DIR__ . '/../../api/key.php';
 require_once __DIR__ . '/../../database/db.php';
-
 
 set_time_limit(1800);
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
+// Get airports for lookup table
 $airportResults = $api->getAirports();
 $airports = $airportResults['airports'] ?? [];
 
 $airportLookup = [];
 foreach ($airports as $airport) {
-    $airportLookup[strtolower($airport['shortName'])] = $airport;}
+    $airportLookup[strtolower($airport['shortName'])] = $airport;
+}
 
+// Get filter/sort parameters from query string
 $statusTab = $_GET['status'] ?? 'all';   
 $mode   = $_GET['mode'] ?? 'flightNumber';
 $search = trim($_GET['search'] ?? '');
@@ -73,6 +78,7 @@ $search = trim($_GET['search'] ?? '');
 $sort = 'time_asc';
 $role = $_SESSION['role'] ?? null;
 
+// Load user's saved sort preference from database
 if (isset($_SESSION['user_id'])) {
     $stmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
     $stmt->execute([$_SESSION['user_id']]);
@@ -90,12 +96,14 @@ $page = max(1, (int)($_GET['page'] ?? 1));
 
 $perPage = 10;
 
+// Build query filters
 $match = [];
 
 if ($statusTab !== 'all') {
     $match['status'] = $statusTab;
 }
 
+// Filter by date if searching by time
 if ($mode === 'time' && $search !== '') {
 
     $timestamp = strtotime($search);
@@ -112,13 +120,12 @@ if ($mode === 'time' && $search !== '') {
     }
 }
 
-
+// Fetch flights from API
 $flights = [];
 $after = '6a41edc0413de93518a3b150';
 
-
 if ($statusTab === 'all' && empty($match['departFromSender'])) {
-
+    // Get all flights
     $response = $api->getAllFlights($after);
 
     if (is_array($response)) {
@@ -130,13 +137,14 @@ if ($statusTab === 'all' && empty($match['departFromSender'])) {
     }
 
 } else {
-
+    // Search with filters
     $apiResult = $api->searchFlights($match);
 
     $flights = $apiResult['flights'] ?? [];
     $nextCursor = $apiResult['nextCursor'] ?? null ?? null;
 }
 
+// Whitelist allowed flight statuses
 $allowedStatuses = [
     'scheduled',
     'cancelled',
@@ -148,6 +156,7 @@ $allowedStatuses = [
     'departed'
 ];
 
+// Filter to only valid statuses
 $flights = array_values(array_filter($flights, function ($f) use ($allowedStatuses) {
 
     $status = strtolower(trim($f['status'] ?? ''));
@@ -156,6 +165,7 @@ $flights = array_values(array_filter($flights, function ($f) use ($allowedStatus
     return in_array($status, $allowedStatuses, true);
 }));
 
+// Helper function to build query strings with overrides
 function buildQuery($overrides = []) {
     return http_build_query(array_merge([
         'status' => $GLOBALS['statusTab'],
@@ -166,6 +176,7 @@ function buildQuery($overrides = []) {
     ], $overrides));
 }
 
+// Extract time from flight data (handles multiple time fields)
 $getTime = function ($f) {
 
     $time = $f['departFromSender']
@@ -187,6 +198,7 @@ $getTime = function ($f) {
     return (int)$time;
 };
 
+// Format time as readable date string
 $getDate = function ($f) use ($getTime) {
 
     $time = $getTime($f);
@@ -196,7 +208,7 @@ $getDate = function ($f) use ($getTime) {
     return date("M d, Y g:i A", $time);
 };
 
-
+// Filter by flight type (arrival/departure)
 if (in_array($mode, ['arrival', 'departure'], true)) {
 
     $flights = array_values(array_filter(
@@ -208,6 +220,7 @@ if (in_array($mode, ['arrival', 'departure'], true)) {
 
 } 
 
+// Apply search filter
 if ($search !== '') {
 
     $searchLower = strtolower($search);
@@ -226,6 +239,7 @@ if ($search !== '') {
             $timeRaw       = (string)$getTime($f);
             $timeFormatted = strtolower($getDate($f));
             
+            // Build searchable city list from airport codes
             $cities = [];
             
             foreach ([$comingFrom, $landingAt, $departingTo] as $code) {
@@ -245,6 +259,7 @@ if ($search !== '') {
             
             $cityString = implode(' ', $cities);
 
+            // Search based on selected mode
             switch ($mode) {
 
                 case 'flightNumber':
@@ -269,6 +284,7 @@ if ($search !== '') {
     ));
 }
 
+// Sort flights
 usort($flights, function ($a, $b) use ($sort, $getTime) {
     switch ($sort) {
         case 'time_asc':
@@ -288,6 +304,7 @@ usort($flights, function ($a, $b) use ($sort, $getTime) {
     }
 });
 
+// Paginate results
 $totalFlights = count($flights);
 $totalPages = ceil($totalFlights / $perPage);
 
@@ -296,6 +313,7 @@ $page = max(1, min($page, $totalPages));
 $offset = ($page - 1) * $perPage;
 $paginatedFlights = array_slice($flights, $offset, $perPage);
 
+// Check user role for booking eligibility
 $now = time();
 $canBook = in_array(strtolower($role), ['user', 'staff']);
 ?>
@@ -311,6 +329,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
    <?php include __DIR__ . '/../../components/nav.php'; ?>
 <div class="w-full min-h-screen bg-gray-900">
 
+    <!-- Hero Section -->
     <section class="p-6">
         <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-xl p-10 shadow-lg">
             <p class="tracking-[0.25em] text-sm text-blue-300 mb-4">BDPA AIRPORTS✈️</p>
@@ -321,6 +340,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
         </div>
     </section>
 
+    <!-- Status Filter Tabs -->
     <section class="px-6 pt-0">
         <div class="border border-gray-700 rounded-t-xl bg-gray-900 shadow-md overflow-hidden">
             <div class="flex overflow-x-auto md:overflow-visible whitespace-nowrap md:flex-wrap">
@@ -361,6 +381,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
         </div>
     </section>
 
+    <!-- Search & Filter Form -->
     <section class="px-6">
         <form method="GET" class="bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-md">
             <input type="hidden" name="status" value="<?= htmlspecialchars($statusTab) ?>">
@@ -407,6 +428,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
         </form>
     </section>
 
+    <!-- Flight Results -->
     <section class="p-6 pt-2 pb-0">
         <?php if ($totalFlights === 0): ?>
             <div class="bg-blue-900/20 border border-blue-700 rounded-lg p-6 transition-all duration-200 hover:bg-blue-900/25 hover:border-blue-800 hover:shadow-lg">
@@ -419,9 +441,11 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
             </div>
         <?php else: ?>
 
+            <!-- Flight Cards -->
             <div id="flightContainer" class="space-y-4 mt-3">
                 <?php foreach ($paginatedFlights as $f): ?>
                     <?php
+                        // Determine if user can book this flight
                         $flightTime = $getTime($f);
                         $canBook = in_array(strtolower($role), ['user', 'staff'])
                             && ($f['type'] ?? '') == 'departure'
@@ -434,6 +458,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
                                 transition duration-300">
 
                         <div class="grid grid-cols-1 md:grid-cols-[140px_200px_180px_180px_120px_160px_180px_1fr] gap-5 items-start md:items-center">
+                            <!-- Flight Number & Airline -->
                             <div>
                                 <h3 class="font-bold text-lg leading-tight">
                                     <?= htmlspecialchars($f['flightNumber'] ?? 'N/A') ?>
@@ -443,6 +468,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
                                 </p>
                             </div>
 
+                            <!-- Scheduled Time -->
                             <div>
                                 <p class="text-xs text-gray-400 uppercase tracking-wide">Scheduled</p>
                                 <p class="text-white text-sm whitespace-nowrap">
@@ -450,6 +476,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
                                 </p>
                             </div>
 
+                            <!-- Origin -->
                             <div class="min-w-0">
                                 <p class="text-xs text-gray-400 uppercase tracking-wide">
                                     <?= ($f['type'] ?? '') === 'arrival' ? 'Coming From' : 'Departing From' ?>
@@ -471,6 +498,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
                                 </p>
                             </div>
 
+                            <!-- Destination -->
                             <div class="min-w-0">
                                 <p class="text-xs text-gray-400 uppercase tracking-wide">
                                     <?= ($f['type'] ?? '') == 'arrival' ? 'Arriving At' : 'Departing To' ?>
@@ -483,6 +511,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
                                 </p>
                             </div>
 
+                            <!-- Type -->
                             <div>
                                 <p class="text-xs text-gray-400 uppercase tracking-wide">Type</p>
                                 <p class="text-sm text-gray-200 capitalize">
@@ -497,6 +526,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
                                 </p>
                             </div>
 
+                            <!-- Status (live-updated) -->
                             <div>
                                 <p class="text-xs text-gray-400 uppercase tracking-wide">Status</p>
                                 <p class="text-sm text-gray-200 capitalize"
@@ -506,6 +536,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
                                 </p>
                             </div>
 
+                            <!-- Gate (live-updated) -->
                             <div>
                                 <?php if (($f['type'] ?? '') == 'departure'): ?>
                                     <p class="text-xs text-gray-400 uppercase tracking-wide">Gate</p>
@@ -517,20 +548,24 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
                                 <?php endif; ?>
                             </div>
 
+                            <!-- Action Button -->
                             <div class="text-right justify-self-end">
                                 <?php if (in_array(strtolower($role), ['admin', 'root'])): ?>
+                                    <!-- Admin: Copy Flight ID -->
                                     <div class="flex flex-col items-end gap-2">
                                         <button onclick="copyFlightId(this, '<?= htmlspecialchars($f['flight_id'] ?? '', ENT_QUOTES) ?>')" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm transition duration-200">
                                             Copy Flight ID
                                         </button>
                                     </div>
                                 <?php elseif ($canBook): ?>
+                                    <!-- User: Book Button -->
                                     <a href="../booking/booking.php?flight_id=<?= urlencode($f['flight_id'] ?? '') ?>"
                                        class="bg-blue-600 px-4 py-2 rounded-lg text-sm
                                               hover:bg-blue-700 active:scale-95 transition duration-200">
                                         Book
                                     </a>
                                 <?php else: ?>
+                                    <!-- View Only with Reason Tooltip -->
                                     <div class="relative group inline-flex items-center gap-1">
                                         <span class="text-gray-400 text-sm">
                                             View Only
@@ -570,6 +605,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
         <?php endif; ?>
     </section>
 
+    <!-- Pagination -->
     <?php if ($totalFlights > 0): ?>
         <section class="p-6">
             <div class="flex justify-between items-center gap-4 flex-wrap">
@@ -610,7 +646,8 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
 </div>
 
 <script>
-    async function updateFlights() { //ajax
+    // Poll for real-time status/gate updates every 13 seconds
+    async function updateFlights() {
         try {
             const res = await fetch(window.location.pathname + '?ajax=1');
             
@@ -639,9 +676,11 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
                 return;
             }
 
+            // Update each flight's status/gate on page
             data.flights.forEach(f => {
                 if (!f.flight_id) return;
 
+                // Update status field
                 const statusEl = document.querySelector(
                     `[data-flight-id="${f.flight_id}"][data-field="status"]`
                 );
@@ -659,6 +698,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
                     }
                 }
 
+                // Update gate field
                 const gateEl = document.querySelector(
                     `[data-flight-id="${f.flight_id}"][data-field="gate"]`
                 );
@@ -682,6 +722,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
         }
     }
 
+    // Copy flight ID to clipboard with feedback
     function copyFlightId(button, flightId) {
         navigator.clipboard.writeText(flightId).then(() => {
             const originalText = button.textContent;
@@ -702,6 +743,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
         });
     }
     
+    // Initial update and periodic refresh
     updateFlights();
     setInterval(updateFlights, 13000);
 </script>
