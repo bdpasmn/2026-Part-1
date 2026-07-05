@@ -1,39 +1,61 @@
+<?php
+    $bagsInfo = [
+        "checked" => [
+            "max" => 8,
+            "prices" => [35, 45, 150, 200, 250, 300, 350, 400]
+        ],
+        "carry" => [
+            "max" => 4,
+            "prices" => [0, 0, 25, 50]
+        ]
+    ];
+?>
+
 <!-- Baggage selection section -->
 <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Baggage selection -->
+        <!-- LEFT -->
         <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
             <h2 class="text-xl font-bold mb-6 text-white">Baggage Selection 💼</h2>
             <div class="space-y-6">
-                <!-- Carry-on bag selection -->
+                <!-- Carry-on -->
                 <div>
-                    <label class="block mb-2 text-sm font-medium text-gray-300">Carry-on Bags (Max 2)</label>
-                    <select id="carryOnSelect" class="w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="0">0 Carry-on Bags</option>
-                        <option value="1">1 Carry-on Bag (FREE)</option>
-                        <option value="2">2 Carry-on Bags ($30 extra)</option>
+                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                        Carry-on Bags (Max <?= $bagsInfo["carry"]["max"] ?>)
+                    </label>
+                    <select id="carryOnSelect" class="w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white">
+                        <option value="0">0 Carry-on Bags ($0)</option>
+                        <?php foreach ($bagsInfo["carry"]["prices"] as $i => $price): ?>
+                            <option value="<?= $i + 1 ?>">
+                                <?= $i + 1 ?> Carry-on Bag<?= ($i + 1) === 1 ? "" : "s" ?>
+                                (<?= $price == 0 ? "FREE" : "$" . $price ?>)
+                            </option>
+                        <?php endforeach; ?>
                     </select>
-
-                    <p class="text-xs text-gray-400 mt-2">First carry-on is free. Second carry-on costs $30.</p>
                 </div>
 
-                <!-- Checked bag selection -->
+                <!-- Checked -->
                 <div>
-                    <label class="block mb-2 text-sm font-medium text-gray-300">Checked Bags (Max 5)</label>
-                    <select id="checkedSelect"class="w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="0">0 Checked Bags</option>
-                        <option value="1">1 Checked Bag (FREE)</option>
-                        <option value="2">2 Checked Bags ($50 extra)</option>
-                        <option value="3">3 Checked Bags ($150 extra)</option>
-                        <option value="4">4 Checked Bags ($250 extra)</option>
-                        <option value="5">5 Checked Bags ($350 extra)</option>
-                    </select>
+                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                        Checked Bags (Max <?= $bagsInfo["checked"]["max"] ?>)
+                    </label>
 
-                    <p class="text-xs text-gray-400 mt-2">1st checked bag is free. 2nd is $50. Each additional is $100.</p>
+                    <select id="checkedSelect" class="w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white">
+                        <option value="0">0 Checked Bags ($0)</option>
+                        <?php foreach ($bagsInfo["checked"]["prices"] as $i => $price): ?>
+                            <option value="<?= $i + 1 ?>">
+                                <?= $i + 1 ?> Checked Bag<?= ($i + 1) === 1 ? "" : "s" ?>
+                                (<?= $price == 0 ? "FREE" : "$" . $price ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
 
-                <!-- Calculate baggage cost -->
-                <button onclick="calculateBags()" class="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition">Calculate Baggage Cost</button>
+                <button onclick="calculateBags()"
+                    class="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition">
+                    Calculate Baggage Cost
+                </button>
+
             </div>
         </div>
 
@@ -57,24 +79,23 @@
         </div>
     </div>
 </div>
+
 <script>
+    const carryPrices = <?= json_encode($bagsInfo["carry"]["prices"]) ?>;
+    const checkedPrices = <?= json_encode($bagsInfo["checked"]["prices"]) ?>;   
+    
     // Calculate baggage fees
     function calculateBags() {
-        const carryOn = parseInt(document.getElementById("carryOnSelect").value);
-        const checked = parseInt(document.getElementById("checkedSelect").value);
+        const carryIndex = parseInt(document.getElementById("carryOnSelect").value);
+        const checkedIndex = parseInt(document.getElementById("checkedSelect").value);
 
-        let carryCost = 0;
-        if (carryOn == 2) carryCost = 30;
-
-        let checkedCost = 0;
-        if (checked >= 2) checkedCost = checkedCost + 50;
-        if (checked > 2) checkedCost = checkedCost + (checked - 2) * 100; 
+        const carryCost = carryIndex == 0 ? 0 : carryPrices[carryIndex - 1];
+        const checkedCost = checkedIndex == 0 ? 0 : checkedPrices[checkedIndex - 1];
 
         const total = carryCost + checkedCost;
 
-        // Update the baggage summary
-        document.getElementById("carrySummary").innerText = carryOn;
-        document.getElementById("checkedSummary").innerText = checked;
+        document.getElementById("carrySummary").innerText = carryIndex;
+        document.getElementById("checkedSummary").innerText = checkedIndex;
         document.getElementById("bagCost").innerText = "$" + total;
     }
 </script>

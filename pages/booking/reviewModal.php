@@ -78,6 +78,11 @@
                             <div class="text-gray-300 text-sm mb-2">Checked Bags</div>
                             <div id="reviewChecked" class="text-xl font-semibold text-white"></div>
                         </div>
+
+                        <div class="bg-slate-600 rounded-lg p-4 md:col-span-3">
+                            <div class="text-gray-300 text-sm mb-2">In-Flight Extras</div>
+                            <div id="reviewExtras" class="text-white font-semibold">None</div>
+                        </div>
                     </div>
                 </div>
 
@@ -93,6 +98,11 @@
                         <div class="flex justify-between items-center">
                             <span class="text-gray-200">Baggage Fees</span>
                             <span id="reviewBagCost" class="text-white font-medium">$0</span>
+                        </div>
+
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-200">In-Flight Extras</span>
+                            <span id="reviewExtrasCost" class="text-white font-medium">$0</span>
                         </div>
 
                         <div class="border-t border-gray-800 pt-5 flex justify-between items-center">
@@ -119,6 +129,7 @@
                         <input type="hidden" id="modalSeatInput" name="seat">
                         <input type="hidden" name="bags_carried" id="purchaseCarryOn">
                         <input type="hidden" name="bags_checked" id="purchaseChecked">
+                        <input type="hidden" name="extras" id="purchaseExtras">
 
                         <!-- Passenger info -->
                         <input type="hidden" name="first_name" id="purchaseFirstName">

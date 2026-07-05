@@ -34,11 +34,6 @@
                 header('Location: ' . BASE_URL . '/pages/dashboard/customer/customer.php?tab=profile');
                 exit;
             }
-        } else {
-            if ($currentFile == 'customer.php' && $currentTab == 'profile') {
-                header('Location: ' . BASE_URL . '/pages/dashboard/customer/customer.php?tab=overview');
-                exit;
-            }
         }
     }
     
@@ -61,7 +56,7 @@
         $dashboardLink = BASE_URL . "/pages/dashboard/root/root.php";
     }
 
-    $profileLocked = $isLoggedIn && strtolower($role) === 'customer' && ($_SESSION['profile_incomplete'] ?? false);
+    $profileLocked = $isLoggedIn && strtolower($role) == 'customer' && ($_SESSION['profile_incomplete'] ?? false);
 
     $disabledClass = $profileLocked ? 'pointer-events-none opacity-50 cursor-not-allowed': '';
     $disabledHref = $profileLocked ? 'javascript:void(0)': null;

@@ -214,6 +214,20 @@
         $stmt->execute([json_encode($flights), $userId]);
     }
 
+    /*
+    $paymentMethod = $_POST['payment_method'] ?? 'card';
+
+    if ($paymentMethod !== 'ffms') {
+        $earnedFfms = intval($flightInfo['ffms'] ?? 0);
+        $stmt = $pdo->prepare('
+            UPDATE "Users"
+            SET ffms = COALESCE(ffms, 0) + ?
+            WHERE user_id = ?
+        ');
+        $stmt->execute([$earnedFfms, $userId]);
+    }
+    */
+
     header("Location: ./confirmation.php?" . http_build_query(['confirmation' => $confirmationCode]));
     exit;
 ?>

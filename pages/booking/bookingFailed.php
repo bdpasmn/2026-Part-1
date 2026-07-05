@@ -3,8 +3,17 @@
     session_start();
     
     $role = $_SESSION['role'] ?? null;
+    $message = trim($_GET['message'] ?? '');
 
-    $message = $_GET['message'] ?? 'Booking could not be completed.';
+    // Redirect if no message was provided
+    if ($message === '') {
+        if (isset($_SESSION['user_id']) && in_array($role, ['customer', 'admin', 'root'])) {
+            header("Location: ../dashboard/{$role}/{$role}.php");
+        } else {
+            header("Location: ../../index.php"); 
+        }
+        exit;
+    }
 
     // Check if the error is related to the selected flight.
     $isFlightNotFound =

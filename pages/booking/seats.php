@@ -17,7 +17,33 @@
             $takenSeats = [];
         }
     }
+
+    $seatInfo = [
+        "first class" => [
+            "priceDollars" => 729.94,
+            "priceFfms" => 16852,
+            "total" => 15,
+        ],
+        "economy plus" => [
+            "priceDollars" => 365.67,
+            "priceFfms" => 13666,
+            "total" => 14
+        ],
+        "exit row" => [
+            "priceDollars" => 201.04,
+            "priceFfms" => 12868,
+            "total" => 11
+        ],
+        "economy" => [
+            "priceDollars" => 112.78,
+            "priceFfms" => 9914,
+            "total" => 54
+        ]
+    ];
 ?>
+<script>
+    const seatInfo = <?= json_encode($seatInfo) ?>;
+</script>
 <style>
     /* Prevent interaction with already-taken seats */
     .taken-seat {
@@ -44,7 +70,6 @@
             <script>
                 // Pass backend data into JavaScript
                 const flightId = <?= json_encode($flightId) ?>;
-                const seatPrice = <?= json_encode($flight['seatPrice'] ?? 0) ?>;
                 let takenSeats = <?= json_encode($takenSeats) ?>;
             </script>
 
@@ -55,9 +80,35 @@
                     // Container for seat buttons
                     const seatContainer = document.currentScript.parentElement;
 
-                    const rows = 10;   // number of rows
-                    const cols = 9;    // seats per row
+                    const cols = 9;
                     const letters = ["A","B","C","D","E","F","G","H","I"];
+
+                    // Calculate total seats 
+                    const totalSeats = Object.values(seatInfo).reduce(
+                        (sum, info) => sum + info.total,
+                        0
+                    );
+
+                    // Calculate required rows
+                    const rows = Math.ceil(totalSeats / cols);
+                    const seatTypes = {};
+                    let seatIndex = 0;
+
+                    for (const [type, info] of Object.entries(seatInfo)) {
+                        for (let i = 0; i < info.total; i++) {
+                            const row = Math.floor(seatIndex / cols) + 1;
+                            const col = seatIndex % cols;
+                            const seatId = `${row}${letters[col]}`;
+
+                            seatTypes[seatId] = {
+                                type: type,
+                                priceDollars: info.priceDollars,
+                                priceFfms: info.priceFfms
+                            };
+
+                            seatIndex++;
+                        }
+                    }
 
                     let selectedSeat = null;
 
@@ -68,10 +119,18 @@
                         return c + 3;
                     }
 
-                    // Generate seat buttons dynamically
+                    // Generate seat buttons 
                     for (let r = 1; r <= rows; r++) {
                         for (let c = 0; c < cols; c++) {
+                            const seatNumber = (r - 1) * cols + c;
+
+                            // Skip cells beyond the total seat count
+                            if (seatNumber >= totalSeats) {
+                                continue;
+                            }
+
                             const seatId = `${r}${letters[c]}`;
+                            const seat = seatTypes[seatId];
                             const wrapper = document.createElement("div");
                             wrapper.style.gridColumnStart = getColIndex(c);
 
@@ -87,26 +146,60 @@
                                 btn.disabled = true;
                             } else {
                                 // Available seat styling + click handler
-                                btn.className = "seat-btn h-10 w-full text-xs rounded bg-slate-600 border border-gray-500 text-white hover:bg-blue-600 hover:border-blue-400 transition";
+                                let classes = "";
+
+                                switch (seat.type) {
+                                    case "first class":
+                                        classes = "bg-pink-600 border border-pink-400 hover:bg-pink-500 hover:border-pink-300";
+                                        break;
+
+                                    case "economy plus":
+                                        classes = "bg-orange-400 border border-orange-200 hover:bg-orange-300 hover:border-orange-100";
+                                        break;
+
+                                    case "exit row":
+                                        classes = "bg-pink-400 border border-pink-200 hover:bg-pink-300 hover:border-pink-100";
+                                        break;
+
+                                    default:
+                                        classes = "bg-slate-600 border border-gray-500 hover:bg-slate-500 hover:border-gray-400";
+                                }
+
+                                btn.className = `seat-btn h-10 w-full text-xs rounded text-white transition ${classes}`;
 
                                 btn.onclick = () => {
                                     selectedSeat = seatId;
                                     // Update UI summary panel
                                     document.getElementById("selectedSeat").innerText = selectedSeat;
-                                    document.getElementById("selectedPrice").innerText = "$" + seatPrice;
+                                    document.getElementById("selectedType").innerText = seat.type.replace(/\b\w/g, c => c.toUpperCase());
+                                    document.getElementById("selectedPrice").innerText = "$" + seat.priceDollars.toFixed(2);
                                     document.getElementById("seatInput").value = selectedSeat;
 
                                     validateBooking();
 
                                     // Reset previous selections visually
                                     document.querySelectorAll(".seat-btn").forEach(b => {
-                                        b.classList.remove("bg-blue-500");
-                                        b.classList.add("bg-gray-700");
+                                        const seat = seatTypes[b.innerText];
+
+                                        switch (seat.type) {
+                                            case "first class":
+                                                b.className = "seat-btn h-10 w-full text-xs rounded text-white transition bg-pink-600 border border-pink-400 hover:bg-pink-500 hover:border-pink-300";
+                                                break;
+
+                                            case "economy plus":
+                                                b.className = "seat-btn h-10 w-full text-xs rounded text-white transition bg-orange-400 border border-orange-200 hover:bg-orange-300 hover:border-orange-100";
+                                                break;
+
+                                            case "exit row":
+                                                b.className = "seat-btn h-10 w-full text-xs rounded text-white transition bg-pink-400 border border-pink-200 hover:bg-pink-300 hover:border-pink-100";
+                                                break;
+
+                                            default:
+                                                b.className = "seat-btn h-10 w-full text-xs rounded text-white transition bg-slate-600 border border-gray-500 hover:bg-slate-500 hover:border-gray-400";
+                                        }
                                     });
 
-                                    // Highlight selected seat
-                                    btn.classList.add("bg-blue-500");
-                                    btn.classList.remove("border-blue-300");
+                                    btn.className = "seat-btn h-10 w-full text-xs rounded text-white transition bg-blue-500 border border-blue-300";
                                 };
                             }
 
@@ -126,6 +219,10 @@
                     <div class="text-gray-300">Seat Number</div>
                     <div id="selectedSeat" class="text-white font-bold">None selected</div>
                 </div>
+                <div class="mt-3">
+                    <div class="text-gray-300">Seat Class</div>
+                    <div id="selectedType" class="text-white font-bold">None</div>
+                </div>
                 <div>
                     <div class="text-gray-300">Seat Price</div>
                     <div id="selectedPrice" class="text-white font-bold">$0</div>
@@ -133,24 +230,34 @@
             </div>
 
             <!-- Legend -->
-            <div class="mt-6 flex items-center gap-4 text-xs">
+            <div class="mt-6 space-y-2 text-xs">
                 <div class="flex items-center gap-2">
-                    <div class="w-4 h-4 rounded bg-slate-600 border border-gray-300"></div>
-                    <span class="text-gray-300">Available</span>
+                    <div class="w-4 h-4 rounded bg-pink-600 border border-pink-400"></div>
+                    <span class="text-gray-300">First Class</span>
                 </div>
-
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 rounded bg-orange-400 border border-orange-200"></div>
+                    <span class="text-gray-300">Economy Plus</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 rounded bg-pink-400 border border-pink-200"></div>
+                    <span class="text-gray-300">Exit Row</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 rounded bg-slate-600 border border-gray-500"></div>
+                    <span class="text-gray-300">Economy</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 rounded bg-slate-700 border border-slate-600"></div>
+                    <span class="text-gray-300">Taken</span>
+                </div>
                 <div class="flex items-center gap-2">
                     <div class="w-4 h-4 rounded bg-blue-500 border border-blue-300"></div>
                     <span class="text-gray-300">Selected</span>
                 </div>
-
-                <div class="flex items-center gap-2">
-                    <div class="w-4 h-4 rounded bg-slate-700 border border-slate-500"></div>
-                    <span class="text-gray-300">Taken</span>
-                </div>
             </div>
 
-            <div class="mt-6 text-xs text-gray-400">Airplane layout: 10 rows × 9 seats (90 total seats)</div>
+            <div id="layoutInfo" class="mt-6 text-xs text-gray-400"></div>
         </div>
     </div>
 </div>
@@ -198,6 +305,9 @@
             console.error("Seat polling failed:", err);
         }
     }
+
+    document.getElementById("layoutInfo").innerText =
+    `Airplane layout: ${rows} rows × ${cols} seats (${totalSeats} total seats)`;
 
     // AJAX
     pollSeats();

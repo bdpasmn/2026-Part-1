@@ -97,8 +97,10 @@
                             <?= htmlspecialchars($flight['airline'] ?? '___') ?> Airlines
                         </p>
                     </div>
-                    <div>
-                        <span class="text-2xl font-bold text-white">$<?= htmlspecialchars($flight['seatPrice'] ?? '0') ?></span>
+
+                    <div class="relative inline-block group">
+                        <span class="text-2xl font-bold text-white cursor-help">$<?= htmlspecialchars($flight['seatPrice'] ?? '0') ?></span>
+                        <div class="absolute left-1/2 -translate-x-1/2 mt-2 w-max px-3 py-2 text-xs text-white bg-gray-900 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">Base ticket price (economy)</div>
                     </div>
                 </div>
             </div>
@@ -127,6 +129,12 @@
                             <span class="ml-2 text-gray-400">Baggage</span>
                             <div class="flex-1 h-px bg-gray-700 mx-4"></div>
                         </a>
+
+                        <!-- Step 4 -->
+                        <a href="#step-4" class="step-link flex items-center">
+                            <div class="step-indicator w-8 h-8 rounded-full border border-gray-600 text-gray-400 flex items-center justify-center text-sm">4</div>
+                            <span class="ml-2 text-gray-400">Extras</span>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -144,6 +152,11 @@
             <!-- Step 3 -->
             <section id="step-3" class="scroll-mt-52 mb-6">
                 <?php include_once('./bags.php'); ?>
+            </section>
+
+            <!-- Step 4 -->
+            <section id="step-4" class="scroll-mt-52 mb-6">
+                <?php include_once('./extras.php'); ?>
             </section>
 
             <input type="hidden" id="seatInput" value="">
@@ -247,6 +260,24 @@
                 // Display baggage summary
                 document.getElementById("reviewCarryOn").innerText = document.getElementById("carryOnSelect").value + " Carry-On Bag(s)";
                 document.getElementById("reviewChecked").innerText = document.getElementById("checkedSelect").value + " Checked Bag(s)";
+
+                // Selected in-flight extras
+                const selectedExtras = [];
+                let extrasCost = 0;
+
+                document.querySelectorAll(".extra-checkbox:checked").forEach(extra => {
+                    selectedExtras.push(extra.dataset.name.replace(/\b\w/g, c => c.toUpperCase()).replace("Wifi", "WiFi"));
+                    extrasCost += parseFloat(extra.dataset.price);
+                });
+
+                // Display extras in review modal
+                document.getElementById("reviewExtras").innerText = selectedExtras.length ? selectedExtras.join(", ") : "None";
+
+                // Display extras cost
+                document.getElementById("reviewExtrasCost").innerText = "$" + extrasCost.toFixed(2);
+
+                // Pass extras to purchase.php
+                document.getElementById("purchaseExtras").value = JSON.stringify(selectedExtras);
 
                 // Seat price from PHP
                 const seatPrice = <?= json_encode($flight['seatPrice'] ?? 0) ?>;
