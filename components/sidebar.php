@@ -8,30 +8,49 @@ require_once __DIR__ . '/../database/db.php';
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
 $stmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
-$stmt->execute([$_SESSION['user_id']]);
+$stmt->execute([$_SESSION['user_id'] ?? null]);
 $dbUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
 // Load this customer's tickets
 $ticketsStmt = $pdo->prepare('SELECT * FROM "Tickets" WHERE user_id = ?');
-$ticketsStmt->execute([$_SESSION['user_id']]);
+$ticketsStmt->execute([$_SESSION['user_id'] ?? null]);
 $userTickets = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $flight = null;
+$selectedTicket = null;
 
-if (!empty($userTickets)) {
+$now = time();
+$closestDeparture = PHP_INT_MAX;
 
-    // Using the fifth ticket like your example
-    $selectedTicket = $userTickets[4];
+foreach ($userTickets as $ticket) {
 
-    $flightId = $selectedTicket['flight_id'];
+    $flightId = $ticket['flight_id'];
 
-    $flightsResponse = $api->searchFlights(
+    $response = $api->searchFlights(
         ["flight_id" => $flightId],
-        null,
+        null,0
         "desc"
     );
 
-    $flight = $flightsResponse["flights"][0] ?? null;
+    $currentFlight = $response['flights'][0] ?? null;
+
+    if (!$currentFlight || empty($currentFlight['departFromSender'])) {
+        continue;
+    }
+
+    // API timestamps are in milliseconds
+    $departure = (int)($currentFlight['departFromSender'] / 1000);
+
+    // Ignore flights that have already departed
+    if ($departure < $now) {
+        continue;
+    }
+
+    if ($departure < $closestDeparture) {
+        $closestDeparture = $departure;
+        $selectedTicket = $ticket;
+        $flight = $currentFlight;
+    }
 }
 ?>
 
@@ -50,10 +69,10 @@ if (!empty($userTickets)) {
     </div>
 
     <nav class="flex-1 p-4 space-y-2">
-       <p class="text-gray-400">User: <?php echo htmlspecialchars($dbUser['first_name']); ?></p>
-       <p class="text-gray-400">Email: <?php echo htmlspecialchars($dbUser['email']); ?></p>
-       <p class="text-gray-400">Tickets: <?php echo htmlspecialchars($userTickets[4]['ticket_id']); ?></p>
-       <p class="text-gray-400">Destination: <?php echo htmlspecialchars($userTickets[4]['destination']); ?></p>
+       <p class="text-gray-400">User: <?php echo htmlspecialchars($dbUser['first_name']  ?? 'Unknown'); ?></p>
+       <p class="text-gray-400">Email: <?php echo htmlspecialchars($dbUser['email']  ?? 'Unknown'); ?></p>
+       <p class="text-gray-400">Tickets: <?php echo htmlspecialchars($selectedTicket['ticket_id']  ?? 'Unknown'); ?></p>
+       <p class="text-gray-400">Destination: <?php echo htmlspecialchars($selectedTicket['destination'] ?? 'Unknown'); ?></p>
        <p class="text-gray-400">Airline: <?= htmlspecialchars($flight['airline'] ?? 'Unknown') ?></p>
        <p class="text-gray-400">Flight Number: <?= htmlspecialchars($flight['flightNumber'] ?? 'Unknown') ?></p>
        <p class="text-gray-400">Departure: <?= !empty($flight['departFromSender'])? date('M j, Y g:i A', $flight['departFromSender'] / 1000): 'TBD'; ?></p>
