@@ -14,8 +14,6 @@
     }
 
     $message = '';
-    $first = $_POST['first'] ?? '';
-    $last = $_POST['last'] ?? '';
     $email = $_POST['email'] ?? '';
 
     // Get dashboard URL based on user role
@@ -63,22 +61,20 @@
 
     // Process login form submission
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $first = trim($_POST['first'] ?? '');
-        $last = trim($_POST['last'] ?? '');
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
 
         // Validate required fields
-        if (!$first || !$last || !$email || !$password) {
+        if (!$email || !$password) {
             $message = "Please fill in all fields.";
         } else {
             // Look up user in database
             $stmt = $pdo->prepare('
                 SELECT user_id, password, title, role, email, first_name, failed_attempts, lock_until
                 FROM "Users"
-                WHERE first_name = ? AND last_name = ? AND email = ?
+                WHERE email = ?
             ');
-            $stmt->execute([$first, $last, $email]);
+            $stmt->execute([$email]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$row) {
@@ -208,18 +204,6 @@
                             <div>
                                 <label class="text-xs text-gray-400">Email</label>
                                 <input type="email" name="email" required value="<?= htmlspecialchars($email) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
-                            </div>
-
-                            <!-- First and last name inputs -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label class="text-xs text-gray-400">First Name</label>
-                                    <input type="text" name="first" required value="<?= htmlspecialchars($first) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-400">Last Name</label>
-                                    <input type="text" name="last" required value="<?= htmlspecialchars($last) ?>" class="w-full mt-2 h-12 bg-gray-900 border border-gray-700 rounded-lg px-4 text-sm text-white placeholder-gray-500 shadow-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition">
-                                </div>
                             </div>
 
                             <!-- Password input -->
