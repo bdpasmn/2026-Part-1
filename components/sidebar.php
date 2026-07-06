@@ -69,12 +69,12 @@ foreach ($userTickets as $ticket) {
     </div>
 
     <nav class="flex-1 p-4 space-y-2">
-       <p class="text-gray-400">User: <?php echo htmlspecialchars($dbUser['first_name']  ?? 'Unknown'); ?></p>
-       <p class="text-gray-400">Email: <?php echo htmlspecialchars($dbUser['email']  ?? 'Unknown'); ?></p>
-       <p class="text-gray-400">Tickets: <?php echo htmlspecialchars($selectedTicket['ticket_id']  ?? 'Unknown'); ?></p>
-       <p class="text-gray-400">Destination: <?php echo htmlspecialchars($selectedTicket['destination'] ?? 'Unknown'); ?></p>
+       <p class="text-gray-400">User: <?php echo htmlspecialchars($dbUser['first_name']  ?? 'Not Signed In'); ?></p>
+       <p class="text-gray-400">Email: <?php echo htmlspecialchars($dbUser['email']  ?? 'Not Signed In'); ?></p>
+       <p class="text-gray-400">Tickets: <?php echo htmlspecialchars($selectedTicket['ticket_id']  ?? '-'); ?></p>
+       <p class="text-gray-400">Destination: <?php echo htmlspecialchars($selectedTicket['destination'] ?? '-'); ?></p>
        <p class="text-gray-400">Airline: <?= htmlspecialchars($flight['airline'] ?? 'Unknown') ?></p>
-       <p class="text-gray-400">Flight Number: <?= htmlspecialchars($flight['flightNumber'] ?? 'Unknown') ?></p>
+       <p class="text-gray-400">Flight Number: <?= htmlspecialchars($flight['flightNumber'] ?? '-') ?></p>
        <p class="text-gray-400">Departure: <?= !empty($flight['departFromSender'])? date('M j, Y g:i A', $flight['departFromSender'] / 1000): 'TBD'; ?></p>
        <p class="text-gray-400">Arrival: <?= !empty($flight['arriveAtReceiver'])? date('M j, Y g:i A', $flight['arriveAtReceiver'] / 1000): 'TBD'; ?></p>
     </nav>
