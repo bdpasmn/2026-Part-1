@@ -16,7 +16,7 @@ $ticketsStmt = $pdo->prepare('SELECT * FROM "Tickets" WHERE user_id = ?');
 $ticketsStmt->execute([$_SESSION['user_id'] ?? null]);
 $userTickets = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-$flight = null;
+// $flight = null;
 $selectedTicket = null;
 
 $now = time();
@@ -51,7 +51,7 @@ foreach ($userTickets as $ticket) {
         $selectedTicket = $ticket;
         $flight = $currentFlight;
     }
-}
+//}
 ?>
 
 <html>
