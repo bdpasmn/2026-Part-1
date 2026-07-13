@@ -51,7 +51,7 @@ foreach ($userTickets as $ticket) {
         $selectedTicket = $ticket;
         $flight = $currentFlight;
     }
-//}
+}
 ?>
 
 <html>
