@@ -1,5 +1,4 @@
 <?php
-session_start();
 
 require_once __DIR__ . '/../api/api.php';
 require_once __DIR__ . '/../api/key.php';
@@ -26,10 +25,10 @@ foreach ($userTickets as $ticket) {
 
     $flightId = $ticket['flight_id'];
 
-    $response = $api->searchFlights(
+    $response = $api->getFlights(
         ["flight_id" => $flightId],
-        null,0
-        "desc"
+        null,0,
+        'desc'
     );
 
     $currentFlight = $response['flights'][0] ?? null;
@@ -53,15 +52,6 @@ foreach ($userTickets as $ticket) {
     }
 }
 ?>
-
-<html>
-<head>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100">
-
-<div class="flex h-screen">
-
   <!-- Sidebar -->
   <aside class="w-64 bg-gray-900 text-white flex flex-col">
     <div class="p-6 text-2xl font-bold border-b border-gray-700">
@@ -79,8 +69,34 @@ foreach ($userTickets as $ticket) {
        <p class="text-gray-400">Arrival: <?= !empty($flight['arriveAtReceiver'])? date('M j, Y g:i A', $flight['arriveAtReceiver'] / 1000): 'TBD'; ?></p>
     </nav>
   </aside>
+<script>
+document.getElementById("flightSearchForm").addEventListener("submit", function(e) {
+    e.preventDefault();
 
-</div>
+    const destination = document.getElementById("destination").value;
+    const date = document.getElementById("date").value;
 
-</body>
-</html>
+    const results = document.getElementById("searchResults");
+
+    results.innerHTML = `
+        <div class="text-center py-8">
+            <span class="text-blue-400">Searching flights...</span>
+        </div>
+    `;
+
+    fetch(`./flightResults.php?destination=${encodeURIComponent(destination)}&date=${encodeURIComponent(date)}`)
+        .then(response => response.text())
+        .then(html => {
+            results.innerHTML = html;
+        })
+        .catch(error => {
+            console.error(error);
+
+            results.innerHTML = `
+                <div class="bg-red-600 text-white p-4 rounded">
+                    Unable to load flights.
+                </div>
+            `;
+        });
+});
+</script>

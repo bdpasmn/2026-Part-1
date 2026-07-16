@@ -169,7 +169,13 @@
     <body class="bg-gray-900 min-h-screen text-white">
         <div class="w-full min-h-screen bg-gray-900">
             <!-- Navigation -->
-            <?php include "../../components/nav.php"; ?>
+            <?php include __DIR__ . '/../../components/nav.php'; ?>
+
+        <div class="flex">
+
+        <?php include __DIR__ . '/../../components/sidebar.php'; ?>
+
+        <main class="flex-1 min-h-screen bg-gray-900">
 
             <!-- Page header section -->
             <section class="p-6">
@@ -309,5 +315,7 @@
                 </div>
             </section>
         </div>
+    </main>
+    </div>
     </body>
 </html>

@@ -718,7 +718,13 @@ function getFlightInfo(string $fid, array $flightMap, AirportsAPI $api): ?array 
 </style>
 </head>
 <body class="bg-gray-900 min-h-screen text-white">
-  <?php include_once __DIR__ . '/../../../components/nav.php'; ?>
+  <?php include __DIR__ . '/../../../components/nav.php'; ?>
+
+        <div class="flex">
+
+        <?php include __DIR__ . '/../../../components/sidebar.php'; ?>
+
+        <main class="flex-1 min-h-screen bg-gray-900">
 <main class="max-w-7xl mx-auto p-4 sm:p-6 space-y-5">
 <!-- Dashboard Header -->
 
@@ -1606,6 +1612,8 @@ $route = 'SMN → ' . strtoupper($destination);
 
   <?php endif; ?>
 
+</main>
+</div>
 </main>
 
 <script>

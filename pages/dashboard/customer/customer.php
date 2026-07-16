@@ -630,7 +630,13 @@ body { font-family: 'Inter', sans-serif; }
 window.__autoLogoutMinutes = <?= (int)$currentUser['auto_logout'] ?>;
 </script>
 
-<?php include_once __DIR__ . '/../../../components/nav.php'; ?>
+ <?php include __DIR__ . '/../../../components/nav.php'; ?>
+
+        <div class="flex">
+
+        <?php include __DIR__ . '/../../../components/sidebar.php'; ?>
+
+        <main class="flex-1 min-h-screen bg-gray-900">
 
 
 <main class="max-w-7xl mx-auto p-6">
@@ -976,6 +982,8 @@ window.__autoLogoutMinutes = <?= (int)$currentUser['auto_logout'] ?>;
       </table>
     </div>
     <div id="past-flights-pagination" class="flex items-center justify-between px-5 py-3 border-t border-gray-700 text-sm text-gray-400"></div>
+  </div>
+  </main>
   </div>
 
   <script>

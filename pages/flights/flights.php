@@ -326,6 +326,12 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
 </head>
 <body class="bg-slate-800 min-h-screen text-white">
    <?php include __DIR__ . '/../../components/nav.php'; ?>
+
+        <div class="flex">
+
+        <?php include __DIR__ . '/../../components/sidebar.php'; ?>
+
+        <main class="flex-1 min-h-screen bg-gray-900">
 <div class="w-full min-h-screen bg-gray-900">
 
     <!-- Hero Section -->
@@ -636,6 +642,8 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
                     <?php endif; ?>
                 </div>
             </div>
+        </main>
+    </div>
         </section>
     <?php endif; ?>
 </div>

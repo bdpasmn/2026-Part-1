@@ -418,7 +418,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 echo json_encode(['success' => false, 'message' => $errorMsg]);
             } else {
                 echo json_encode(['success' => true, 'message' => $updateMsg]);
-            }24
+            }
             exit;
         }
         $activeTab = 'tickets';
@@ -460,7 +460,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 </style>
 </head>
 <body class="bg-gray-900 min-h-screen text-white">
-  <?php include_once __DIR__ . '/../../../components/nav.php'; ?>
+  <?php include __DIR__ . '/../../../components/nav.php'; ?>
+
+    <div class="flex">
+
+      <?php include __DIR__ . '/../../../components/sidebar.php'; ?>
+
+      <main class="flex-1 min-h-screen bg-gray-900">
 <main class="max-w-7xl mx-auto p-4 sm:p-6 space-y-5">
 
   <div class="rounded-lg p-8 mb-6 bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 shadow-lg">
@@ -833,6 +839,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
   <?php endif; // myAirline check ?>
 
 </main>
+</main>
+</div>
 
 <script>
 function copyToClipboard(text, el) {

@@ -86,8 +86,14 @@
         <script src="https://cdn.tailwindcss.com"></script>
     </head>
     <body class="bg-gray-900 min-h-screen text-white">
-        <!-- Navigation -->
-        <?php include "../../components/nav.php"; ?>
+        <!-- Navigation -->"; ?>
+        <?php include __DIR__ . '/../../components/nav.php'; ?>
+
+        <div class="flex">
+
+        <?php include __DIR__ . '/../../components/sidebar.php'; ?>
+
+        <main class="flex-1 min-h-screen bg-gray-900">
 
         <main class="max-w-7xl mx-auto p-6">
             <!-- Flight Summary Section -->
@@ -190,6 +196,8 @@
                 </div>
             </section>
         </main>
+        </main>
+        </div>
 
         <?php include_once('reviewModal.php'); ?>
         <?php include_once('paymentModal.php'); ?>

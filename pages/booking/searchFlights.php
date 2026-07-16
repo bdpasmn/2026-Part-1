@@ -45,8 +45,13 @@
     <body class="bg-gray-900 min-h-screen text-white">
         <div class="w-full min-h-screen bg-gray-900">
             <!-- Navbar -->
-            <?php include "../../components/nav.php"; ?>
+            <?php include __DIR__ . '/../../components/nav.php'; ?>
 
+        <div class="flex">
+
+        <?php include __DIR__ . '/../../components/sidebar.php'; ?>
+
+        <main class="flex-1 min-h-screen bg-gray-900">
             <!-- Hero section -->
             <section class="p-6">
                 <div class="bg-gradient-to-r from-slate-800 to-slate-900 border border-gray-700 rounded-xl p-10 shadow-lg">
@@ -127,6 +132,6 @@
                     <?php endforeach; ?>
                 </div>
             </section>
-        </div>
+        
     </body>
 </html>

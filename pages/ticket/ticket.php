@@ -283,7 +283,13 @@ $statusClass = match ($status) {
  
 <body class="bg-gray-900 min-h-screen text-white">
 <div class="w-full min-h-screen bg-gray-900">
-    <?php include __DIR__ . "/../../components/nav.php"; ?>
+     <?php include __DIR__ . '/../../components/nav.php'; ?>
+
+        <div class="flex">
+
+        <?php include __DIR__ . '/../../components/sidebar.php'; ?>
+
+        <main class="flex-1 min-h-screen bg-gray-900">
  
     <main class="w-full p-10">
  
@@ -610,6 +616,8 @@ $statusClass = match ($status) {
  
  
     </main>
+</div>
+</main>
 </div>
 <script>
 // Update local time display
