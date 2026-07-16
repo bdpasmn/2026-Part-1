@@ -129,8 +129,7 @@
                             :phone,
                             :email,
                             :password,
-                            :role,
-                            :ban
+                            :role
                         )
                     RETURNING user_id
                 ');
@@ -151,8 +150,7 @@
                     ':phone' => $phone,
                     ':email' => $email,
                     ':password' => password_hash($password, PASSWORD_DEFAULT),
-                    ':role' => 'Customer',
-                    ':ban' => 'NO'
+                    ':role' => 'Customer'
                 ]);
 
                 $userId = $stmt->fetchColumn();
