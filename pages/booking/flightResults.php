@@ -167,6 +167,7 @@
         <script src="https://cdn.tailwindcss.com"></script>
     </head>
     <body class="bg-gray-900 min-h-screen text-white">
+        
         <div class="w-full min-h-screen bg-gray-900">
             <!-- Navigation -->
             <?php include __DIR__ . '/../../components/nav.php'; ?>
@@ -283,7 +284,7 @@
                                 <!-- Price -->
                                 <div>
                                     <p class="font-medium text-white">Price</p>
-                                    <p class="text-gray-400">$<?= htmlspecialchars($flight['seatPrice'] ?? '0') ?></p>
+                                    <p class="text-gray-400">$<?= htmlspecialchars($flight['seats']['economy']['priceDollars'] ?? '0') ?><?= (isset($role) && $role === 'customer') ? ' or ' . htmlspecialchars($flight['seats']['economy']['priceFfms'] ?? '0'). ' FFM' : '' ?></p>
                                 </div>
 
                                 <!-- Booking button -->

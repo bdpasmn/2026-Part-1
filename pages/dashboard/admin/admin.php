@@ -571,13 +571,89 @@ if ($_POST['action'] === 'update_attendant_airline') {
     }
         // Mark ticket as cancelled
 
-    if ($_POST['action'] === 'cancel_ticket') {
-        $tid = $_POST['ticket_id'] ?? '';
+if ($_POST['action'] === 'cancel_ticket') {
+    $tid = $_POST['ticket_id'] ?? '';
+
+    $findStmt = $pdo->prepare('SELECT * FROM "Tickets" WHERE ticket_id = ? LIMIT 1');
+    $findStmt->execute([$tid]);
+    $ticket = $findStmt->fetch(PDO::FETCH_ASSOC);
+
+    try {
+        $pdo->beginTransaction();
+
         $upd = $pdo->prepare('UPDATE "Tickets" SET status=? WHERE ticket_id=?');
         $upd->execute(['cancelled', $tid]);
+
+        // --- FFM adjustment ---
+        if ($ticket) {
+            $fId = $ticket['flight_id'] ?? '';
+            $confirmation = $ticket['confirmation_code'] ?? '';
+
+            $stmtUser = $pdo->prepare('
+                SELECT u.user_id, u.ffm, u.ffms_spent, u.ffms_gained
+                FROM "Users" u, jsonb_array_elements(u.flights) AS elem
+                WHERE elem->>\'confirmation_code\' = :confirmation
+                LIMIT 1
+            ');
+            $stmtUser->execute([":confirmation" => $confirmation]);
+            $userRow = $stmtUser->fetch();
+
+            if ($userRow) {
+                $ffmsSpent  = json_decode($userRow["ffms_spent"]  ?? "[]", true) ?: [];
+                $ffmsGained = json_decode($userRow["ffms_gained"] ?? "[]", true) ?: [];
+
+                // Refund FFMs spent on this flight (ticket purchase + in-flight extras)
+                $refundTotal = 0;
+                $remainingSpent = [];
+                foreach ($ffmsSpent as $entry) {
+                    if (($entry["flight_id"] ?? null) === $fId) {
+                        $refundTotal += (int) ($entry["amount"] ?? 0);
+                    } else {
+                        $remainingSpent[] = $entry;
+                    }
+                }
+
+                // Deduct FFMs earned for purchasing a ticket on this flight
+                $deductTotal = 0;
+                $remainingGained = [];
+                foreach ($ffmsGained as $entry) {
+                    if (($entry["flight_id"] ?? null) === $fId) {
+                        $deductTotal += (int) ($entry["amount"] ?? 0);
+                    } else {
+                        $remainingGained[] = $entry;
+                    }
+                }
+
+                $newBalance = max(0, (int) $userRow["ffm"] + $refundTotal - $deductTotal);
+
+                $stmtUserUpdate = $pdo->prepare('
+                    UPDATE "Users"
+                    SET ffm = :balance,
+                        ffms_spent = :spent::jsonb,
+                        ffms_gained = :gained::jsonb
+                    WHERE user_id = :uid
+                ');
+                $stmtUserUpdate->execute([
+                    ":balance" => $newBalance,
+                    ":spent"   => json_encode(array_values($remainingSpent)),
+                    ":gained"  => json_encode(array_values($remainingGained)),
+                    ":uid"     => $userRow["user_id"],
+                ]);
+            }
+        }
+
+        $pdo->commit();
         $updateMsg = 'Ticket cancelled.';
-        $ticketsStmt = $pdo->query('SELECT * FROM "Tickets"');
-        $allTickets  = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        $errorMsg = 'Failed to cancel ticket: ' . $e->getMessage();
+    }
+
+    $ticketsStmt = $pdo->query('SELECT * FROM "Tickets"');
+    $allTickets  = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
         if ($isAjax) {
             header('Content-Type: application/json');
@@ -606,7 +682,7 @@ if ($_POST['action'] === 'update_attendant_airline') {
         }
 
         $activeTab = 'customers';
-    }
+    
 
     if ($_POST['action'] === 'delete_unhashed_admins') {
         $delStmt = $pdo->query('SELECT user_id, password FROM "Users" WHERE LOWER(role) = \'admin\'');

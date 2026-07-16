@@ -70,6 +70,7 @@ if (isset($_GET["xhr"]) && $_GET["xhr"] === "flight-status") {
     exit();
 }
 
+
 // AJAX: Cancel ticket and free up seat
 if (isset($_GET["xhr"]) && $_GET["xhr"] === "delete-ticket") {
     header("Content-Type: application/json");
@@ -106,6 +107,60 @@ if (isset($_GET["xhr"]) && $_GET["xhr"] === "delete-ticket") {
                 ":seat" => $seatToRemove,
                 ":fid" => $fId,
             ]);
+
+            // --- FFM adjustment ---
+            // Find the customer who owns this ticket via their `flights` list
+            $stmtUser = $pdo->prepare('
+                SELECT u.user_id, u.ffm, u.ffms_spent, u.ffms_gained
+                FROM "Users" u, jsonb_array_elements(u.flights) AS elem
+                WHERE elem->>\'confirmation_code\' = :confirmation
+                LIMIT 1
+            ');
+            $stmtUser->execute([":confirmation" => $confirmation]);
+            $userRow = $stmtUser->fetch();
+
+            if ($userRow) {
+                $ffmsSpent  = json_decode($userRow["ffms_spent"]  ?? "[]", true) ?: [];
+                $ffmsGained = json_decode($userRow["ffms_gained"] ?? "[]", true) ?: [];
+
+                // Refund FFMs spent on this flight (ticket purchase + in-flight extras)
+                $refundTotal = 0;
+                $remainingSpent = [];
+                foreach ($ffmsSpent as $entry) {
+                    if (($entry["flight_id"] ?? null) === $fId) {
+                        $refundTotal += (int) ($entry["amount"] ?? 0);
+                    } else {
+                        $remainingSpent[] = $entry;
+                    }
+                }
+
+                // Deduct FFMs earned for purchasing a ticket on this flight
+                $deductTotal = 0;
+                $remainingGained = [];
+                foreach ($ffmsGained as $entry) {
+                    if (($entry["flight_id"] ?? null) === $fId) {
+                        $deductTotal += (int) ($entry["amount"] ?? 0);
+                    } else {
+                        $remainingGained[] = $entry;
+                    }
+                }
+
+                $newBalance = max(0, (int) $userRow["ffm"] + $refundTotal - $deductTotal);
+
+                $stmtUserUpdate = $pdo->prepare('
+                    UPDATE "Users"
+                    SET ffm = :balance,
+                        ffms_spent = :spent::jsonb,
+                        ffms_gained = :gained::jsonb
+                    WHERE user_id = :uid
+                ');
+                $stmtUserUpdate->execute([
+                    ":balance" => $newBalance,
+                    ":spent"   => json_encode(array_values($remainingSpent)),
+                    ":gained"  => json_encode(array_values($remainingGained)),
+                    ":uid"     => $userRow["user_id"],
+                ]);
+            }
         }
 
         // Mark ticket as cancelled

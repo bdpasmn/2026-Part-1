@@ -1,7 +1,4 @@
 <?php
-    // BUGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
-    // when try again, seat color not reset
-    // add ffm seat price too
 
     // Initialize empty array for seats that are already taken
     $takenSeats = [];
@@ -57,14 +54,13 @@
             </script>
 
             <!-- Seat map layout -->
-            <div class="grid gap-2"
-                style="grid-template-columns: repeat(3, minmax(0, 1fr)) 0.3fr repeat(3, minmax(0, 1fr)) 0.3fr repeat(3, minmax(0, 1fr));">
+            <div class="grid gap-2" style="grid-template-columns: repeat(3, minmax(0,1fr)) 0.3fr repeat(4, minmax(0,1fr)) 0.3fr repeat(3, minmax(0,1fr));">
                 <script>
                     // Container for seat buttons
                     const seatContainer = document.currentScript.parentElement;
 
-                    const cols = 9;
-                    const letters = ["A","B","C","D","E","F","G","H","I"];
+                    const cols = 10;
+                    const letters = ["A","B","C","D","E","F","G","H","I", "J"];
 
                     // Calculate total seats 
                     const totalSeats = Object.values(seatInfo).reduce(
@@ -98,7 +94,7 @@
                     // Maps seat column to seat map position
                     function getColIndex(c) {
                         if (c <= 2) return c + 1;
-                        if (c <= 5) return c + 2;
+                        if (c <= 6) return c + 2;
                         return c + 3;
                     }
 

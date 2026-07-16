@@ -1,4 +1,4 @@
-<!-- make card details its own card, only showif paying with card. glitch with hovring on save, it flickers. only money pay. the modal defaults the cost-->
+<!-- try gain colors. 10x in admin-->
 <div id="paymentModal" class="fixed inset-0 hidden z-50 overflow-y-auto">
     <div class="fixed inset-0 bg-black/30" onclick="closePaymentModal()"></div>
     <div class="relative min-h-screen flex items-center justify-center p-6">
@@ -35,7 +35,7 @@
                     <input type="hidden" id="purchaseFfmEarned" name="ffm_earned" value="0">
 
                     <!-- Payment method breakdown: ticket + extras + baggage. -->
-                    <div class="bg-gray-700 border border-gray-600 rounded-lg p-5">
+                    <div class="bg-gray-700 border border-gray-600 rounded-lg p-5 mb-5">
                         <h3 class="font-semibold text-white mb-4">Choose how you'd like to pay</h3>
 
                         <!-- Ticket -->
@@ -84,72 +84,77 @@
                         <!-- Shown if the combined FFM total exceeds the user's balance -->
                         <div id="ffmBalanceWarning" class="hidden mt-3 text-sm text-red-400 bg-red-950/40 border border-red-800 rounded-lg p-3"></div>
                     </div>
-                    <div id="cardDetailsSection">
-                    <div>
-                        <label class="block mb-2 text-sm font-medium text-gray-300">Cardholder Name*</label>
-                        <input type="text" id="cardHolderName" name="cardholder_name" class="required-payment w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-
-                    <div>
-                        <label class="block mb-2 text-sm font-medium text-gray-300">Card Number*</label>
-                        <input type="text" id="cardNumber" name="card_number" maxlength="19" oninput="this.value=this.value.replace(/\D/g,'').replace(/(.{4})/g,'$1 ').trim()" class="required-payment w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
+                    
+                    <div class="mt-0 mb-0">
+                        <div id="cardDetailsSection" class="border border-gray-600 rounded-lg p-6 space-y-6 mt-4 mb-4">    
+                        <h3 class="text-lg font-semibold text-white mb-4">Payment Information</h3>
+ 
                         <div>
-                            <label class="block mb-2 text-sm font-medium text-gray-300">Expiration Date*</label>
-                            <input type="text" id="expirationDate" name="expiration_date" maxlength="5" placeholder="MM/YY" oninput="this.value=this.value.replace(/\D/g,''); if(this.value.length > 2){ this.value=this.value.slice(0,2)+'/'+this.value.slice(2,4);}" class="required-payment w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <label class="block mb-2 text-sm font-medium text-gray-300">Cardholder Name*</label>
+                            <input type="text" id="cardHolderName" name="cardholder_name" class="required-payment w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         </div>
+
                         <div>
-                            <label class="block mb-2 text-sm font-medium text-gray-300">CVC*</label>
-                            <input type="text" id="cvc" name="cvc" maxlength="4" oninput="this.value=this.value.replace(/\D/g,'')" class="required-payment w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <label class="block mb-2 text-sm font-medium text-gray-300">Card Number*</label>
+                            <input type="text" id="cardNumber" name="card_number" maxlength="19" oninput="this.value=this.value.replace(/\D/g,'').replace(/(.{4})/g,'$1 ').trim()" class="required-payment w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         </div>
-                    </div>
 
-                    <div>
-                        <label class="block mb-2 text-sm font-medium text-gray-300">Billing Address*</label>
-                        <input type="text" id="billingAddress" name="billing_address" class="required-payment w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label class="block mb-2 text-sm font-medium text-gray-300">ZIP Code*</label>
-                        <input type="text" id="zipCode" name="zip_code" maxlength="10" oninput="this.value=this.value.replace(/[^0-9\-]/g,'')" class="required-payment w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-
-                    <!-- Saved payment methods -->
-                    <?php if (!empty($_SESSION['user_id']) && !empty($savedCards)): ?>
-                        <div class="mt-8 border-t border-gray-700 pt-6">
-                            <h3 class="font-semibold mb-4 text-white">Saved Payment Methods</h3>
-                            <select id="savedCard" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white">
-                                <option value="">Select Payment Method</option>
-                                <?php foreach ($savedCards as $card): ?>
-                                    <option value="<?= $card['card_id'] ?>" data-name="<?= htmlspecialchars($card['cardholder_name']) ?>" data-number="<?= htmlspecialchars($card['card_number']) ?>" data-exp="<?= htmlspecialchars($card['expiration_date']) ?>" data-cvc="<?= htmlspecialchars($card['cvc']) ?>" data-address="<?= htmlspecialchars($card['billing_address']) ?>" data-zip="<?= htmlspecialchars($card['zip_code']) ?>">
-                                        <?= htmlspecialchars($card['card_name']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    <?php endif; ?>
-
-                    <!-- Save card option -->
-                    <?php if (!empty($_SESSION['user_id'])): ?>
-                        <input type="hidden" name="save_card" id="purchaseSaveCardFlag" value="0">
-                        <div class="mt-6 relative">
-                            <label class="flex items-center gap-3 cursor-pointer" onmouseenter="showSaveCardTooltip()" onmouseleave="hideSaveCardTooltip()">
-                                <input type="checkbox" id="saveCardCheckbox" disabled class="h-4 w-4" onchange="document.getElementById('purchaseSaveCardFlag').value = this.checked ? 1 : 0">
-                                <span class="text-gray-300">Save this as a new payment method for future purchases</span>
-                            </label>
-
-                            <div id="saveCardTooltip" class="hidden absolute left-0 top-full mt-2 w-72 bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm text-gray-300 shadow-lg z-50">
-                                New card/payment method can only be saved if all information is filled and doesn't already exist.
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block mb-2 text-sm font-medium text-gray-300">Expiration Date*</label>
+                                <input type="text" id="expirationDate" name="expiration_date" maxlength="5" placeholder="MM/YY" oninput="this.value=this.value.replace(/\D/g,''); if(this.value.length > 2){ this.value=this.value.slice(0,2)+'/'+this.value.slice(2,4);}" class="required-payment w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             </div>
-                            <div id="cardNameContainer" class="hidden mt-4">
-                                <label class="block mb-2 text-sm font-medium text-gray-300">Card Name (Optional)</label>
-                                <input type="text" id="cardName" name="card_name" class="w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white" placeholder="ex. Personal Card">
+                            <div>
+                                <label class="block mb-2 text-sm font-medium text-gray-300">CVC*</label>
+                                <input type="text" id="cvc" name="cvc" maxlength="4" oninput="this.value=this.value.replace(/\D/g,'')" class="required-payment w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             </div>
                         </div>
-                    <?php endif; ?>
+
+                        <div>
+                            <label class="block mb-2 text-sm font-medium text-gray-300">Billing Address*</label>
+                            <input type="text" id="billingAddress" name="billing_address" class="required-payment w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block mb-2 text-sm font-medium text-gray-300">ZIP Code*</label>
+                            <input type="text" id="zipCode" name="zip_code" maxlength="10" oninput="this.value=this.value.replace(/[^0-9\-]/g,'')" class="required-payment w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <!-- Saved payment methods -->
+                        <?php if (!empty($_SESSION['user_id']) && !empty($savedCards)): ?>
+                            <div class="mt-8 border-t border-gray-700 pt-6">
+                                <h3 class="font-semibold mb-4 text-white">Saved Payment Methods</h3>
+                                <select id="savedCard" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white">
+                                    <option value="">Select Payment Method</option>
+                                    <?php foreach ($savedCards as $card): ?>
+                                        <option value="<?= $card['card_id'] ?>" data-name="<?= htmlspecialchars($card['cardholder_name']) ?>" data-number="<?= htmlspecialchars($card['card_number']) ?>" data-exp="<?= htmlspecialchars($card['expiration_date']) ?>" data-cvc="<?= htmlspecialchars($card['cvc']) ?>" data-address="<?= htmlspecialchars($card['billing_address']) ?>" data-zip="<?= htmlspecialchars($card['zip_code']) ?>">
+                                            <?= htmlspecialchars($card['card_name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- Save card option -->
+                        <?php if (!empty($_SESSION['user_id'])): ?>
+                            <input type="hidden" name="save_card" id="purchaseSaveCardFlag" value="0">
+                            <div class="mt-6 relative">
+                                <label class="flex items-center gap-3 cursor-pointer" onmouseenter="showSaveCardTooltip()" onmouseleave="hideSaveCardTooltip()">
+                                    <input type="checkbox" id="saveCardCheckbox" disabled class="h-4 w-4" onchange="document.getElementById('purchaseSaveCardFlag').value = this.checked ? 1 : 0">
+                                    <span class="text-gray-300">Save this as a new payment method for future purchases</span>
+                                </label>
+
+                                <div id="saveCardTooltip" class="hidden absolute left-0 bottom-full mb-2 w-72 bg-gray-700 border border-gray-700 rounded-lg p-3 text-sm text-gray-300 shadow-lg z-50">
+                                    New card/payment method can only be saved if all information is filled and doesn't already exist.
+                                </div>
+                                <div id="cardNameContainer" class="hidden mt-4">
+                                    <label class="block mb-2 text-sm font-medium text-gray-300">Card Name (Optional)</label>
+                                    <input type="text" id="cardName" name="card_name" class="w-full h-12 border border-gray-600 rounded-lg px-4 bg-gray-700 text-white" placeholder="ex. Personal Card">
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
-                </div>
+                        </div>
 
                 <!-- Footer actions -->
                 <div class="px-8 py-6 border-t border-gray-700 bg-gray-800">
@@ -186,20 +191,11 @@
     function showConfirmTooltip() {
         const button = document.getElementById("confirmPurchaseButton");
         if (button.disabled) {
-            document.getElementById("confirmTooltip").classList.remove("hidden");
+            document.getElementById("confirmTooltip")?.classList.remove("hidden");
         }
     }
 
     function hideConfirmTooltip() {
-        document.getElementById("confirmTooltip").classList.add("hidden");
+        document.getElementById("confirmTooltip")?.classList.add("hidden");
     }
-
-    window.updateCardDetailsVisibility = function (moneyDue) {
-    const section = document.getElementById("cardDetailsSection");
-    const savedSection = document.getElementById("savedCardSection");
-    const show = moneyDue > 0;
-
-    if (section) section.classList.toggle("hidden", !show);
-    if (savedSection) savedSection.classList.toggle("hidden", !show);
-};
 </script>

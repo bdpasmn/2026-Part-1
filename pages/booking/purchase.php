@@ -48,21 +48,11 @@
         exit;
     }
 
-    /**
-     * Replicates the seat-layout algorithm from seats.php so the server can
-     * independently derive which class a given seat ID (e.g. "12A") belongs
-     * to, instead of trusting price/class info submitted by the client.
-     *
-     * Must stay in lockstep with the JS generation logic in seats.php:
-     * - iterate $flight['seats'] in REVERSED key order
-     * - 9 columns per row, letters A-I
-     * - consecutive seatIndex assigned per class in order, info.total seats each
-     */
     function resolveSeatClass(array $seatsByClass, string $seatId): ?string {
         $seatInfo = array_reverse($seatsByClass);
 
-        $cols = 9;
-        $letters = ["A","B","C","D","E","F","G","H","I"];
+        $cols = 10;
+        $letters = ["A","B","C","D","E","F","G","H","I", "J"];
         $seatIndex = 0;
 
         foreach ($seatInfo as $type => $info) {
@@ -395,6 +385,49 @@
             // rather than leaving the user with a ticket and no confirmation.
             error_log("FFM balance race condition for user_id={$userId}, confirmation={$confirmationCode}, ffmCharge={$ffmCharge}");
         }
+    }
+    if ($userId) {
+        // Get existing history
+        $stmt = $pdo->prepare('SELECT ffms_spent, ffms_gained FROM "Users" WHERE user_id = ?');
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+        $ffmsSpentHistory = json_decode($user['ffms_spent'] ?? '[]', true);
+        $ffmsGainedHistory = json_decode($user['ffms_gained'] ?? '[]', true);
+    
+        if (!is_array($ffmsSpentHistory)) {
+            $ffmsSpentHistory = [];
+        }
+    
+        if (!is_array($ffmsGainedHistory)) {
+            $ffmsGainedHistory = [];
+        }
+    
+        if ($ffmCharge > 0) {
+            $ffmsSpentHistory[] = [
+                'flight_id' => $flightId,
+                'amount' => $ffmCharge
+            ];
+        }
+    
+        if ($ffmEarned > 0) {
+            $ffmsGainedHistory[] = [
+                'flight_id' => $flightId,
+                'amount' => $ffmEarned
+            ];
+        }
+    
+        $stmt = $pdo->prepare('
+            UPDATE "Users"
+            SET ffms_spent = ?, ffms_gained = ?
+            WHERE user_id = ?
+        ');
+    
+        $stmt->execute([
+            json_encode($ffmsSpentHistory),
+            json_encode($ffmsGainedHistory),
+            $userId
+        ]);
     }
 
     header("Location: ./confirmation.php?" . http_build_query(['confirmation' => $confirmationCode]));
