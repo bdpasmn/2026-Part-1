@@ -13,7 +13,8 @@
     if ($role == 'Admin' || $role == 'Root') {
         // Check role to take to correct dashboard
         if (in_array($role, ['Admin', 'Root'])) {
-            header("Location: ../dashboard/{$role}/{$role}.php");
+                        $roleLower = strtolower($role);
+            header("Location: ./pages/dashboard/{$roleLower}/{$roleLower}.php");
         }
         exit;
     }
@@ -61,7 +62,7 @@
     }
 
     // Fetch flights from API
-    $apiResult = $api->searchFlights($match);
+    $apiResult = $api->getFlights(match: $match);
     $batch = $apiResult['flights'] ?? [];
 
     // Filter flights based on destination search

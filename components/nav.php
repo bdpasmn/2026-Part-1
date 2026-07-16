@@ -143,6 +143,12 @@
                     <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">View Tickets</span>
                     <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
                 </a>
+
+            <?php $active = isActivePath(BASE_URL . '/pages/booking/checkIn.php'); ?>
+                <a href="<?= BASE_URL ?>/pages/booking/checkIn.php" class="relative group">
+                    <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Check In</span>
+                    <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
+                </a>
             <?php endif; ?>
 
             <?php if ($role == 'root'): ?>
@@ -156,7 +162,7 @@
             <?php if ($role == 'admin' || $role == 'root'): ?>
                 <?php $active = $currentTab == 'customers'; ?>
                 <a href="<?= BASE_URL ?>/pages/dashboard/<?= $role ?>/<?= $role ?>.php?tab=customers" class="relative group">
-                    <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">customers</span>
+                    <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Customers</span>
                     <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
                 </a>
 
@@ -234,6 +240,9 @@
 
                 <a class="px-6 py-3 hover:bg-gray-700"
                    href="<?= BASE_URL ?>/pages/ticket/viewTicket.php">View Tickets</a>
+
+                <a class="px-6 py-3 hover:bg-gray-700"
+                   href="<?= BASE_URL ?>/pages/booking/checkIn.php">Check In</a>
             <?php endif; ?>
 
             <?php if ($role == 'root'): ?>

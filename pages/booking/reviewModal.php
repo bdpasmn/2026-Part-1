@@ -1,4 +1,5 @@
 <!-- Review booking modal -->
+<!-- baggage fees wrong -->
 <div id="reviewModal" class="fixed inset-0 hidden z-50 overflow-y-auto">
     <div class="fixed inset-0 bg-black/30" onclick="closeReviewModal()"></div>
     <div class="relative min-h-screen flex items-center justify-center p-6">
@@ -7,7 +8,7 @@
             <!-- Header -->
             <div class="px-8 py-6 border-b border-gray-700">
                 <h2 class="text-2xl font-bold text-white">Review Your Booking 📝</h2>
-                <p class="text-sm text-gray-300 mt-1">Verify your information before confirming your purchase.</p>
+                <p class="text-sm text-gray-300 mt-1">Verify your information, then continue to payment.</p>
             </div>
 
             <!-- Scrollable content -->
@@ -24,7 +25,7 @@
                             <p class="text-gray-300 text-sm mt-1"><?= $timestamp ? date("D, M j Y g:i A", $timestamp / 1000) : "N/A" ?></p>
                         </div>
                         <div class="md:text-right">
-                            <div class="text-3xl font-bold text-white mt-1">$<?= htmlspecialchars($flight['seatPrice'] ?? 0) ?></div>
+                            <div id="reviewFlightSummaryPrice" class="text-3xl font-bold text-white mt-1">$<?= htmlspecialchars($flight['seats']['economy']['priceDollars'] ?? 0) ?></div>
                         </div>
                     </div>
                 </div>
@@ -92,7 +93,7 @@
                     <div class="space-y-4">
                         <div class="flex justify-between items-center">
                             <span class="text-gray-200">Flight Fare</span>
-                            <span class="text-white font-medium">$<?= htmlspecialchars($flight['seatPrice'] ?? 0) ?></span>
+                            <span id="reviewFlightCost" class="text-white font-medium">$<?= htmlspecialchars($flight['seats']['economy']['priceDollars'] ?? 0) ?></span>
                         </div>
 
                         <div class="flex justify-between items-center">
@@ -109,6 +110,10 @@
                             <span class="text-2xl font-bold text-white">Total</span>
                             <span id="reviewTotal" class="text-3xl font-bold text-blue-400">$0</span>
                         </div>
+
+                        <?php if ($canUseFfm): ?>
+                            <p class="text-xs text-gray-400 pt-1">Shown assuming your ticket is paid with money. You can choose to pay with FFMs.</p>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -121,45 +126,10 @@
                         Back
                     </button>
 
-                    <!-- Purchase form -->
-                    <form action="purchase.php" method="POST">
-
-                        <!-- Hidden booking data -->
-                        <input type="hidden" name="flight_id" value="<?= $flightId ?>">
-                        <input type="hidden" id="modalSeatInput" name="seat">
-                        <input type="hidden" name="bags_carried" id="purchaseCarryOn">
-                        <input type="hidden" name="bags_checked" id="purchaseChecked">
-                        <input type="hidden" name="extras" id="purchaseExtras">
-
-                        <!-- Passenger info -->
-                        <input type="hidden" name="first_name" id="purchaseFirstName">
-                        <input type="hidden" name="middle_name" id="purchaseMiddleName">
-                        <input type="hidden" name="last_name" id="purchaseLastName">
-                        <input type="hidden" name="sex" id="purchaseSex">
-                        <input type="hidden" name="dob" id="purchaseDob">
-                        <input type="hidden" name="phone" id="purchasePhone">
-                        <input type="hidden" name="email" id="purchaseEmail">
-
-                        <!-- Pricing -->
-                        <input type="hidden" name="price" id="purchasePrice">
-
-                        <!-- Save card option -->
-                        <input type="hidden" name="save_card" id="purchaseSaveCard">
-                        <input type="hidden" name="card_name" id="purchaseCardName">
-
-                        <!-- Payment info -->
-                        <input type="hidden" name="cardholder_name" id="purchaseCardholderName">
-                        <input type="hidden" name="card_number" id="purchaseCardNumber">
-                        <input type="hidden" name="expiration_date" id="purchaseExpirationDate">
-                        <input type="hidden" name="cvc" id="purchaseCvc">
-                        <input type="hidden" name="billing_address" id="purchaseBillingAddress">
-                        <input type="hidden" name="zip_code" id="purchaseZipCode">
-
-                        <!-- Submit -->
-                        <button type="submit" class="w-full sm:w-auto px-8 h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition shadow-lg shadow-blue-900/30">
-                            Confirm Purchase
-                        </button>
-                    </form>
+                    <!-- Hands off to the payment modal instead of submitting here -->
+                    <button onclick="goToPayment()" class="w-full sm:w-auto px-8 h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition shadow-lg shadow-blue-900/30">
+                        Continue to Payment 💳
+                    </button>
                 </div>
             </div>
         </div>

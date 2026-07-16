@@ -1,14 +1,5 @@
 <?php
-    $bagsInfo = [
-        "checked" => [
-            "max" => 8,
-            "prices" => [35, 45, 150, 200, 250, 300, 350, 400]
-        ],
-        "carry" => [
-            "max" => 4,
-            "prices" => [0, 0, 25, 50]
-        ]
-    ];
+    $bagsInfo = $flight['baggage'];
 ?>
 
 <!-- Baggage selection section -->

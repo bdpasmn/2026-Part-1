@@ -1,15 +1,129 @@
 <?php
 session_start();
 require_once "../../database/db.php";
+require_once __DIR__ . "/../../api/api.php";
+require_once __DIR__ . "/../../api/key.php";
+
+$api = new AirportsAPI(AIRPORTS_API_KEY);
 
 // Initialize variables
 $ticket = null;
-$error = "";
+$pageError = null;
 $canCheckIn = false;
 
 // Get confirmation code and last name from query string or form
 $confirmation = $_GET["confirmation"] ?? ($_POST["confirmation"] ?? null);
 $lastName = $_POST["last_name"] ?? null;
+$confirmationFromUrl = isset($_GET["confirmation"]) ? true : false;
+
+// Check if confirmation code is empty
+if ($confirmationFromUrl && empty($confirmation)) {
+    $pageError = "missing_confirmation";
+}
+
+// Handle search submission (when no confirmation in URL)
+if (isset($_POST["search"]) && !$confirmationFromUrl) {
+    if (!$confirmation || !$lastName) {
+        $pageError = "missing_fields";
+    } else {
+        $stmt = $pdo->prepare("
+            SELECT * FROM \"Tickets\"
+            WHERE confirmation_code = ?
+            AND LOWER(name_last) = LOWER(?)
+            LIMIT 1
+        ");
+
+        $stmt->execute([$confirmation, $lastName]);
+        $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$ticket) {
+            $pageError = "booking_not_found";
+        } elseif ($ticket["status"] === "cancelled") {
+            $pageError = "booking_cancelled";
+        } elseif ($ticket["checked_in"]) {
+            // Already checked in, redirect to ticket page
+            header(
+                "Location: ../ticket/ticket.php?confirmation=" .
+                    urlencode($ticket["confirmation_code"])
+            );
+            exit();
+        } else {
+            // Fetch flight details for check-in availability
+            $flightId = $ticket['flight_id'] ?? null;
+            
+            if (!$flightId) {
+                $pageError = "flight_not_found";
+            } else {
+                $flightData = $api->getFlightById($flightId);
+                
+                if (!$flightData) {
+                    $pageError = "flight_not_found";
+                } else {
+                    $departureTimestamp = $flightData['departFromReceiver'] ?? null;
+                    
+                    if ($departureTimestamp) {
+                        $departureSeconds = $departureTimestamp / 1000;
+                        $hoursUntilDeparture = ($departureSeconds - time()) / 3600;
+                        $canCheckIn = $hoursUntilDeparture <= 24 && $hoursUntilDeparture > 0;
+                        
+                        if ($hoursUntilDeparture <= 0) {
+                            $pageError = "flight_departed";
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Auto-fetch booking if confirmation code in URL
+if ($confirmationFromUrl && $confirmation && !$pageError) {
+    $stmt = $pdo->prepare("
+        SELECT * FROM \"Tickets\"
+        WHERE confirmation_code = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$confirmation]);
+    $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$ticket) {
+        $pageError = "booking_not_found";
+    } elseif ($ticket["status"] === "cancelled") {
+        $pageError = "booking_cancelled";
+    } elseif ($ticket["checked_in"]) {
+        // Already checked in, redirect to ticket page
+        header(
+            "Location: ../ticket/ticket.php?confirmation=" .
+                urlencode($confirmation)
+        );
+        exit();
+    } else {
+        // Fetch flight details for check-in availability
+        $flightId = $ticket['flight_id'] ?? null;
+        
+        if (!$flightId) {
+            $pageError = "flight_not_found";
+        } else {
+            $flightData = $api->getFlightById($flightId);
+            
+            if (!$flightData) {
+                $pageError = "flight_not_found";
+            } else {
+                $departureTimestamp = $flightData['departFromReceiver'] ?? null;
+                
+                if ($departureTimestamp) {
+                    $departureSeconds = $departureTimestamp / 1000;
+                    $hoursUntilDeparture = ($departureSeconds - time()) / 3600;
+                    $canCheckIn = $hoursUntilDeparture <= 24 && $hoursUntilDeparture > 0;
+                    
+                    if ($hoursUntilDeparture <= 0) {
+                        $pageError = "flight_departed";
+                    }
+                }
+            }
+        }
+    }
+}
 
 // Handle check-in submission
 if (isset($_POST["checkin"])) {
@@ -35,29 +149,30 @@ if (isset($_POST["checkin"])) {
             ");
 
             $stmt->execute([$ticket["ticket_id"]]);
+            
+            // Redirect to ticket view page
+            header(
+                "Location: ../ticket/ticket.php?confirmation=" .
+                    urlencode($confirmation)
+            );
+            exit();
+        } else {
+            $pageError = "booking_not_found";
         }
-
-        // Redirect to ticket view page
-        header(
-            "Location: ../ticket/ticket.php?confirmation=" .
-                urlencode($confirmation)
-        );
-        exit();
     }
 }
 
 // Handle booking cancellation
 if (isset($_POST["cancel"])) {
-    if ($confirmation && $lastName) {
+    if ($confirmation && $ticket) {
         // Mark booking as cancelled
         $stmt = $pdo->prepare("
             UPDATE \"Tickets\"
             SET status = 'cancelled'
             WHERE confirmation_code = ?
-            AND LOWER(name_last) = LOWER(?)
         ");
 
-        $stmt->execute([$confirmation, $lastName]);
+        $stmt->execute([$confirmation]);
 
         // Redirect based on user role
         $role = $_SESSION["role"] ?? "";
@@ -73,38 +188,6 @@ if (isset($_POST["cancel"])) {
     }
 }
 
-// Fetch ticket details if confirmation and last name provided
-if ($confirmation && $lastName) {
-    $stmt = $pdo->prepare("
-        SELECT * FROM \"Tickets\"
-        WHERE confirmation_code = ?
-        AND LOWER(name_last) = LOWER(?)
-        LIMIT 1
-    ");
-
-    $stmt->execute([$confirmation, $lastName]);
-    $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$ticket) {
-        $error = "Booking not found.";
-    } else {
-        // Check ticket status and redirect if already checked in
-        if ($ticket["status"] === "cancelled") {
-            $error = "This booking has been cancelled.";
-            $ticket = null;
-        } elseif ($ticket["checked_in"]) {
-            header(
-                "Location: ../ticket/ticket.php?confirmation=" .
-                    urlencode($confirmation)
-            );
-            exit();
-        }
-
-        // Check if check-in window is open (hardocded departure time inplace for api, usually has to be within 24 hours of departure)
-        $departureTime = strtotime("2026-07-04 14:30:00");
-        $canCheckIn = time() >= $departureTime - 86400;
-    }
-}
 ?>
 
 <!DOCTYPE html>
@@ -127,18 +210,32 @@ if ($confirmation && $lastName) {
         <p class="tracking-[0.25em] text-sm text-blue-300 mb-3">AIRLINE CHECK-IN ✈️</p>
         <h2 class="text-4xl font-bold mb-3">Check In to Your Flight</h2>
         <p class="text-gray-400 mb-4">
-            Enter your last name and confirmation code to access your booking.
+            <?php if ($confirmationFromUrl): ?>
+                Check in for your flight
+            <?php else: ?>
+                Enter your last name and confirmation code to access your booking.
+            <?php endif; ?>
         </p>
 
-        <!-- Error message display -->
-        <?php if (!empty($error)): ?>
+        <!-- Error display -->
+        <?php if (!empty($pageError)): ?>
             <div class="mb-4 p-3 bg-red-600/20 border border-red-500 text-red-300 rounded-lg transition-all duration-300 hover:-translate-y-1 hover:border-red-400 cursor-default">
-                <?= htmlspecialchars($error) ?>
+                <?php 
+                $errorMessages = [
+                    'missing_confirmation' => 'Confirmation code is required.',
+                    'missing_fields' => 'Please enter both your last name and confirmation code.',
+                    'booking_not_found' => 'Booking not found. Please check your confirmation code and last name.',
+                    'booking_cancelled' => 'This booking has been cancelled.',
+                    'flight_not_found' => 'The flight associated with this booking could not be found.',
+                    'flight_departed' => 'This flight has already departed. Check-in is no longer available.'
+                ];
+                echo htmlspecialchars($errorMessages[$pageError] ?? 'An error occurred.');
+                ?>
             </div>
         <?php endif; ?>
 
-        <!-- Success message when booking found -->
-        <?php if (!empty($ticket) && !$error): ?>
+        <!-- Success message -->
+        <?php if (!empty($ticket) && !$pageError): ?>
             <div class="mb-4 p-3 bg-green-600/20 border border-green-500 text-green-300 rounded-lg">
                 Booking found for
                 <?= htmlspecialchars(
@@ -147,37 +244,42 @@ if ($confirmation && $lastName) {
             </div>
         <?php endif; ?>
 
-        <!-- Search form - only show if no booking found -->
-        <?php if (!$ticket): ?>
-            <form method="POST" class="space-y-6">
+        <!-- Form -->
+        <?php if (!$ticket || $pageError): ?>
+            <?php if (!$confirmationFromUrl || $pageError): ?>
+                <!-- No confirmation code in URL - show full search form, or show form if error occurred -->
+                <form method="POST" class="space-y-6">
 
-                <!-- Last name input -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Last Name</label>
-                    <input type="text" name="last_name" required
-                           placeholder="Enter your last name"
-                           class="w-full h-12 px-4 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-1 focus:ring-white focus:border-white">
-                </div>
+                    <!-- Last name input -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Last Name</label>
+                        <input type="text" name="last_name" required
+                               placeholder="Enter your last name"
+                               value="<?= htmlspecialchars($_POST["last_name"] ?? "") ?>"
+                               class="w-full h-12 px-4 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-1 focus:ring-white focus:border-white">
+                    </div>
 
-                <!-- Confirmation code input -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Confirmation Code</label>
-                    <input type="text" name="confirmation"
-                           required placeholder="Enter confirmation code"
-                           class="w-full h-12 px-4 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-1 focus:ring-white focus:border-white">
-                </div>
+                    <!-- Confirmation code input -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Confirmation Code</label>
+                        <input type="text" name="confirmation" required
+                               placeholder="Enter confirmation code"
+                               value="<?= htmlspecialchars($_POST["confirmation"] ?? $_GET["confirmation"] ?? "") ?>"
+                               class="w-full h-12 px-4 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 transition duration-200 focus:outline-none focus:ring-1 focus:ring-white focus:border-white">
+                    </div>
 
-                <!-- Search button -->
-                <button type="submit"
-                        class="w-full h-12 bg-blue-600 text-white rounded-lg font-medium transition duration-200 hover:bg-blue-700 hover:shadow-md">
-                    Find Booking
-                </button>
+                    <!-- Search button -->
+                    <button type="submit" name="search"
+                            class="w-full h-12 bg-blue-600 text-white rounded-lg font-medium transition duration-200 hover:bg-blue-700 hover:shadow-md">
+                        Find Booking
+                    </button>
 
-            </form>
+                </form>
+            <?php endif; ?>
         <?php endif; ?>
 
-        <!-- Booking details display - only show if ticket found -->
-        <?php if ($ticket): ?>
+        <!-- Booking details -->
+        <?php if ($ticket && !$pageError): ?>
 
             <div class="mt-6 space-y-6">
 
@@ -229,7 +331,7 @@ if ($confirmation && $lastName) {
                             <input type="hidden" name="last_name"
                                    value="<?= htmlspecialchars($ticket["name_last"]) ?>">
 
-                            <button name="checkin"
+                            <button name="checkin" type="submit"
                                     class="w-full h-12 bg-blue-600 text-white rounded-lg font-medium transition duration-200 hover:bg-blue-700 hover:shadow-md active:scale-[0.99]">
                                 Check In
                             </button>
@@ -247,7 +349,7 @@ if ($confirmation && $lastName) {
                             <input type="hidden" name="last_name"
                                    value="<?= htmlspecialchars($ticket["name_last"]) ?>">
 
-                            <button name="cancel"
+                            <button name="cancel" type="submit"
                                     onclick="return confirm('Cancel booking?')"
                                     class="w-full h-12 bg-red-600 text-white rounded-lg font-medium transition duration-200 hover:bg-red-700 hover:shadow-md active:scale-[0.99]">
                                 Cancel Booking

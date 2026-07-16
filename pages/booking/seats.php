@@ -1,4 +1,8 @@
 <?php
+    // BUGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+    // when try again, seat color not reset
+    // add ffm seat price too
+
     // Initialize empty array for seats that are already taken
     $takenSeats = [];
 
@@ -18,28 +22,7 @@
         }
     }
 
-    $seatInfo = [
-        "first class" => [
-            "priceDollars" => 729.94,
-            "priceFfms" => 16852,
-            "total" => 15,
-        ],
-        "economy plus" => [
-            "priceDollars" => 365.67,
-            "priceFfms" => 13666,
-            "total" => 14
-        ],
-        "exit row" => [
-            "priceDollars" => 201.04,
-            "priceFfms" => 12868,
-            "total" => 11
-        ],
-        "economy" => [
-            "priceDollars" => 112.78,
-            "priceFfms" => 9914,
-            "total" => 54
-        ]
-    ];
+    $seatInfo = array_reverse($flight['seats']);
 ?>
 <script>
     const seatInfo = <?= json_encode($seatInfo) ?>;
@@ -173,6 +156,7 @@
                                     document.getElementById("selectedSeat").innerText = selectedSeat;
                                     document.getElementById("selectedType").innerText = seat.type.replace(/\b\w/g, c => c.toUpperCase());
                                     document.getElementById("selectedPrice").innerText = "$" + seat.priceDollars.toFixed(2);
+                                    document.getElementById("selectedPriceFfms").innerText = seat.priceFfms + " FFMs";
                                     document.getElementById("seatInput").value = selectedSeat;
 
                                     validateBooking();
@@ -226,6 +210,7 @@
                 <div>
                     <div class="text-gray-300">Seat Price</div>
                     <div id="selectedPrice" class="text-white font-bold">$0</div>
+                    <div id="selectedPriceFfms" class="text-white font-bold">0 FFMs</div>
                 </div>
             </div>
 

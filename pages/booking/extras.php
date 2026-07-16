@@ -1,24 +1,7 @@
 <?php
     $isGuest = !isset($_SESSION['user_id']); 
 
-    $flightExtras = [
-        "blanket" => [
-            "priceDollars" => 2.98,
-            "priceFfms" => 133
-        ],
-        "headphones" => [
-            "priceDollars" => 6.56,
-            "priceFfms" => 203
-        ],
-        "wifi" => [
-            "priceDollars" => 14.54,
-            "priceFfms" => 322
-        ],
-        "extra food" => [
-            "priceDollars" => 27.69,
-            "priceFfms" => 612
-        ]
-    ];
+    $flightExtras = $flight['extras'];
 ?>
 
 <script>
