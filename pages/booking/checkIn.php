@@ -4,10 +4,6 @@ require_once "../../database/db.php";
 require_once __DIR__ . "/../../api/api.php";
 require_once __DIR__ . "/../../api/key.php";
 
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
-error_reporting(E_ALL);
-
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
 // Initialize variables

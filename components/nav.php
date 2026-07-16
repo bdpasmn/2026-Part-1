@@ -162,7 +162,7 @@
             <?php if ($role == 'admin' || $role == 'root'): ?>
                 <?php $active = $currentTab == 'customers'; ?>
                 <a href="<?= BASE_URL ?>/pages/dashboard/<?= $role ?>/<?= $role ?>.php?tab=customers" class="relative group">
-                    <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">customers</span>
+                    <span class="<?= $active ? 'text-white' : 'group-hover:text-white' ?>">Customers</span>
                     <span class="absolute left-0 -bottom-1 h-[2px] bg-blue-400 transition-all duration-300 <?= $active ? 'w-full' : 'w-0 group-hover:w-full' ?>"></span>
                 </a>
 

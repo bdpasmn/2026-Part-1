@@ -10,7 +10,8 @@
         $role = strtolower($_SESSION['role']) ?? '';
     
         if (in_array($role, ['customer', 'admin', 'root'])) {
-            header("Location: ../dashboard/{$role}/{$role}.php");
+                        $roleLower = strtolower($role);
+            header("Location: ./pages/dashboard/{$roleLower}/{$roleLower}.php");
         }
     
         exit;
