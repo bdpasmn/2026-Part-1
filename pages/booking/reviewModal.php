@@ -108,7 +108,7 @@
 
                         <div class="border-t border-gray-800 pt-5 flex justify-between items-center">
                             <span class="text-2xl font-bold text-white">Total</span>
-                            <span id="reviewTotal" class="text-3xl font-bold text-blue-400">$0</span>
+                            <span id="reviewTotal" class="text-3xl font-bold text-blue-400">$<?php echo number_format($total, 2, '.', ''); ?></span>    
                         </div>
 
                         <?php if ($canUseFfm): ?>

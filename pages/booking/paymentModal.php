@@ -1,4 +1,3 @@
-<!-- try gain colors. 10x in admin-->
 <div id="paymentModal" class="fixed inset-0 hidden z-50 overflow-y-auto">
     <div class="fixed inset-0 bg-black/30" onclick="closePaymentModal()"></div>
     <div class="relative min-h-screen flex items-center justify-center p-6">

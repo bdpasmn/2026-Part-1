@@ -11,9 +11,8 @@
 
     // Redirect admins/root users to their dashboard
     if ($role == 'Admin' || $role == 'Root') {
-        if (in_array($role, ['Admin', 'Root', 'Attendant'])) {
-                        $roleLower = strtolower($role);
-            header("Location: ./pages/dashboard/{$roleLower}/{$roleLower}.php");
+        if (in_array($role, ['Admin', 'Root'])) {
+            header("Location: ../dashboard/{$role}/{$role}.php");
         }
         
         exit;
@@ -30,11 +29,12 @@
     $stmt->execute([$userId]);
     $savedCards = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $stmt = $pdo->prepare('SELECT ffm FROM "Users" WHERE user_id = ?');
-    $stmt->execute([$userId]);
-    $userFfmBalance = (int) $stmt->fetchColumn();
-
+    // Guests cannot use frequent flier miles
     $canUseFfm = (bool) $userId;
+
+    // TODO: Replace with the real balance once it's available (DB column / API).
+    // Hardcoded for now — same as the flight FFM data below.
+    $userFfmBalance = $canUseFfm ? 200 : 0;
 
     // Get flight ID from URL
     $flightId = $_GET['flight_id'] ?? null;
@@ -71,12 +71,12 @@
 
     // Extract departure timestamp (API returns ms)
     $departureTimestamp = $flight['departFromReceiver'] ?? null;
-    // Ensure booking is made at least 36 hours before departure
+    // Ensure booking is made at least 24 hours before departure
     if (
         !$departureTimestamp ||
-        ($departureTimestamp / 1000) < (time() + 129600)
+        ($departureTimestamp / 1000) < (time() + 86400)
     ) {
-        header("Location: bookingFailed.php?" . http_build_query(['message' => 'Flights must be booked at least 36 hours before departure.']));
+        header("Location: bookingFailed.php?" . http_build_query(['message' => 'Flights must be booked at least 24 hours before departure.']));
         exit;
     }
 ?>
@@ -86,14 +86,8 @@
         <script src="https://cdn.tailwindcss.com"></script>
     </head>
     <body class="bg-gray-900 min-h-screen text-white">
-        <!-- Navigation -->"; ?>
-        <?php include __DIR__ . '/../../components/nav.php'; ?>
-
-        <div class="flex">
-
-        <?php include __DIR__ . '/../../components/sidebar.php'; ?>
-
-        <main class="flex-1 min-h-screen bg-gray-900">
+        <!-- Navigation -->
+        <?php include "../../components/nav.php"; ?>
 
         <main class="max-w-7xl mx-auto p-6">
             <!-- Flight Summary Section -->
@@ -196,8 +190,6 @@
                 </div>
             </section>
         </main>
-        </main>
-        </div>
 
         <?php include_once('reviewModal.php'); ?>
         <?php include_once('paymentModal.php'); ?>
@@ -240,16 +232,6 @@
 
             // Attach observer to each step section
             sections.forEach(section => observer.observe(section));
-
-            function getBagCost() {
-                const carryIndex = parseInt(document.getElementById("carryOnSelect").value || 0);
-                const checkedIndex = parseInt(document.getElementById("checkedSelect").value || 0);
-
-                const carryCost = carryIndex == 0 ? 0 : (carryPrices[carryIndex - 1] || 0);
-                const checkedCost = checkedIndex == 0 ? 0 : (checkedPrices[checkedIndex - 1] || 0);
-
-                return carryCost + checkedCost;
-            }
 
             // Opens review modal and copies all form data into hidden purchase fields
             // (payment fields are handled separately in the payment modal, after review)
@@ -309,7 +291,24 @@
                 // Pass extras to purchase.php
                 document.getElementById("purchaseExtras").value = JSON.stringify(selectedExtras);
 
-                const bagCost = getBagCost();
+                const carryOn = parseInt(document.getElementById("carryOnSelect").value);
+                const checked = parseInt(document.getElementById("checkedSelect").value);
+
+                let bagCost = 0;
+                // Carry-on bag pricing
+                if (carryOn == 2) {
+                    bagCost = bagCost + 30;
+                }
+
+                // Base checked bag pricing 
+                if (checked >= 2) {
+                    bagCost = bagCost + 50;
+                }
+
+                // Additional checked bags pricing 
+                if (checked > 2) {
+                    bagCost = bagCost + (checked - 2) * 100;
+                }
 
                 // Extras are dollar-only for now — TODO: once extras.php supports per-item
                 // FFM/money selection, split extrasCost the same way the ticket is split below.
@@ -320,7 +319,7 @@
                 const total = seatPrice + bagCost + extrasCost;
 
                 document.getElementById("reviewFlightCost").innerText = "$" + seatPrice.toFixed(2);
-                document.getElementById("reviewFlightSummaryPrice") && (document.getElementById("reviewFlightSummaryPrice").innerText = "$" + seatPrice.toFixed(2));
+            
                 document.getElementById("reviewBagCost").innerText = "$" + bagCost;
                 document.getElementById("reviewTotal").innerText = "$" + total;
 
@@ -396,45 +395,6 @@
                     });
                 });
             };
-            
-            function updateCardDetailsVisibility() {
-                const usingCard = (window.moneyDueNow ?? 0) > 0;
-
-                // Card section
-                document.getElementById("cardDetailsSection")
-                    ?.classList.toggle("hidden", !usingCard);
-
-                // Required fields
-                document.querySelectorAll(".required-payment").forEach(field => {
-                    field.required = usingCard;
-
-                    if (!usingCard) {
-                        field.value = "";
-                    }
-                });
-
-                // Saved cards
-                const savedSection = document.getElementById("savedCard")?.closest(".mt-8");
-                if (savedSection) {
-                    savedSection.classList.toggle("hidden", !usingCard);
-                }
-
-                // Save card checkbox
-                const saveCheckbox = document.getElementById("saveCardCheckbox");
-                const saveFlag = document.getElementById("purchaseSaveCardFlag");
-
-                if (saveCheckbox) {
-                    saveCheckbox.disabled = !usingCard;
-
-                    if (!usingCard) {
-                        saveCheckbox.checked = false;
-                        if (saveFlag) saveFlag.value = "0";
-                    }
-                }
-
-                // Hide card name
-                document.getElementById("cardNameContainer")?.classList.add("hidden");
-            }
 
             window.refreshPaymentTotals = function () {
                 const seatId = document.getElementById("seatInput").value;
@@ -445,7 +405,12 @@
                 const ffmEarn = <?= json_encode($flightFfmEarn) ?>;
                 const ffmBalance = <?= json_encode($userFfmBalance) ?>;
 
-                const bagCost = getBagCost();
+                const carryOn = parseInt(document.getElementById("carryOnSelect").value || 0);
+                const checked = parseInt(document.getElementById("checkedSelect").value || 0);
+                let bagCost = 0;
+                if (carryOn == 2) bagCost += 30;
+                if (checked >= 2) bagCost += 50;
+                if (checked > 2) bagCost += (checked - 2) * 100;
 
                 // Baggage fees are card-only (no FFM pricing in the API spec)
                 let moneyDue = bagCost;
@@ -486,7 +451,6 @@
 
                 // Track globally so validatePayment() knows whether card details are required
                 window.moneyDueNow = moneyDue;
-                updateCardDetailsVisibility();
 
                 // Update payment modal display
                 const moneyDueEl = document.getElementById("paymentMoneyDue");
@@ -496,7 +460,8 @@
                 if (ffmDueEl) ffmDueEl.innerText = ffmDue + " FFMs";
                 if (ffmEarnedEl) ffmEarnedEl.innerText = ffmEarned + " FFMs";
 
-
+                // Combined FFM balance check — everything FFM-eligible draws from the
+                // same pool, so this has to be validated across items together.
                 const warningEl = document.getElementById("ffmBalanceWarning");
                 window.ffmOverBalance = canUseFfmJs && ffmDue > ffmBalance;
                 if (warningEl) {
@@ -748,36 +713,16 @@
                     // Reset selected seat state
                     selectedSeat = null;
                     document.getElementById("seatInput").value = "";
-
-                    if (document.getElementById("purchaseSeat")) {
-                        document.getElementById("purchaseSeat").value = "";
-                    }
-
+                    if (document.getElementById("purchaseSeat")) document.getElementById("purchaseSeat").value = "";
                     document.getElementById("selectedSeat").innerText = "None selected";
-                    document.getElementById("selectedType").innerText = "None";
                     document.getElementById("selectedPrice").innerText = "$0";
-                    document.getElementById("selectedPriceFfms").innerText = "0 FFMs";
 
-                    // Reset every seat button
+                    // Reset all seat button styles
                     document.querySelectorAll(".seat-btn").forEach(btn => {
-                        const seat = seatTypes[btn.innerText];
-
-                        switch (seat.type) {
-                            case "first class":
-                                btn.className = "seat-btn h-10 w-full text-xs rounded text-white transition bg-pink-600 border border-pink-400 hover:bg-pink-500 hover:border-pink-300";
-                                break;
-
-                            case "economy plus":
-                                btn.className = "seat-btn h-10 w-full text-xs rounded text-white transition bg-orange-400 border border-orange-200 hover:bg-orange-300 hover:border-orange-100";
-                                break;
-
-                            case "exit row":
-                                btn.className = "seat-btn h-10 w-full text-xs rounded text-white transition bg-pink-400 border border-pink-200 hover:bg-pink-300 hover:border-pink-100";
-                                break;
-
-                            default:
-                                btn.className = "seat-btn h-10 w-full text-xs rounded text-white transition bg-slate-600 border border-gray-500 hover:bg-slate-500 hover:border-gray-400";
-                        }
+                        btn.classList.remove("bg-blue-500");
+                        btn.classList.remove("border-blue-300");
+                        btn.classList.add("bg-slate-600");
+                        btn.classList.add("border-gray-500");
                     });
 
                     // Reset save card
