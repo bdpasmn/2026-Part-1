@@ -32,23 +32,22 @@ require_once '../../../api/api.php';
 require_once '../../../database/db.php';
 // Get currently logged in user ID from session
 
-// $sessionUserId = $_SESSION['user_id'] ?? null; // Original session-based user ID
-$sessionUserId = 80; // Hardcoded for testing
+$sessionUserId = $_SESSION['user_id'] ?? null; 
 // Redirect to login page if user is not logged in
- /** 
+
 if (!$sessionUserId) {
     header('Location: ../../../index.php');
     exit;
 }
 
-*/
+
 // Retrieve current user's information from database
 
 $selfStmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
 $selfStmt->execute([$sessionUserId]);
 $selfUser = $selfStmt->fetch(PDO::FETCH_ASSOC);
 // Redirect if user does not exist
-/** 
+ 
 if (!$selfUser) {
     header('Location: ../../../index.php');
     exit;
@@ -59,7 +58,7 @@ if (($selfUser['role'] ?? '') !== 'Attendant') {
     header('Location: ../../../index.php');
     exit;
 }
-*/
+
 $selfName = trim(($selfUser['first_name'] ?? '') . ' ' . ($selfUser['last_name'] ?? ''));
 if ($selfName === '') $selfName = 'Attendant';
 
