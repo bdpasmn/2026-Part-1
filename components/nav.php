@@ -24,6 +24,23 @@
     $userFullName = "Guest";
     $role = strtolower($_SESSION['role'] ?? 'guest');
 
+    // AJAX: live ban check, polled on every click from the client
+if (isset($_GET['xhr']) && $_GET['xhr'] === 'check-ban') {
+    header('Content-Type: application/json');
+
+    if (!$isLoggedIn) {
+        echo json_encode(['banned' => false]);
+        exit;
+    }
+
+    $stmt = $pdo->prepare('SELECT ban FROM "Users" WHERE user_id = ?');
+    $stmt->execute([$_SESSION['user_id']]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    echo json_encode(['banned' => (($row['ban'] ?? '') === 'YES')]);
+    exit;
+}
+
     if ($isLoggedIn && $role == 'customer') {
 
         $currentFile = basename($_SERVER['PHP_SELF']);
@@ -61,8 +78,9 @@
     $disabledClass = $profileLocked ? 'pointer-events-none opacity-50 cursor-not-allowed': '';
     $disabledHref = $profileLocked ? 'javascript:void(0)': null;
 
-    if ($user['ban'] === 'YES'  ) {
-        //Ban Logout
+    if ($isLoggedIn && ($user['ban'] ?? null) === 'YES') {
+        header('Location: ' . BASE_URL . '/pages/auth/logout.php');
+        exit;
     }
 ?>
 
@@ -352,6 +370,19 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 
 <?php if ($isLoggedIn): ?>
+
+<script>
+document.addEventListener('click', () => {
+    fetch('<?= BASE_URL ?>/components/nav.php?xhr=check-ban', { credentials: 'same-origin' })
+        .then(res => res.json())
+        .then(data => {
+            if (data.banned) {
+                window.location.href = '<?= BASE_URL ?>/pages/auth/logout.php';
+            }
+        })
+        .catch(() => {});
+});
+</script>
 
 <script>
     window.__autoLogoutMinutes = <?= (int)($_SESSION['auto_logout'] ?? 0) ?>;
