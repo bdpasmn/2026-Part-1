@@ -6,7 +6,7 @@
     // Redirect if already logged in
     if (isset($_SESSION['user_id'])) {
         $role = $_SESSION['role'] ?? '';
-        if (in_array($role, ['Customer', 'Admin', 'Root'])) {
+        if (in_array($role, ['Customer', 'Admin', 'Root', 'Attendant'])) {
             $roleLower = strtolower($role);
             header("Location: ./pages/dashboard/{$roleLower}/{$roleLower}.php");
             exit;
@@ -21,6 +21,7 @@
         switch ($role) {
             case 'Admin': return BASE_URI . '/pages/dashboard/admin/admin.php';
             case 'Root': return BASE_URI . '/pages/dashboard/root/root.php';
+            case 'Attendant': return BASE_URI . '/pages/dashboard/attendant/attendant.php';
             case 'Customer': default: return BASE_URI . '/pages/dashboard/customer/customer.php';
         }
     }

@@ -38,7 +38,7 @@
     }
     
     if ($isLoggedIn) {
-        $stmt = $pdo->prepare('SELECT first_name, last_name FROM "Users" WHERE user_id = ?');
+        $stmt = $pdo->prepare('SELECT first_name, last_name, ban FROM "Users" WHERE user_id = ?');
         $stmt->execute([$_SESSION['user_id']]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -60,10 +60,14 @@
 
     $disabledClass = $profileLocked ? 'pointer-events-none opacity-50 cursor-not-allowed': '';
     $disabledHref = $profileLocked ? 'javascript:void(0)': null;
+
+    if ($user['ban'] === 'YES'  ) {
+        //Ban Logout
+    }
 ?>
 
 <head>
-<link rel="icon" href="<?= BASE_URL ?>/favicon.ico">
+    <link rel="icon" href="<?= BASE_URL ?>/favicon.ico">
 </head>
 
 <div id="loading-overlay" class="fixed inset-0 z-50 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center">
@@ -79,17 +83,17 @@
 <header class="h-16 bg-gray-800 border-b border-gray-700 relative z-50">
     <div class="h-full px-8 flex items-center justify-between relative">
         <a href="<?php 
-    if (!$isLoggedIn) {
-        echo BASE_URL . '/index.php';
-    } else {
-        $role = strtolower($_SESSION['role'] ?? '');
+                if (!$isLoggedIn) {
+                    echo BASE_URL . '/index.php';
+                } else {
+                    $role = strtolower($_SESSION['role'] ?? '');
 
-        if (in_array($role, ['customer', 'admin', 'root'])) {
-            echo BASE_URL . "/pages/dashboard/{$role}/{$role}.php";
-        } else {
-            echo BASE_URL . '/index.php';
-        }
-    }
+                    if (in_array($role, ['customer', 'admin', 'root'])) {
+                        echo BASE_URL . "/pages/dashboard/{$role}/{$role}.php";
+                    } else {
+                        echo BASE_URL . '/index.php';
+                    }
+                }
             ?>" class="flex items-center text-white font-bold text-xl hover:text-blue-300 transition">
             <img src="<?= BASE_URL ?>/favicon.ico" alt="B" class="w-7 h-7" style="margin-right:-2px;">
             <span class="tracking-wide">DPA Airports</span>
@@ -350,32 +354,32 @@ document.addEventListener("DOMContentLoaded", function () {
 <?php if ($isLoggedIn): ?>
 
 <script>
-window.__autoLogoutMinutes = <?= (int)($_SESSION['auto_logout'] ?? 0) ?>;
-window.__remembered = <?= !empty($_SESSION['remembered']) ? 'true' : 'false' ?>;
+    window.__autoLogoutMinutes = <?= (int)($_SESSION['auto_logout'] ?? 0) ?>;
+    window.__remembered = <?= !empty($_SESSION['remembered']) ? 'true' : 'false' ?>;
 </script>
 
 <script>
-(function () {
-    if (window.__remembered) return;
+    (function () {
+        if (window.__remembered) return;
 
-    const minutes = window.__autoLogoutMinutes;
-    if (!minutes || isNaN(minutes)) return;
+        const minutes = window.__autoLogoutMinutes;
+        if (!minutes || isNaN(minutes)) return;
 
-    const timeoutMs = minutes * 60 * 1000;
-    let timer = setTimeout(doLogout, timeoutMs);
+        const timeoutMs = minutes * 60 * 1000;
+        let timer = setTimeout(doLogout, timeoutMs);
 
-    function doLogout() {
-        window.location.href = "<?= BASE_URL ?>/pages/auth/logout.php";
-    }
+        function doLogout() {
+            window.location.href = "<?= BASE_URL ?>/pages/auth/logout.php";
+        }
 
-    function resetTimer() {
-        clearTimeout(timer);
-        timer = setTimeout(doLogout, timeoutMs);
-    }
+        function resetTimer() {
+            clearTimeout(timer);
+            timer = setTimeout(doLogout, timeoutMs);
+        }
 
-    ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evt => {
-        document.addEventListener(evt, resetTimer, { passive: true });
-    });
-})();
+        ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evt => {
+            document.addEventListener(evt, resetTimer, { passive: true });
+        });
+    })();
 </script>
 <?php endif; ?>
