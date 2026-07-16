@@ -1,26 +1,4 @@
 <?php
-/**
-
- * 1. New role value stored in "Users".role is exactly 'Attendant'
- *    (matches the existing LOWER(role) = 'customer' / 'admin' pattern).
- * 2. "Users" needs a new nullable column to store which airline an
- *    attendant is assigned to:
-  *
- *    Populated with one of the airline `name` values returned by
- *    $api->getAirlines() (e.g. "Delta", "American", "United",
- *    "Southwest", "Frontier", "Spirit") when an admin creates the
- *    attendant account (see admin.php / root.php additions).
- * 3. "Belongs to their airline" = $flight['airline'] matches the
- *    attendant's assigned airline (case-insensitive).
- * 4. "Customer information" for an attendant = the passengers who hold
- *    tickets on their airline's flights (derived from "Tickets" rows,
- *    optionally joined to "Users" by user_id when the ticket isn't a
- *    guest booking) — NOT the full customer roster. Attendants are
- *    view-only for this data (no edit/delete), per the spec.
- * 5. "Upcoming flight" (required to allow cancellation) = departFromSender
- *    timestamp is in the future AND flight status isn't already
- *    'past' or 'cancelled'.
- */
 
 // Start session if one is not already active
 
