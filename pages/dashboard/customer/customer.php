@@ -6,7 +6,7 @@ require_once '../../../api/api.php';
 require_once '../../../database/db.php';
 
 // Only logged-in customers can view this dashboard
-if (strtolower($_SESSION['role'] ?? '') !== 'customer') {
+if (strtolower($_SESSION['role'] ?? '') !== 'Customer') {
   header('Location: ../../../index.php');
   exit;
 }

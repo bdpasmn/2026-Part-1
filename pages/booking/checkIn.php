@@ -177,7 +177,7 @@ if (isset($_POST["cancel"])) {
         // Redirect based on user role
         $role = $_SESSION["role"] ?? "";
 
-        if (in_array($role, ["Customer", "Admin", "Root"])) {
+        if (in_array($role, ["Customer", "Admin", "Root", 'Attendant'])) {
             $roleLower = strtolower($role);
             header("Location: ../dashboard/{$roleLower}/{$roleLower}.php");
         } else {

@@ -10,9 +10,9 @@
     
     // Get user role from session 
     $role = $_SESSION['role'] ?? null;
-    if ($role == 'Admin' || $role == 'Root') {
+    if ($role == 'Admin' || $role == 'Root' || $role == 'Attendant') {
         // Check role to take to correct dashboard
-        if (in_array($role, ['Admin', 'Root'])) {
+        if (in_array($role, ['Admin', 'Root', 'Attendant'])) {
                         $roleLower = strtolower($role);
             header("Location: ./pages/dashboard/{$roleLower}/{$roleLower}.php");
         }

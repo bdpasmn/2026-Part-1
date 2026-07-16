@@ -11,8 +11,8 @@
     $role = $_SESSION['role'] ?? null;
 
     // Redirect admins/root users to dashboard
-    if ($role == 'Admin' || $role == 'Root') {
-        if (in_array($role, ['Admin', 'Root'])) {
+    if ($role == 'Admin' || $role == 'Root' || $role == 'Attendant') {
+        if (in_array($role, ['Admin', 'Root', 'Attendant'])) {
             $roleLower = strtolower($role);
             header("Location: ./pages/dashboard/{$roleLower}/{$roleLower}.php");
         }
