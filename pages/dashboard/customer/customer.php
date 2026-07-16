@@ -80,6 +80,7 @@ $currentUser = [
     'last_name'           => $dbUser['last_name']  ?? '',
     'email'               => $dbUser['email']       ?? '',
     'phone'               => $dbUser['phone']       ?? '',
+    'ffm'                 => (int)($dbUser['ffm'] ?? 0),
     'last_login_ip'       => $_SESSION['last_login_ip'],
     'last_login_datetime' => $_SESSION['last_login_datetime'],
     'auto_logout'         => $prefs['auto_logout'],
@@ -705,6 +706,11 @@ window.__autoLogoutMinutes = <?= (int)$currentUser['auto_logout'] ?>;
       <h2 class="text-4xl font-bold mt-2"><?= count($savedCards) ?></h2>
     </div>
   </div>
+ <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 overflow-hidden transition duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-blue-500">
+      <p class="text-gray-400 text-sm">Frequent Flyer Miles</p>
+      <h2 class="text-4xl font-bold mt-2 text-emerald-400"><?= number_format($currentUser['ffm']) ?></h2>
+    </div>
+  </div>
 
   <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden mb-6">
     <div class="p-5 border-b border-gray-700 flex items-center justify-between">
@@ -830,6 +836,7 @@ window.__autoLogoutMinutes = <?= (int)$currentUser['auto_logout'] ?>;
             <th class="text-left px-5 py-3">Confirmation</th>
             <th class="text-left px-5 py-3">Departure</th>
             <th class="text-left px-5 py-3">Arrival</th>
+            
           </tr>
         </thead>
         <tbody id="upcoming-flights-body">
@@ -1242,6 +1249,7 @@ function fmtTs(ts) {
     <?php
     $details = [
       'Customer ID'   => '<code class="text-sm bg-gray-700 px-2 py-0.5 rounded text-gray-300">' . htmlspecialchars($currentUser['id']) . '</code>',
+      'Frequent Flyer Miles' => '<span class="text-emerald-400 font-semibold">' . number_format($currentUser['ffm']) . '</span>',
       'Last Login'    => htmlspecialchars($currentUser['last_login_datetime']),
       'Last Login IP' => '<code class="text-sm bg-gray-700 px-2 py-0.5 rounded text-gray-300">' . htmlspecialchars($currentUser['last_login_ip']) . '</code>',
       'Date of Birth'  => htmlspecialchars($dbUser['date_birth'] ?? $dbUser['date_of_birth'] ?? '—'),

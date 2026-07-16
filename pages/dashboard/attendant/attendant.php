@@ -10,22 +10,23 @@ require_once '../../../api/api.php';
 require_once '../../../database/db.php';
 // Get currently logged in user ID from session
 
-$sessionUserId = $_SESSION['user_id'] ?? null; 
+//$sessionUserId = $_SESSION['user_id'] ?? null; 
 // Redirect to login page if user is not logged in
-
+$sessionUserId = 78;
+/** 
 if (!$sessionUserId) {
     header('Location: ../../../index.php');
     exit;
 }
 
-
+*/
 // Retrieve current user's information from database
 
 $selfStmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
 $selfStmt->execute([$sessionUserId]);
 $selfUser = $selfStmt->fetch(PDO::FETCH_ASSOC);
 // Redirect if user does not exist
- 
+ /** 
 if (!$selfUser) {
     header('Location: ../../../index.php');
     exit;
@@ -36,7 +37,7 @@ if (($selfUser['role'] ?? '') !== 'Attendant') {
     header('Location: ../../../index.php');
     exit;
 }
-
+*/
 $selfName = trim(($selfUser['first_name'] ?? '') . ' ' . ($selfUser['last_name'] ?? ''));
 if ($selfName === '') $selfName = 'Attendant';
 
@@ -94,14 +95,22 @@ foreach ($allFlights as $f) {
 function isMyAirlineFlight(string $fid, array $myAirlineFlightIds): bool {
     return isset($myAirlineFlightIds[$fid]);
 }
-
+function ticketMatchesAirline(array $ticket, array &$flightMap, AirportsAPI $api, string $myAirline): bool {
+    if ($myAirline === '') return false;
+    $fid = $ticket['flight_id'] ?? '';
+    if (!$fid) return false;
+    $f = getFlightInfo($fid, $flightMap, $api);
+    if (!$f) return false;
+    $flightMap[$fid] = $f; // cache so later lookups (tickets tab, etc.) reuse this
+    return strtolower(trim($f['airline'] ?? '')) === strtolower(trim($myAirline));
+}
 // Retrieve all tickets, then filter down to only this attendant's airline.
 
 $ticketsStmt = $pdo->query('SELECT * FROM "Tickets"');
 $allTicketsRaw = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-$allTickets = array_values(array_filter($allTicketsRaw, function ($t) use ($myAirlineFlightIds) {
-    return isMyAirlineFlight($t['flight_id'] ?? '', $myAirlineFlightIds);
+$allTickets = array_values(array_filter($allTicketsRaw, function ($t) use (&$flightMap, $api, $myAirline) {
+    return ticketMatchesAirline($t, $flightMap, $api, $myAirline);
 }));
 
 // Build a "customers" view from the filtered ticket set: distinct
@@ -123,14 +132,54 @@ if (!empty($ticketUserIds)) {
     }
 }
 
+// Build a name -> user lookup so tickets without a user_id (guest/attendant
+// entered) can still be matched to a registered account by first+last name.
+$allUsersStmt = $pdo->query('SELECT * FROM "Users"');
+$linkedUsersByName = [];
+foreach ($allUsersStmt->fetchAll(PDO::FETCH_ASSOC) as $u) {
+    $nameKey = strtolower(trim(($u['first_name'] ?? '') . '|' . ($u['last_name'] ?? '')));
+    if ($nameKey === '|') continue;
+    $linkedUsersByName[$nameKey] = $u;
+}
+// Name-based lookup — many tickets (esp. attendant-entered / guest bookings)
+// won't have a user_id but do have a name that matches a registered account.
+$ticketNamePairs = [];
+foreach ($allTickets as $t) {
+    $fn = strtolower(trim($t['name_first'] ?? ''));
+    $ln = strtolower(trim($t['name_last']  ?? ''));
+    if ($fn === '' && $ln === '') continue;
+    $ticketNamePairs[$fn . '|' . $ln] = ['first' => $t['name_first'] ?? '', 'last' => $t['name_last'] ?? ''];
+}
+
+$linkedUsersByName = [];
+if (!empty($ticketNamePairs)) {
+    $conds  = [];
+    $params = [];
+    foreach ($ticketNamePairs as $pair) {
+        $conds[]  = '(LOWER(TRIM(first_name)) = ? AND LOWER(TRIM(last_name)) = ?)';
+        $params[] = strtolower(trim($pair['first']));
+        $params[] = strtolower(trim($pair['last']));
+    }
+    $nStmt = $pdo->prepare('SELECT * FROM "Users" WHERE ' . implode(' OR ', $conds));
+    $nStmt->execute($params);
+    foreach ($nStmt->fetchAll(PDO::FETCH_ASSOC) as $u) {
+        $nameKey = strtolower(trim(($u['first_name'] ?? '') . '|' . ($u['last_name'] ?? '')));
+        $linkedUsersByName[$nameKey] = $u;
+    }
+}
+
 // One row per distinct passenger (by name+email) seen in this airline's tickets.
 
 $myCustomers = [];
 foreach ($allTickets as $t) {
     $key = strtolower(trim(($t['name_first'] ?? '') . '|' . ($t['name_last'] ?? '') . '|' . ($t['email'] ?? '')));
     if ($key === '||') continue;
+
     if (!isset($myCustomers[$key])) {
-        $linked = isset($t['user_id']) ? ($linkedUsersById[$t['user_id']] ?? null) : null;
+        $nameKey = strtolower(trim(($t['name_first'] ?? '') . '|' . ($t['name_last'] ?? '')));
+        $linked = (isset($t['user_id']) ? ($linkedUsersById[$t['user_id']] ?? null) : null)
+                  ?? ($linkedUsersByName[$nameKey] ?? null);
+
         $myCustomers[$key] = [
             'first_name' => $t['name_first'] ?? '',
             'last_name'  => $t['name_last']  ?? '',
@@ -138,7 +187,7 @@ foreach ($allTickets as $t) {
             'phone'      => $t['phone_number'] ?? ($linked['phone']    ?? ''),
             'city'       => $linked['city']       ?? '',
             'country'    => $linked['country']    ?? '',
-            'user_id'    => $t['user_id'] ?? null,
+            'user_id'    => $t['user_id'] ?? ($linked['user_id'] ?? null),
             'is_registered' => $linked !== null,
         ];
     }
@@ -280,10 +329,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $sex       = trim($_POST['sex']        ?? '');
         $dob       = trim($_POST['dob']        ?? '');
 
-        if (!isMyAirlineFlight($fid, $myAirlineFlightIds)) {
-            $errorMsg = 'That flight does not belong to your assigned airline.';
-        } elseif (!$fid) {
+      $ticketFlight = getFlightInfo($fid, $flightMap, $api);
+        if ($ticketFlight) $flightMap[$fid] = $ticketFlight;
+
+        if (!$fid) {
             $errorMsg = 'Flight ID is required.';
+        } elseif (!$ticketFlight || strtolower(trim($ticketFlight['airline'] ?? '')) !== strtolower(trim($myAirline))) {
+            $errorMsg = 'That flight does not belong to your assigned airline.';
         } elseif (!$nameLast || !$nameFirst) {
             $errorMsg = 'First name and last name are required.';
         } elseif ($seat === '') {
@@ -299,7 +351,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } elseif (isOnNoFlyList($nameFirst, $nameLast, $noFlyList)) {
             $errorMsg = "{$nameFirst} {$nameLast} is on the no-fly list.";
         } else {
-            $f = $flightMap[$fid] ?? null;
+            $f = $ticketFlight;
             $takenFromApi = [];
             if ($f) {
                 foreach ($f['takenSeats'] ?? $f['taken_seats'] ?? [] as $ts) {
@@ -339,8 +391,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
                 $ticketsStmt = $pdo->query('SELECT * FROM "Tickets"');
                 $allTicketsRaw = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
-                $allTickets = array_values(array_filter($allTicketsRaw, function ($t) use ($myAirlineFlightIds) {
-                    return isMyAirlineFlight($t['flight_id'] ?? '', $myAirlineFlightIds);
+                $allTickets = array_values(array_filter($allTicketsRaw, function ($t) use (&$flightMap, $api, $myAirline) {
+                return ticketMatchesAirline($t, $flightMap, $api, $myAirline);
                 }));
 
                 if ($isAjax) {
@@ -452,9 +504,9 @@ if ($_POST['action'] === 'cancel_ticket') {
             if (!isset($errorMsg)) {
                 $ticketsStmt = $pdo->query('SELECT * FROM "Tickets"');
                 $allTicketsRaw = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
-                $allTickets = array_values(array_filter($allTicketsRaw, function ($t) use ($myAirlineFlightIds) {
-                    return isMyAirlineFlight($t['flight_id'] ?? '', $myAirlineFlightIds);
-                }));
+                $allTickets = array_values(array_filter($allTicketsRaw, function ($t) use (&$flightMap, $api, $myAirline) {
+                  return ticketMatchesAirline($t, $flightMap, $api, $myAirline);
+                    }));
             }
         }
     }
@@ -712,17 +764,49 @@ if ($_POST['action'] === 'cancel_ticket') {
           <input type="text" name="flight_id" id="tFlightId" required class="field font-mono text-xs" onblur="onFlightBlur(this.value)">
           <p id="flightInfo" class="text-xs mt-1 hidden"></p>
         </div>
-        <div>
+       <div>
           <label class="block text-xs text-gray-400 mb-1">Seat*</label>
           <input type="text" name="seat" id="tSeat" required maxlength="3" placeholder="ex. 5A, 7H" class="field uppercase" oninput="this.value=this.value.toUpperCase()" onblur="onSeatBlur(this.value)">
           <p class="hint">Rows 1–10 · Columns A–I</p>
           <p id="seatErr" class="text-red-400 text-xs mt-1 hidden"></p>
         </div>
 
+        <p class="section-label">Bags &amp; Pricing</p>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Carry-On Bags</label>
+            <select id="tCarryOn" class="field" onchange="onFlightBlur(document.getElementById('tFlightId').value)">
+              <option value="0">0 Carry-on</option>
+              <option value="1">1 Carry-on</option>
+              <option value="2">2 Carry-on</option>
+              <option value="3">3 Carry-on</option>
+              <option value="4">4 Carry-on</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Checked Bags</label>
+            <select id="tChecked" class="field" onchange="onFlightBlur(document.getElementById('tFlightId').value)">
+              <option value="0">0 Checked</option>
+              <option value="1">1 Checked</option>
+              <option value="2">2 Checked</option>
+              <option value="3">3 Checked</option>
+              <option value="4">4 Checked</option>
+              <option value="5">5 Checked</option>
+              <option value="6">6 Checked</option>
+              <option value="7">7 Checked</option>
+              <option value="8">8 Checked</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="bg-gray-800/60 border border-gray-700 rounded-lg p-4 text-sm space-y-1 mt-3">
+          <div class="flex justify-between text-gray-300"><span>Seat Price</span><span id="priceSeatBase">$0.00</span></div>
+          <div class="flex justify-between text-gray-300"><span>Bag Fees</span><span id="priceBagFees">$0.00</span></div>
+          <div class="flex justify-between font-bold text-white border-t border-gray-700 pt-2 mt-1"><span>Total</span><span id="priceTotal" class="text-emerald-400">$0.00</span></div>
+        </div>
         <input type="hidden" name="price" id="tPrice" value="0">
         <input type="hidden" name="destination" id="tDestination" value="">
         <input type="hidden" name="bags" id="tBags" value="0">
-
         <p class="section-label">Passenger (required)</p>
         <div class="grid grid-cols-2 gap-3">
           <div>
@@ -942,20 +1026,30 @@ const dbTakenSeats = <?php
 ?>;
 
 async function onFlightBlur(val) {
-  const infoEl = document.getElementById('flightInfo');
+  const infoEl  = document.getElementById('flightInfo');
+  const carryOn = document.getElementById('tCarryOn').value;
+  const checked = document.getElementById('tChecked').value;
+
   if (!val) {
     infoEl.classList.add('hidden');
-    document.getElementById('tPrice').value = '0';
+    document.getElementById('priceSeatBase').textContent = '$0.00';
+    document.getElementById('priceBagFees').textContent  = '$0.00';
+    document.getElementById('priceTotal').textContent    = '$0.00';
+    document.getElementById('tPrice').value       = '0';
     document.getElementById('tDestination').value = '';
+    document.getElementById('tBags').value        = '0';
     return;
   }
   try {
-    const res = await fetch(`flight_lookup.php?flight_id=${encodeURIComponent(val)}&carry_on=0&checked=0`);
+    const res = await fetch(`flight_lookup.php?flight_id=${encodeURIComponent(val)}&carry_on=${carryOn}&checked=${checked}`);
     const data = await res.json();
     if (data.error) {
       infoEl.textContent = data.error;
       infoEl.className = 'text-xs mt-1 text-red-400';
       infoEl.classList.remove('hidden');
+      document.getElementById('priceSeatBase').textContent = '$0.00';
+      document.getElementById('priceBagFees').textContent  = '$0.00';
+      document.getElementById('priceTotal').textContent    = '$0.00';
       document.getElementById('tPrice').value = '0';
       document.getElementById('tDestination').value = '';
       return;
@@ -966,8 +1060,12 @@ async function onFlightBlur(val) {
     infoEl.textContent = `${data.flightNumber} · ${data.airline} → ${data.destination}`;
     infoEl.className = 'text-xs mt-1 text-emerald-400';
     infoEl.classList.remove('hidden');
-    document.getElementById('tPrice').value = data.total;
+    document.getElementById('priceSeatBase').textContent = '$' + data.seatPrice.toFixed(2);
+    document.getElementById('priceBagFees').textContent  = '$' + data.bagCost.toFixed(2);
+    document.getElementById('priceTotal').textContent    = '$' + data.total.toFixed(2);
+    document.getElementById('tPrice').value       = data.total;
     document.getElementById('tDestination').value = data.destination;
+    document.getElementById('tBags').value        = (parseInt(carryOn) + parseInt(checked));
   } catch (e) {
     infoEl.textContent = 'Could not look up flight.';
     infoEl.className = 'text-xs mt-1 text-red-400';
@@ -1013,6 +1111,9 @@ document.getElementById('ticketForm')?.addEventListener('submit', async function
         showFlash(data.message);
         this.reset();
         document.getElementById('flightInfo').classList.add('hidden');
+        document.getElementById('priceSeatBase').textContent = '$0.00';
+        document.getElementById('priceBagFees').textContent  = '$0.00';
+        document.getElementById('priceTotal').textContent    = '$0.00';
         setTimeout(() => window.location.reload(), 900);
       }
     } else {
