@@ -32,20 +32,22 @@ require_once '../../../api/api.php';
 require_once '../../../database/db.php';
 // Get currently logged in user ID from session
 
-$sessionUserId = $_SESSION['user_id'] ?? null;
+$sessionUserId = $_SESSION['user_id'] ?? null; 
 // Redirect to login page if user is not logged in
 
 if (!$sessionUserId) {
     header('Location: ../../../index.php');
     exit;
 }
+
+
 // Retrieve current user's information from database
 
 $selfStmt = $pdo->prepare('SELECT * FROM "Users" WHERE user_id = ? LIMIT 1');
 $selfStmt->execute([$sessionUserId]);
 $selfUser = $selfStmt->fetch(PDO::FETCH_ASSOC);
 // Redirect if user does not exist
-
+ 
 if (!$selfUser) {
     header('Location: ../../../index.php');
     exit;
@@ -56,6 +58,7 @@ if (($selfUser['role'] ?? '') !== 'Attendant') {
     header('Location: ../../../index.php');
     exit;
 }
+
 $selfName = trim(($selfUser['first_name'] ?? '') . ' ' . ($selfUser['last_name'] ?? ''));
 if ($selfName === '') $selfName = 'Attendant';
 
@@ -76,7 +79,7 @@ foreach ($airports as $airport) {
     $airportLookup[strtolower($airport['shortName'])] = $airport;
 }
 
-$allFlightsData = $api->getAllFlights();
+$allFlightsData = $api->getFlights();
 $allFlights     = $allFlightsData['flights'] ?? [];
 
 // Retrieve no-fly list from API and normalize names
@@ -554,7 +557,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     <div class="p-5 border-b border-gray-700 flex flex-wrap items-center justify-between gap-4">
       <div>
         <h2 class="text-lg font-bold">Passengers — <?= htmlspecialchars($myAirline) ?> 👥</h2>
-        <p class="readonly-note mt-1">View only — attendants cannot modify customer records.</p>
+        <p class="readonly-note mt-1">View only attendants cannot modify customer records.</p>
       </div>
       <form method="GET" class="flex gap-2 flex-wrap">
         <input type="hidden" name="tab" value="customers">

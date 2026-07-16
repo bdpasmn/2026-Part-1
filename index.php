@@ -1,6 +1,6 @@
 <?php
     session_start();
-
+    
     require_once "./database/db.php";
 
     $stmt = $pdo->query('SELECT COUNT(*) FROM "Tickets"');
@@ -12,8 +12,9 @@
     if (isset($_SESSION['user_id'])) {
         $role = $_SESSION['role'] ?? '';
     
-        if (in_array($role, ['Customer', 'Admin', 'Root'])) {
-            header("Location: ./pages/dashboard/{$role}/{$role}.php");
+        if (in_array($role, ['Customer', 'Admin', 'Root', 'Attendant'])) {
+            $roleLower = strtolower($role);
+            header("Location: ./pages/dashboard/{$roleLower}/{$roleLower}.php");
         }
     
         exit;

@@ -9,9 +9,9 @@
     $role = $_SESSION['role'] ?? null;
 
     // Prevent Admin/Root from accessing this customer-only page
-    if ($role == 'Admin' || $role == 'Root') {
+    if ($role == 'Admin' || $role == 'Root' || $role == 'Attendant') {
         // Redirect admins/roots to their dashboard
-        if (in_array($role, ['Admin', 'Root'])) {
+        if (in_array($role, ['Admin', 'Root', 'Attendant'])) {
             header("Location: ../dashboard/{$role}/{$role}.php");
         }
 

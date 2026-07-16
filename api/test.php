@@ -4,9 +4,10 @@ require_once "key.php";
 
 $api = new AirportsAPI(AIRPORTS_API_KEY);
 
-$response = $api->getFlights();
+$flight = $api->getFlightById("6a616790e2522dcb77b129b0");
 
 echo "<pre>";
-print_r($response);
+print_r($flight);
 echo "</pre>";
+
 ?>

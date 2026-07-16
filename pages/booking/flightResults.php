@@ -10,10 +10,11 @@
     
     // Get user role from session 
     $role = $_SESSION['role'] ?? null;
-    if ($role == 'Admin' || $role == 'Root') {
+    if ($role == 'Admin' || $role == 'Root' || $role == 'Attendant') {
         // Check role to take to correct dashboard
-        if (in_array($role, ['Admin', 'Root'])) {
-            header("Location: ../dashboard/{$role}/{$role}.php");
+        if (in_array($role, ['Admin', 'Root', 'Attendant'])) {
+                        $roleLower = strtolower($role);
+            header("Location: ./pages/dashboard/{$roleLower}/{$roleLower}.php");
         }
         exit;
     }
@@ -61,7 +62,7 @@
     }
 
     // Fetch flights from API
-    $apiResult = $api->searchFlights($match);
+    $apiResult = $api->getFlights(match: $match);
     $batch = $apiResult['flights'] ?? [];
 
     // Filter flights based on destination search
