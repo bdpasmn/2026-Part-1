@@ -1284,7 +1284,7 @@ $filteredUsers = array_slice(
                   </option>
                   <?php endforeach; ?>
                 </select>
-              </form>
+                  </form>  
             </td>
             <td class="px-5 py-4">
               <form method="POST" onsubmit="return confirm('Delete attendant <?= htmlspecialchars(addslashes(trim(($a['first_name'] ?? '') . ' ' . ($a['last_name'] ?? '')))) ?>?')">
@@ -1385,20 +1385,20 @@ $filteredTickets = array_slice(
           <div>
             <label class="block text-xs text-gray-400 mb-1">Carry-On Bags</label>
             <select id="tCarryOn" class="field" onchange="onFlightBlur(document.getElementById('tFlightId').value)">
-              <option value="0">0 Carry-on (Free)</option>
-              <option value="1">1 Carry-on (Free)</option>
-              <option value="2">2 Carry-on ($30 extra)</option>
+              <option value="0">0 Carry-on </option>
+              <option value="1">1 Carry-on </option>
+              <option value="2">2 Carry-on </option>
             </select>
           </div>
           <div>
             <label class="block text-xs text-gray-400 mb-1">Checked Bags</label>
             <select id="tChecked" class="field" onchange="onFlightBlur(document.getElementById('tFlightId').value)">
-              <option value="0">0 Checked (Free)</option>
-              <option value="1">1 Checked (Free)</option>
-              <option value="2">2 Checked ($50 extra)</option>
-              <option value="3">3 Checked ($150 extra)</option>
-              <option value="4">4 Checked ($250 extra)</option>
-              <option value="5">5 Checked ($350 extra)</option>
+              <option value="0">0 Checked </option>
+              <option value="1">1 Checked </option>
+              <option value="2">2 Checked </option>
+              <option value="3">3 Checked </option>
+              <option value="4">4 Checked </option>
+              <option value="5">5 Checked </option>
             </select>
           </div>
         </div>
@@ -1890,6 +1890,7 @@ document.querySelectorAll('.update-customer-form').forEach(form => {
     }
   });
 });
+
 // Delete a customer account without refreshing the page
 
 document.querySelectorAll('.delete-customer-form').forEach(form => {
