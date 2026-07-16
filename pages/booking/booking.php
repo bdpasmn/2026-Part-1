@@ -60,12 +60,12 @@
 
     // Extract departure timestamp (API returns ms)
     $departureTimestamp = $flight['departFromReceiver'] ?? null;
-    // Ensure booking is made at least 24 hours before departure
+    // Ensure booking is made at least 36 hours before departure
     if (
         !$departureTimestamp ||
-        ($departureTimestamp / 1000) < (time() + 86400)
+        ($departureTimestamp / 1000) < (time() + 129600)
     ) {
-        header("Location: bookingFailed.php?" . http_build_query(['message' => 'Flights must be booked at least 24 hours before departure.']));
+        header("Location: bookingFailed.php?" . http_build_query(['message' => 'Flights must be booked at least 36 hours before departure.']));
         exit;
     }
 ?>

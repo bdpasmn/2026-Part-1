@@ -25,7 +25,7 @@
         str_contains(strtolower($message), 'no flight was selected') ||
         str_contains(strtolower($message), 'has departed') ||
         str_contains(strtolower($message), 'was cancelled') ||
-        str_contains(strtolower($message), '24 hours before departure')
+        str_contains(strtolower($message), '36 hours before departure')
     );
 
     // Customize the page based on the type of booking error.

@@ -83,7 +83,7 @@ $usersStmt = $pdo->query('SELECT * FROM "Users" WHERE LOWER(role) = \'customer\'
 $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
 // CALCULATE DASHBOARD STATISTICS
 
-$daySec   = 86400;
+$daySec   = 129600; // 36 hours in seconds
 $weekSec  = 7  * $daySec;
 $monthSec = 30 * $daySec;
 $yearSec  = 365 * $daySec;

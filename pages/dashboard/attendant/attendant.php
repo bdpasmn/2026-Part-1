@@ -164,7 +164,7 @@ foreach ($allTickets as $t) {
 }
 $myCustomers = array_values($myCustomers);
 
-$daySec = 86400;
+$daySec = 129600; // 36 hours in seconds
 $utc = new DateTimeZone('UTC');
 $nowUtc = new DateTime('now', $utc);
 $now = $nowUtc->getTimestamp();
@@ -415,7 +415,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 echo json_encode(['success' => false, 'message' => $errorMsg]);
             } else {
                 echo json_encode(['success' => true, 'message' => $updateMsg]);
-            }
+            }24
             exit;
         }
         $activeTab = 'tickets';

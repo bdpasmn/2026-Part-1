@@ -450,7 +450,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
                         $canBook = in_array(strtolower($role), ['user', 'staff'])
                             && ($f['type'] ?? '') == 'departure'
                             && ($f['landingAt'] ?? '') == 'SMN'
-                            && $flightTime > ($now + 86400);
+                            && $flightTime > ($now + 129600); // 36 hours in seconds
                     ?>
 
                     <div class="bg-gray-800 border border-gray-700 rounded-xl p-5
@@ -583,8 +583,8 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
                                                 $reason = 'This flight does not depart from SMN.';
                                             } elseif ($flightTime <= $now) {
                                                 $reason = 'This flight has already departed.';
-                                            } elseif ($flightTime <= ($now + 86400)) {
-                                                $reason = 'Booking closes 24 hours before departure.';
+                                            } elseif ($flightTime <= ($now + 129600)) { // 36 hours in seconds
+                                                $reason = 'Booking closes 36 hours before departure.';
                                             }
                                         ?>
 

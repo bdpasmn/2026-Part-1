@@ -92,19 +92,19 @@
     
     $flightsBeforeBookingRules = count($batch);
     $now = round(microtime(true) * 1000);
-    $twentyFourHours = 24 * 60 * 60 * 1000;
+    $thirtySixHours = 36 * 60 * 60 * 1000;
 
     // Filter out flights that are not scheduled or too close to departure
-    $batch = array_filter($batch, function ($flight) use ($now, $twentyFourHours) 
+    $batch = array_filter($batch, function ($flight) use ($now, $thirtySixHours) 
         {
             // Only include scheduled flights
             if (($flight['status'] ?? '') !== 'scheduled') {
                 return false;
             }
 
-            // Ensure departure is at least 24 hours away
+            // Ensure departure is at least 36 hours away
             $arrivalTime = $flight['departFromReceiver'] ?? 0;
-            return $arrivalTime > ($now + $twentyFourHours);
+            return $arrivalTime > ($now + $thirtySixHours);
         }
     );
 
@@ -236,7 +236,7 @@
                             <?php if ($dateMissing): ?>
                                 Please select a date to search for flights.
                             <?php elseif ($failedTimeRequirement): ?>
-                                Flights must be scheduled and depart more than 24 hours from now.
+                                Flights must be scheduled and depart more than 36 hours from now.
                             <?php else: ?>
                                 No flights are available that meet your search requirements.
                             <?php endif; ?>

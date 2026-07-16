@@ -94,7 +94,7 @@ $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
 $admins    = array_values(array_filter($allUsers, fn($u) => in_array(strtolower($u['role'] ?? ''), ['admin', 'root'])));
 $customers = array_values(array_filter($allUsers, fn($u) => strtolower($u['role'] ?? '') === 'customer'));
 
-$daySec   = 86400;
+$daySec   = 129600; // 36 hours in seconds
 $weekSec  = 7  * $daySec;
 $monthSec = 30 * $daySec;
 $yearSec  = 365 * $daySec;

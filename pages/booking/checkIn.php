@@ -100,9 +100,9 @@ if ($confirmation && $lastName) {
             exit();
         }
 
-        // Check if check-in window is open (hardocded departure time inplace for api, usually has to be within 24 hours of departure)
+        // Check if check-in window is open (hardocded departure time inplace for api, usually has to be within 36 hours of departure)
         $departureTime = strtotime("2026-07-04 14:30:00");
-        $canCheckIn = time() >= $departureTime - 86400;
+        $canCheckIn = time() >= $departureTime - 129600; // 36 hours before departure
     }
 }
 ?>
@@ -208,7 +208,7 @@ if ($confirmation && $lastName) {
                     <?php if ($canCheckIn): ?>
                         <p>✅ You may now check in for this flight.</p>
                     <?php else: ?>
-                        <p>⏳ Check-in opens 24 hours before departure.</p>
+                        <p>⏳ Check-in opens 36 hours before departure.</p>
                     <?php endif; ?>
 
                 </div>
