@@ -163,12 +163,25 @@
     // Card is required whenever anything is actually owed in dollars.
     $cardRequired = $moneyDue > 0;
 
-    // Validate the credit card number (only required if money is actually due)
-    if ($cardRequired && (strlen($cardNumber) < 13 || strlen($cardNumber) > 19)) {
-        header("Location: bookingFailed.php?" . http_build_query(['message' => 'Please enter a valid card number.']));
-        exit;
-    }
 
+    //Check card number with blacklist
+   $pdo->checkCard();
+   $stmt = $pdo->prepare('
+     SELECT blacklist
+     FROM ‘SAVED CARDS’
+     WHERE card_number = ?
+   ');
+   $stmt->execute([$cardNumber]);
+   $row = $stmt->fetch(PDO::FETCH_ASSOC);
+   if ($row['blacklist'] === 'YES'  ) {
+        header("Location: bookingFailed.php?" . http_build_query(['message' => 'The entered card number was blacklisted']));
+   } else {
+        // Validate the credit card number (only required if money is actually due)
+        if ($cardRequired && (strlen($cardNumber) < 13 || strlen($cardNumber) > 19)) {
+            header("Location: bookingFailed.php?" . http_build_query(['message' => 'Please enter a valid card number.']));
+            exit;
+        }
+   }
     // Validate the expiration date
     if ($cardRequired && !preg_match('/^(0[1-9]|1[0-2])\/\d{2}$/', $expirationDate)) {
         header("Location: bookingFailed.php?" . http_build_query(['message' => 'Please enter a valid expiration date (MM/YY).']));
