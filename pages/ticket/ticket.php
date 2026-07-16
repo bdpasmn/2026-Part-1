@@ -17,6 +17,13 @@ $stmt = $pdo->prepare(
 $stmt->execute([$confirmation]);
 $ticketRow = $stmt->fetch();
 
+$isntCheckedin = $ticketRow && $ticketRow["checked_in"] === false;
+
+if ($isntCheckedin) {
+    header("Location: " . BASE_URI . "/pages/booking/checkIn.php?confirmation=" . urlencode($confirmation));
+    exit();
+}
+
 // Check if ticket is cancelled
 $isCancelled =
     $ticketRow && strtolower($ticketRow["status"] ?? "") === "cancelled";
@@ -39,11 +46,7 @@ if (isset($_GET["xhr"]) && $_GET["xhr"] === "flight-status") {
         exit();
     }
 
-    $flightsResponse = $api->searchFlights(
-        ["flight_id" => $flightId],
-        null,
-        "desc"
-    );
+    $flightsResponse = $api->getFlights($after);
 
     $flight = $flightsResponse["flights"][0] ?? null;
 
@@ -125,7 +128,7 @@ if (isset($_GET["xhr"]) && $_GET["xhr"] === "delete-ticket") {
 
 // Page load: fetch flight and build ticket display
 if ($ticketRow) {
-    $flightsResponse = $api->searchFlights(
+    $flightsResponse = $api->getFlights(
         ["flight_id" => $flightId],
         null,
         "desc"

@@ -11,7 +11,8 @@
     // Redirect admins/root users to their dashboard
     if ($role == 'Admin' || $role == 'Root') {
         if (in_array($role, ['Admin', 'Root'])) {
-            header("Location: ../dashboard/{$role}/{$role}.php");
+                        $roleLower = strtolower($role);
+            header("Location: ./pages/dashboard/{$roleLower}/{$roleLower}.php");
         }
         
         exit;

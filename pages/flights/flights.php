@@ -1,7 +1,6 @@
 <?php
 // Initialize session
 session_start();
-
 // Handle AJAX requests for real-time flight updates
 if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
     ob_start();
@@ -14,10 +13,10 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
 
         $api = new AirportsAPI(AIRPORTS_API_KEY);
 
-        $after = "6a41edc0413de93518a3b150";
+        // Use cursor from request if present
+        $cursor = $_GET['cursor'] ?? null;
 
-        // Fetch all flights via API
-        $response = $api->getAllFlights($after);
+        $response = $api->getFlights(after: $cursor);
 
         $flights = [];
 
@@ -96,6 +95,10 @@ $page = max(1, (int)($_GET['page'] ?? 1));
 
 $perPage = 10;
 
+// Get cursor from query string for pagination
+$cursor = $_GET['cursor'] ?? null;
+$pageNum = max(1, (int)($_GET['page'] ?? 1));
+
 // Build query filters
 $match = [];
 
@@ -103,16 +106,12 @@ if ($statusTab !== 'all') {
     $match['status'] = $statusTab;
 }
 
-// Filter by date if searching by time
+// Filter by date if searching by time (server-side via API)
 if ($mode === 'time' && $search !== '') {
-
     $timestamp = strtotime($search);
-
     if ($timestamp !== false) {
-
         $start = strtotime(date('Y-m-d 00:00:00', $timestamp)) * 1000;
         $end   = strtotime(date('Y-m-d 23:59:59', $timestamp)) * 1000;
-
         $match['departFromSender'] = [
             '$gte' => $start,
             '$lte' => $end
@@ -122,26 +121,31 @@ if ($mode === 'time' && $search !== '') {
 
 // Fetch flights from API
 $flights = [];
-$after = '6a41edc0413de93518a3b150';
+$nextCursor = null;
+$after = $cursor;
 
-if ($statusTab === 'all' && empty($match['departFromSender'])) {
-    // Get all flights
-    $response = $api->getAllFlights($after);
+if ($statusTab === 'all' && empty($match)) {
+    // Get all flights (no filters)
+    $response = $api->getFlights(after: $after);
 
     if (is_array($response)) {
         $flights = $response['flights'] ?? [];
-        $nextCursor = $response['nextCursor'] ?? null;
+        if (count($flights) > 0) {
+            $nextCursor = $flights[count($flights) - 1]['flight_id'] ?? null;
+        }
     } else {
         $flights = [];
         $nextCursor = null;
     }
 
 } else {
-    // Search with filters
-    $apiResult = $api->searchFlights($match);
+    // Apply filters (status and date range via API)
+    $apiResult = $api->getFlights(match: !empty($match) ? $match : null, after: $after);
 
     $flights = $apiResult['flights'] ?? [];
-    $nextCursor = $apiResult['nextCursor'] ?? null ?? null;
+    if (count($flights) > 0) {
+        $nextCursor = $flights[count($flights) - 1]['flight_id'] ?? null;
+    }
 }
 
 // Whitelist allowed flight statuses
@@ -220,8 +224,8 @@ if (in_array($mode, ['arrival', 'departure'], true)) {
 
 } 
 
-// Apply search filter
-if ($search !== '') {
+// Apply search filter (client-side for all non-time modes)
+if ($search !== '' && $mode !== 'time') {
 
     $searchLower = strtolower($search);
 
@@ -235,9 +239,6 @@ if ($search !== '') {
             $comingFrom   = strtolower($f['comingFrom'] ?? '');
             $landingAt    = strtolower($f['landingAt'] ?? '');
             $departingTo  = strtolower($f['departingTo'] ?? '');
-            
-            $timeRaw       = (string)$getTime($f);
-            $timeFormatted = strtolower($getDate($f));
             
             // Build searchable city list from airport codes
             $cities = [];
@@ -271,9 +272,6 @@ if ($search !== '') {
                 case 'city':
                     return str_contains($cityString, $searchLower);
 
-                case 'time':
-                    return str_contains($timeRaw, $searchLower) || str_contains($timeFormatted, $searchLower);
-
                 default:
                     return str_contains($flightNumber, $searchLower) 
                         || str_contains($airline, $searchLower)
@@ -306,12 +304,13 @@ usort($flights, function ($a, $b) use ($sort, $getTime) {
 
 // Paginate results
 $totalFlights = count($flights);
-$totalPages = ceil($totalFlights / $perPage);
+$perPage = 10;
 
-$page = max(1, min($page, $totalPages));
-
-$offset = ($page - 1) * $perPage;
+$offset = 0;
 $paginatedFlights = array_slice($flights, $offset, $perPage);
+
+// Determine if there are more results
+$hasNextPage = count($flights) > $perPage || $nextCursor !== null;
 
 // Check user role for booking eligibility
 $now = time();
@@ -610,28 +609,24 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
         <section class="p-6">
             <div class="flex justify-between items-center gap-4 flex-wrap">
                 <div class="text-sm text-gray-400">
-                    Page <?= $page ?> of <?= $totalPages ?>
+                    Page <span class="font-semibold text-white"><?= $pageNum ?></span>
                 </div>
 
                 <div class="flex items-center gap-4">
-                    <?php if ($page > 1): ?>
+                    <?php if ($cursor): ?>
                         <a class="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600 transition duration-200"
-                           href="?page=<?= $page - 1 ?>&status=<?= urlencode($statusTab) ?>&mode=<?= urlencode($mode) ?>&sort=<?= urlencode($sort) ?>&search=<?= urlencode($search) ?>">
-                            ← Previous
+                           href="?status=<?= urlencode($statusTab) ?>&mode=<?= urlencode($mode) ?>&sort=<?= urlencode($sort) ?>&search=<?= urlencode($search) ?>&page=1">
+                            ← First Page
                         </a>
                     <?php else: ?>
                         <span class="px-4 py-2 bg-gray-800 text-gray-600 rounded cursor-not-allowed">
-                            ← Previous
+                            ← First Page
                         </span>
                     <?php endif; ?>
 
-                    <div class="px-4 py-2 bg-gray-800 border border-gray-700 rounded">
-                        Page <?= $page ?> of <?= $totalPages ?>
-                    </div>
-
-                    <?php if ($page < $totalPages): ?>
+                    <?php if ($nextCursor !== null): ?>
                         <a class="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600 transition duration-200"
-                           href="?page=<?= $page + 1 ?>&status=<?= urlencode($statusTab) ?>&mode=<?= urlencode($mode) ?>&sort=<?= urlencode($sort) ?>&search=<?= urlencode($search) ?>">
+                           href="?cursor=<?= urlencode($nextCursor) ?>&status=<?= urlencode($statusTab) ?>&mode=<?= urlencode($mode) ?>&sort=<?= urlencode($sort) ?>&search=<?= urlencode($search) ?>&page=<?= $pageNum + 1 ?>">
                             Next →
                         </a>
                     <?php else: ?>
@@ -649,7 +644,8 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
     // Poll for real-time status/gate updates every 13 seconds
     async function updateFlights() {
         try {
-            const res = await fetch(window.location.pathname + '?ajax=1');
+            const url = window.location.pathname + window.location.search + (window.location.search ? '&' : '?') + 'ajax=1';
+            const res = await fetch(url);
             
             if (!res.ok) {
                 console.error(`HTTP error! status: ${res.status}`);

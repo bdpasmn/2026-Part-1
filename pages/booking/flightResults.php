@@ -61,7 +61,7 @@
     }
 
     // Fetch flights from API
-    $apiResult = $api->searchFlights($match);
+    $apiResult = $api->getFlights(match: $match);
     $batch = $apiResult['flights'] ?? [];
 
     // Filter flights based on destination search
