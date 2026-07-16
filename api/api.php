@@ -165,8 +165,9 @@ private function request($method, $endpoint, $data = null, $query = []) {
     public function getFlightById($flightId) {
         // V2 TODO: once getFlightsByIds() is replaced by getFlights(),DONE 
         // update this to call: DONE 
-        $result = $this->getFlights(null, ['flight_id' => $flightId]);
-      //  $result = $this->getFlightsByIds([$flightId]); OLD 
+        $result = $this->getFlights(['flight_id' => $flightId]);
+
+//  $result = $this->getFlightsByIds([$flightId]); OLD 
 
         if (
             isset($result['flights']) &&

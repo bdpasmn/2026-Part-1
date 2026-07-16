@@ -6,6 +6,7 @@ require_once '../../../api/api.php';
 require_once '../../../database/db.php';
 
 // Only logged-in customers can view this dashboard
+
 if (strtolower($_SESSION['role'] ?? '') !== 'customer') {
   header('Location: ../../../index.php');
   exit;
@@ -118,7 +119,7 @@ $api = new AirportsAPI(AIRPORTS_API_KEY);
 // Pull airline/airport reference data, and flight data only if needed
 $airlinesData   = $api->getAirlines();
 $airportsData   = $api->getAirports();
-$allFlightsData = $needsFlightDetails ? $api->getAllFlights() : null;
+$allFlightsData = $needsFlightDetails ? $api->getFlights() : null;
 
 // Build a quick lookup map of airline ID -> airline name
 $airlinesMap = [];
@@ -180,7 +181,7 @@ function normalizeFlight(array $f): array {
 function getFlightById(AirportsAPI $api, $flightId) {
   if (!$flightId) return null;
 
-  $res = $api->searchFlights(
+  $res = $api->getFlights(
       ['flight_id' => $flightId],
       null,
       'desc'
