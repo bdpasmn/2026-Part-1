@@ -89,6 +89,13 @@ $allTickets  = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $usersStmt = $pdo->query('SELECT * FROM "Users"');
 $allUsers  = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
+// Airlines list, used to populate the attendant "assigned airline" dropdown
+$airlinesData = $api->getAirlines();
+$airlines     = $airlinesData['airlines'] ?? [];
+
+// Existing attendant accounts
+$attendantsStmt = $pdo->query('SELECT * FROM "Users" WHERE LOWER(role) = \'attendant\' ORDER BY user_id ASC');
+$allAttendants  = $attendantsStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Split users into admin/root accounts vs customer accounts
 $admins    = array_values(array_filter($allUsers, fn($u) => in_array(strtolower($u['role'] ?? ''), ['admin', 'root'])));
@@ -505,6 +512,90 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $activeTab = 'customers';
     }
 
+// CREATE ATTENDANT
+if ($_POST['action'] === 'create_attendant') {
+    $fn      = trim($_POST['first_name'] ?? '');
+    $ln      = trim($_POST['last_name']  ?? '');
+    $email   = trim($_POST['email']      ?? '');
+    $phone   = trim($_POST['phone']      ?? '');
+    $pw      = trim($_POST['password']   ?? '');
+    $airline = trim($_POST['airline']    ?? '');
+
+    if (!$fn || !$ln || !$email) {
+        $errorMsg = 'First name, last name, and email are required.';
+    } elseif (!isValidEmail($email)) {
+        $errorMsg = 'Please enter a valid email address (must contain "@" and ".").';
+    } elseif ($phone !== '' && phoneHasLetters($phone)) {
+        $errorMsg = 'Phone number cannot contain letters.';
+    } elseif (strlen($pw) < 8) {
+        $errorMsg = 'Password must be at least 8 characters.';
+    } elseif (!$airline) {
+        $errorMsg = 'An assigned airline is required for attendants.';
+    } else {
+        $emailCheck = $pdo->prepare('SELECT 1 FROM "Users" WHERE LOWER(email) = LOWER(?)');
+        $emailCheck->execute([$email]);
+
+        if ($emailCheck->fetch()) {
+            $errorMsg = 'That email address is already in use.';
+        } else {
+            $phoneFormatted = $phone ? formatPhone($phone) : null;
+            $hashed = password_hash($pw, PASSWORD_BCRYPT);
+
+            $ins = $pdo->prepare(
+                'INSERT INTO "Users" (first_name, last_name, email, phone, password, role, airline)
+                 VALUES (?,?,?,?,?,?,?)'
+            );
+            $ins->execute([$fn, $ln, $email, $phoneFormatted, $hashed, 'Attendant', $airline]);
+
+            $updateMsg = "Attendant {$fn} {$ln} created and assigned to {$airline}.";
+            $attendantsStmt = $pdo->query('SELECT * FROM "Users" WHERE LOWER(role) = \'attendant\' ORDER BY user_id ASC');
+            $allAttendants  = $attendantsStmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+    }
+    $activeTab = 'attendants';
+}
+
+// DELETE ATTENDANT
+if ($_POST['action'] === 'delete_attendant') {
+    $uid = $_POST['user_id'] ?? '';
+    if ($uid) {
+        $del = $pdo->prepare('DELETE FROM "Users" WHERE user_id = ? AND LOWER(role) = \'attendant\'');
+        $del->execute([$uid]);
+        $updateMsg = 'Attendant account deleted.';
+    }
+    $attendantsStmt = $pdo->query('SELECT * FROM "Users" WHERE LOWER(role) = \'attendant\' ORDER BY user_id ASC');
+    $allAttendants  = $attendantsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'message' => $updateMsg]);
+        exit;
+    }
+    $activeTab = 'attendants';
+}
+
+// UPDATE ATTENDANT AIRLINE ASSIGNMENT
+if ($_POST['action'] === 'update_attendant_airline') {
+    $uid     = $_POST['user_id'] ?? '';
+    $airline = trim($_POST['airline'] ?? '');
+    if (!$airline) {
+        $errorMsg = 'An assigned airline is required.';
+    } else {
+        $upd = $pdo->prepare('UPDATE "Users" SET airline = ? WHERE user_id = ? AND LOWER(role) = \'attendant\'');
+        $upd->execute([$airline, $uid]);
+        $updateMsg = 'Attendant airline assignment updated.';
+        $attendantsStmt = $pdo->query('SELECT * FROM "Users" WHERE LOWER(role) = \'attendant\' ORDER BY user_id ASC');
+        $allAttendants  = $attendantsStmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode($errorMsg ? ['success' => false, 'message' => $errorMsg] : ['success' => true, 'message' => $updateMsg]);
+        exit;
+    }
+    $activeTab = 'attendants';
+}
+
     if ($_POST['action'] === 'create_ticket') {
         $fid       = trim($_POST['flight_id']  ?? '');
         $nameFirst = trim($_POST['name_first'] ?? '');
@@ -700,6 +791,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
       'overview'  => 'Overview',
       'admins'    => 'Administrators',
       'customers' => 'Customers',
+      'attendants' => 'Attendants',
       'tickets'   => 'Tickets',
     ];
     foreach ($tabs as $key => $label):
@@ -1280,6 +1372,103 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
   </div>
 
   <?php endif; ?>
+<?php if ($activeTab === 'attendants'): ?>
+
+<div class="grid lg:grid-cols-2 gap-5">
+  <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 shadow-sm">
+    <h2 class="text-xl font-bold mb-1">Create Attendant 🧑‍✈️</h2>
+    <p class="text-sm text-gray-400 mb-5">Register a new attendant and assign them to an airline.</p>
+    <form method="POST" class="space-y-3">
+      <input type="hidden" name="action" value="create_attendant">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">First Name*</label>
+          <input type="text" name="first_name" required class="field">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Last Name*</label>
+          <input type="text" name="last_name" required class="field">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Email Address*</label>
+        <input type="email" name="email" required pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+          title="Email must contain &quot;@&quot; and &quot;.&quot;" class="field">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Password*</label>
+        <input type="password" name="password" required class="field">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Phone Number</label>
+        <input type="tel" name="phone" class="field" inputmode="numeric" oninput="autoFormatPhone(this)">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Assigned Airline*</label>
+        <select name="airline" required class="field">
+          <option value="">Select an airline</option>
+          <?php foreach ($airlines as $al): ?>
+          <option value="<?= htmlspecialchars($al['name']) ?>"><?= htmlspecialchars($al['name']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <button type="submit" class="w-full h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg" data-skip-loader>
+        Create Attendant
+      </button>
+    </form>
+  </div>
+
+  <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+    <div class="p-5 border-b border-gray-700">
+      <h2 class="text-lg font-bold">All Attendants 🧑‍✈️</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr class="bg-gray-700/50 text-gray-400 text-sm">
+            <th class="text-left px-5 py-3">Name</th>
+            <th class="text-left px-5 py-3">Email</th>
+            <th class="text-left px-5 py-3">Airline</th>
+            <th class="text-left px-5 py-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($allAttendants as $a): ?>
+          <tr>
+            <td class="px-5 py-4 font-semibold"><?= htmlspecialchars(trim(($a['first_name'] ?? '') . ' ' . ($a['last_name'] ?? ''))) ?></td>
+            <td class="px-5 py-4 text-gray-300"><?= htmlspecialchars($a['email'] ?? '—') ?></td>
+            <td class="px-5 py-4">
+              <form method="POST" class="flex items-center gap-2">
+                <input type="hidden" name="action" value="update_attendant_airline">
+                <input type="hidden" name="user_id" value="<?= htmlspecialchars((string)($a['user_id'] ?? '')) ?>">
+                <select name="airline" class="field h-8 text-xs" onchange="this.form.submit()">
+                  <?php foreach ($airlines as $al): ?>
+                  <option value="<?= htmlspecialchars($al['name']) ?>" <?= (strcasecmp($al['name'], $a['airline'] ?? '') === 0) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($al['name']) ?>
+                  </option>
+                  <?php endforeach; ?>
+                </select>
+              </form>
+            </td>
+            <td class="px-5 py-4">
+              <form method="POST" onsubmit="return confirm('Delete attendant <?= htmlspecialchars(addslashes(trim(($a['first_name'] ?? '') . ' ' . ($a['last_name'] ?? '')))) ?>?')">
+                <input type="hidden" name="action" value="delete_attendant">
+                <input type="hidden" name="user_id" value="<?= htmlspecialchars((string)($a['user_id'] ?? '')) ?>">
+                <button type="submit" data-skip-loader class="text-sm text-red-400 hover:text-red-300 font-semibold transition">Delete</button>
+              </form>
+            </td>
+          </tr>
+          <?php endforeach; ?>
+          <?php if (empty($allAttendants)): ?>
+          <tr><td colspan="4" class="px-5 py-10 text-center text-gray-500">No attendants yet.</td></tr>
+          <?php endif; ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<?php endif; ?>
 
   <?php if ($activeTab === 'tickets'): ?>
 
@@ -1345,22 +1534,27 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs text-gray-400 mb-1">Carry-On Bags</label>
-            <select id="tCarryOn" class="field" onchange="onFlightBlur(document.getElementById('tFlightId').value)">
-              <option value="0">0 Carry-on (Free)</option>
-              <option value="1">1 Carry-on (Free)</option>
-              <option value="2">2 Carry-on ($30 extra)</option>
-            </select>
+          <select id="tCarryOn" class="field" onchange="onFlightBlur(document.getElementById('tFlightId').value)">
+          <option value="0">0 Carry-on</option>
+          <option value="1">1 Carry-on</option>
+          <option value="2">2 Carry-on</option>
+          <option value="3">3 Carry-on</option>
+          <option value="4">4 Carry-on</option>
+        </select>
           </div>
           <div>
             <label class="block text-xs text-gray-400 mb-1">Checked Bags</label>
-            <select id="tChecked" class="field" onchange="onFlightBlur(document.getElementById('tFlightId').value)">
-              <option value="0">0 Checked (Free)</option>
-              <option value="1">1 Checked (Free)</option>
-              <option value="2">2 Checked ($50 extra)</option>
-              <option value="3">3 Checked ($150 extra)</option>
-              <option value="4">4 Checked ($250 extra)</option>
-              <option value="5">5 Checked ($350 extra)</option>
-            </select>
+                <select id="tChecked" class="field" onchange="onFlightBlur(document.getElementById('tFlightId').value)">
+                  <option value="0">0 Checked</option>
+                  <option value="1">1 Checked</option>
+                  <option value="2">2 Checked</option>
+                  <option value="3">3 Checked</option>
+                  <option value="4">4 Checked</option>
+                  <option value="5">5 Checked</option>
+                  <option value="6">6 Checked</option>
+                  <option value="7">7 Checked</option>
+                  <option value="8">8 Checked</option>
+                </select>
           </div>
         </div>
 

@@ -1,17 +1,14 @@
 <?php
-
-if (session_status() === PHP_SESSION_NONE) session_start();
-
-header('Content-Type: application/json');
-
 require_once '../../../api/key.php';
 require_once '../../../api/api.php';
+
+header('Content-Type: application/json');
 
 $flightId = trim($_GET['flight_id'] ?? '');
 $carryOn  = (int)($_GET['carry_on'] ?? 0);
 $checked  = (int)($_GET['checked'] ?? 0);
 
-if ($flightId === '') {
+if (!$flightId) {
     echo json_encode(['error' => 'Flight ID is required.']);
     exit;
 }
@@ -20,87 +17,34 @@ $api = new AirportsAPI(AIRPORTS_API_KEY);
 $flight = $api->getFlightById($flightId);
 
 if (!$flight) {
-    echo json_encode(['error' => 'Flight ID not found.']);
+    echo json_encode(['error' => 'Flight not found.']);
     exit;
 }
 
-function flightDestination(array $f, array $airportLookup): string {
+// Seat price: pick a class — economy is the default seat class
+$seatClass = 'economy'; // adjust if you add a seat-class selector
+$seatPrice = $flight['seats'][$seatClass]['priceDollars'] ?? 0;
 
-    $code =
-        $f['departingTo']
-        ?? $f['landingAt']
-        ?? $f['destination']
-        ?? $f['arrivalCode']
-        ?? $f['arrival']
-        ?? '';
-
-    if (!$code) {
-        return '—';
-    }
-
-    $airport = $airportLookup[strtolower($code)] ?? null;
-
-    if ($airport) {
-        $city = $airport['city']
-             ?? $airport['cityName']
-             ?? $airport['location']
-             ?? '';
-
-        if ($city !== '') {
-            return $city . ' (' . strtoupper($code) . ')';
-        }
-    }
-
-    return strtoupper($code);
+// Baggage price from API's "prices" arrays (cumulative — sum first N elements)
+function bagCost(array $bagType, int $count): float {
+    if ($count <= 0) return 0;
+    $prices = $bagType['prices'] ?? [];
+    $max = $bagType['max'] ?? count($prices);
+    $count = min($count, $max);
+    return array_sum(array_slice($prices, 0, $count));
 }
 
-$airportResults = $api->getAirports();
-$airports = $airportResults['airports'] ?? [];
-$airportLookup = [];
-foreach ($airports as $airport) {
-    $airportLookup[strtolower($airport['shortName'])] = $airport;
-}
+$carryCost   = bagCost($flight['baggage']['carry']   ?? [], $carryOn);
+$checkedCost = bagCost($flight['baggage']['checked'] ?? [], $checked);
+$bagCostTotal = $carryCost + $checkedCost;
 
-$destination  = flightDestination($flight, $airportLookup);
-$flightNumber = $flight['flightNumber'] ?? $flight['flight_number'] ?? '—';
-$airline      = $flight['airline'] ?? '—';
-
-$seatPrice = 0.0;
-foreach (['seatPrice', 'price', 'baseFare', 'fare'] as $key) {
-    if (isset($flight[$key]) && is_numeric($flight[$key])) {
-        $seatPrice = (float)$flight[$key];
-        break;
-    }
-}
-
-$bagCost = 0.0;
-
-if ($carryOn >= 2) {
-    $bagCost += 30.0;
-}
-
-$checkedFeeTable = [
-    0 => 0.0,
-    1 => 0.0,
-    2 => 50.0,
-    3 => 150.0,
-    4 => 250.0,
-    5 => 350.0,
-];
-if (isset($checkedFeeTable[$checked])) {
-    $bagCost += $checkedFeeTable[$checked];
-} elseif ($checked > 5) {
-    $bagCost += 50.0 + (($checked - 2) * 100.0);
-}
-
-$total = $seatPrice + $bagCost;
+$total = $seatPrice + $bagCostTotal;
 
 echo json_encode([
-    'flightNumber' => $flightNumber,
-    'airline'      => $airline,
-    'destination'  => $destination,
-    'seatPrice'    => round($seatPrice, 2),
-    'bagCost'      => round($bagCost, 2),
-    'total'        => round($total, 2),
+    'flightNumber' => $flight['flightNumber'] ?? '',
+    'airline'      => $flight['airline'] ?? '',
+    'destination'  => $flight['departingTo'] ?? $flight['landingAt'] ?? '',
+    'seatPrice'    => $seatPrice,
+    'bagCost'      => $bagCostTotal,
+    'total'        => $total,
 ]);
-exit;

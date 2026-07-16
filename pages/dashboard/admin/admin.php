@@ -294,67 +294,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $question3 = trim($_POST['question3']   ?? '');
         $answer3   = trim($_POST['answer3']     ?? '');
 
-        // CREATE ATTENDANT
-if ($_POST['action'] === 'create_attendant') {
-    $fn      = trim($_POST['first_name'] ?? '');
-    $ln      = trim($_POST['last_name']  ?? '');
-    $email   = trim($_POST['email']      ?? '');
-    $phone   = trim($_POST['phone']      ?? '');
-    $pw      = trim($_POST['password']   ?? '');
-    $airline = trim($_POST['airline']    ?? '');
-
-    if (!$fn || !$ln || !$email) {
-        $errorMsg = 'First name, last name, and email are required.';
-    } elseif (!isValidEmail($email)) {
-        $errorMsg = 'Please enter a valid email address (must contain "@" and ".").';
-    } elseif ($phone !== '' && phoneHasLetters($phone)) {
-        $errorMsg = 'Phone number cannot contain letters.';
-    } elseif (strlen($pw) < 8) {
-        $errorMsg = 'Password must be at least 8 characters.';
-    } elseif (!$airline) {
-        $errorMsg = 'An assigned airline is required for attendants.';
-    } else {
-        $emailCheck = $pdo->prepare('SELECT 1 FROM "Users" WHERE LOWER(email) = LOWER(?)');
-        $emailCheck->execute([$email]);
-
-        if ($emailCheck->fetch()) {
-            $errorMsg = 'That email address is already in use.';
-        } else {
-            $phoneFormatted = $phone ? formatPhone($phone) : null;
-            $hashed = password_hash($pw, PASSWORD_BCRYPT);
-
-            $ins = $pdo->prepare(
-                'INSERT INTO "Users" (first_name, last_name, email, phone, password, role, airline)
-                 VALUES (?,?,?,?,?,?,?)'
-            );
-            $ins->execute([$fn, $ln, $email, $phoneFormatted, $hashed, 'Attendant', $airline]);
-
-            $updateMsg = "Attendant {$fn} {$ln} created and assigned to {$airline}.";
-            $attendantsStmt = $pdo->query('SELECT * FROM "Users" WHERE LOWER(role) = \'attendant\' ORDER BY user_id ASC');
-            $allAttendants  = $attendantsStmt->fetchAll(PDO::FETCH_ASSOC);
-        }
-    }
-    $activeTab = 'attendants';
-}
-
-// DELETE ATTENDANT
-if ($_POST['action'] === 'delete_attendant') {
-    $uid = $_POST['user_id'] ?? '';
-    if ($uid) {
-        $del = $pdo->prepare('DELETE FROM "Users" WHERE user_id = ? AND LOWER(role) = \'attendant\'');
-        $del->execute([$uid]);
-        $updateMsg = 'Attendant account deleted.';
-    }
-    $attendantsStmt = $pdo->query('SELECT * FROM "Users" WHERE LOWER(role) = \'attendant\' ORDER BY user_id ASC');
-    $allAttendants  = $attendantsStmt->fetchAll(PDO::FETCH_ASSOC);
-
-    if ($isAjax) {
-        header('Content-Type: application/json');
-        echo json_encode(['success' => true, 'message' => $updateMsg]);
-        exit;
-    }
-    $activeTab = 'attendants';
-}
+        
 
 // UPDATE ATTENDANT AIRLINE ASSIGNMENT
 if ($_POST['action'] === 'update_attendant_airline') {
@@ -435,7 +375,92 @@ if ($_POST['action'] === 'update_attendant_airline') {
         }
         $activeTab = 'customers';
     }
-// update customer info 
+
+    // CREATE ATTENDANT
+    if ($_POST['action'] === 'create_attendant') {
+        $fn      = trim($_POST['first_name'] ?? '');
+        $ln      = trim($_POST['last_name']  ?? '');
+        $email   = trim($_POST['email']      ?? '');
+        $phone   = trim($_POST['phone']      ?? '');
+        $pw      = trim($_POST['password']   ?? '');
+        $airline = trim($_POST['airline']    ?? '');
+
+        if (!$fn || !$ln || !$email) {
+            $errorMsg = 'First name, last name, and email are required.';
+        } elseif (!isValidEmail($email)) {
+            $errorMsg = 'Please enter a valid email address (must contain "@" and ".").';
+        } elseif ($phone !== '' && phoneHasLetters($phone)) {
+            $errorMsg = 'Phone number cannot contain letters.';
+        } elseif (strlen($pw) < 8) {
+            $errorMsg = 'Password must be at least 8 characters.';
+        } elseif (!$airline) {
+            $errorMsg = 'An assigned airline is required for attendants.';
+        } else {
+            $emailCheck = $pdo->prepare('SELECT 1 FROM "Users" WHERE LOWER(email) = LOWER(?)');
+            $emailCheck->execute([$email]);
+
+            if ($emailCheck->fetch()) {
+                $errorMsg = 'That email address is already in use.';
+            } else {
+                $phoneFormatted = $phone ? formatPhone($phone) : null;
+                $hashed = password_hash($pw, PASSWORD_BCRYPT);
+
+                $ins = $pdo->prepare(
+                    'INSERT INTO "Users" (first_name, last_name, email, phone, password, role, airline)
+                     VALUES (?,?,?,?,?,?,?)'
+                );
+                $ins->execute([$fn, $ln, $email, $phoneFormatted, $hashed, 'Attendant', $airline]);
+
+                $updateMsg = "Attendant {$fn} {$ln} created and assigned to {$airline}.";
+                $attendantsStmt = $pdo->query('SELECT * FROM "Users" WHERE LOWER(role) = \'attendant\' ORDER BY user_id ASC');
+                $allAttendants  = $attendantsStmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+        }
+        $activeTab = 'attendants';
+    }
+
+    // DELETE ATTENDANT
+    if ($_POST['action'] === 'delete_attendant') {
+        $uid = $_POST['user_id'] ?? '';
+        if ($uid) {
+            $del = $pdo->prepare('DELETE FROM "Users" WHERE user_id = ? AND LOWER(role) = \'attendant\'');
+            $del->execute([$uid]);
+            $updateMsg = 'Attendant account deleted.';
+        }
+        $attendantsStmt = $pdo->query('SELECT * FROM "Users" WHERE LOWER(role) = \'attendant\' ORDER BY user_id ASC');
+        $allAttendants  = $attendantsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => $updateMsg]);
+            exit;
+        }
+        $activeTab = 'attendants';
+    }
+
+    // UPDATE ATTENDANT AIRLINE ASSIGNMENT
+    if ($_POST['action'] === 'update_attendant_airline') {
+        $uid     = $_POST['user_id'] ?? '';
+        $airline = trim($_POST['airline'] ?? '');
+        if (!$airline) {
+            $errorMsg = 'An assigned airline is required.';
+        } else {
+            $upd = $pdo->prepare('UPDATE "Users" SET airline = ? WHERE user_id = ? AND LOWER(role) = \'attendant\'');
+            $upd->execute([$airline, $uid]);
+            $updateMsg = 'Attendant airline assignment updated.';
+            $attendantsStmt = $pdo->query('SELECT * FROM "Users" WHERE LOWER(role) = \'attendant\' ORDER BY user_id ASC');
+            $allAttendants  = $attendantsStmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode($errorMsg ? ['success' => false, 'message' => $errorMsg] : ['success' => true, 'message' => $updateMsg]);
+            exit;
+        }
+        $activeTab = 'attendants';
+    }
+
+// update customer info
     if ($_POST['action'] === 'update_customer') {
         $uid     = $_POST['user_id']     ?? '';
         $email   = trim($_POST['email']  ?? '');
