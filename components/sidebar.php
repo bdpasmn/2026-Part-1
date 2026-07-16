@@ -274,7 +274,7 @@ updateSidebarFlight();
 
 
 // Refresh every 13 seconds
-setInterval(updateSidebarFlight,13000);
+setInterval(updateSidebarFlight,30000);
 
 
 </script>
