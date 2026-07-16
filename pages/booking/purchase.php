@@ -12,6 +12,11 @@
     $flightId = $_POST['flight_id'];
     $seat = $_POST['seat'];
 
+    // Fetch flight info early — we need it both for pricing/FFM math below
+    // and for the destination used later in the ticket record.
+    $flightInfo = $api->getFlightById($flightId);
+    $destination = $flightInfo['departingTo'] ?? '';
+
     // Clean and format payment information
     $cardNumber = preg_replace('/\D/', '', $_POST['card_number'] ?? '');
     $expirationDate = trim($_POST['expiration_date'] ?? '');
@@ -43,22 +48,160 @@
         exit;
     }
 
-    // Validate the credit card number
-    if (strlen($cardNumber) < 13 || strlen($cardNumber) > 19) {
+    /**
+     * Replicates the seat-layout algorithm from seats.php so the server can
+     * independently derive which class a given seat ID (e.g. "12A") belongs
+     * to, instead of trusting price/class info submitted by the client.
+     *
+     * Must stay in lockstep with the JS generation logic in seats.php:
+     * - iterate $flight['seats'] in REVERSED key order
+     * - 9 columns per row, letters A-I
+     * - consecutive seatIndex assigned per class in order, info.total seats each
+     */
+    function resolveSeatClass(array $seatsByClass, string $seatId): ?string {
+        $seatInfo = array_reverse($seatsByClass);
+
+        $cols = 9;
+        $letters = ["A","B","C","D","E","F","G","H","I"];
+        $seatIndex = 0;
+
+        foreach ($seatInfo as $type => $info) {
+            $total = intval($info['total'] ?? 0);
+
+            for ($i = 0; $i < $total; $i++) {
+                $row = intdiv($seatIndex, $cols) + 1;
+                $col = $seatIndex % $cols;
+                $candidateId = $row . $letters[$col];
+
+                if ($candidateId === $seatId) {
+                    return $type;
+                }
+
+                $seatIndex++;
+            }
+        }
+
+        return null; // seat ID doesn't correspond to any generated seat
+    }
+
+    // Resolve the passenger's seat to its real class, then price from that —
+    // never trust a class/price submitted by the client.
+    $seatClass = resolveSeatClass($flightInfo['seats'] ?? [], $seat);
+
+    if ($seatClass === null || !isset($flightInfo['seats'][$seatClass])) {
+        header("Location: bookingFailed.php?" . http_build_query(['message' => 'Invalid seat selection.']));
+        exit;
+    }
+
+    $seatPriceDollars = floatval($flightInfo['seats'][$seatClass]['priceDollars'] ?? 0);
+    $flightFfmCost     = intval($flightInfo['seats'][$seatClass]['priceFfms'] ?? 0);
+    $flightFfmEarn     = intval($flightInfo['ffms'] ?? 0);
+
+
+    // --- FFM payment method (ticket + extras) ---
+    // Never trust the client-submitted price/ffm_charge/ffm_earned — recompute
+    // everything from $flightInfo and the posted extras list.
+    $ticketPaymentMethod = ($_POST['ticket_payment_method'] ?? 'money') === 'ffm' ? 'ffm' : 'money';
+    $extras = json_decode($_POST['extras'] ?? '[]', true);
+    if (!is_array($extras)) {
+        $extras = [];
+    }
+    $extrasJson = json_encode($extras);
+
+    // Guests can't use FFMs at all — guard against a spoofed request.
+    if (!$userId && $ticketPaymentMethod === 'ffm') {
+        $ticketPaymentMethod = 'money';
+    }
+
+    $ffmCharge = 0;
+    $ffmEarned = 0;
+    $moneyDue = 0.0;
+
+    if ($ticketPaymentMethod === 'ffm') {
+        $ffmCharge += $flightFfmCost;
+    } else {
+        $ffmEarned += $flightFfmEarn;
+        $moneyDue += $seatPriceDollars;
+    }
+
+    // Only card payment is required for baggage — extras can each be paid with
+    // card or FFMs depending on the per-item choice made in the payment modal.
+    foreach ($extras as $extra) {
+        $extraPaymentMethod = ($extra['payment_method'] ?? 'money') === 'ffm' ? 'ffm' : 'money';
+
+        if (!$userId) {
+            $extraPaymentMethod = 'money';
+        }
+
+        if ($extraPaymentMethod === 'ffm') {
+            $ffmCharge += intval($extra['ffm'] ?? 0);
+        } else {
+            $moneyDue += floatval($extra['price'] ?? 0);
+        }
+    }
+
+    /**
+     * Baggage is always paid in dollars (never FFMs). Prices are tiered per
+     * bag: prices[0] is the cost of the 1st bag, prices[1] the 2nd, etc., so
+     * the cost of carrying N bags is the sum of prices[0..N-1]. Bag counts
+     * are clamped to the allowed max — never trust the client's count either.
+     */
+    function priceBags(array $bagInfo, int $requestedCount): array {
+        $max = intval($bagInfo['max'] ?? 0);
+        $prices = $bagInfo['prices'] ?? [];
+
+        $count = max(0, min($requestedCount, $max));
+        $total = 0.0;
+
+        for ($i = 0; $i < $count; $i++) {
+            $total += floatval($prices[$i] ?? 0);
+        }
+
+        return ['count' => $count, 'total' => $total];
+    }
+
+    $bagsCarriedRequested = intval($_POST['bags_carried'] ?? 0);
+    $bagsCheckedRequested = intval($_POST['bags_checked'] ?? 0);
+
+    $carryResult = priceBags($flightInfo['baggage']['carry'] ?? [], $bagsCarriedRequested);
+    $checkedResult = priceBags($flightInfo['baggage']['checked'] ?? [], $bagsCheckedRequested);
+
+    $bagsCarried = $carryResult['count'];
+    $bagsChecked = $checkedResult['count'];
+    $moneyDue += $carryResult['total'] + $checkedResult['total'];
+
+    // Card is required whenever anything is actually owed in dollars.
+    $cardRequired = $moneyDue > 0;
+
+    // Validate the credit card number (only required if money is actually due)
+    if ($cardRequired && (strlen($cardNumber) < 13 || strlen($cardNumber) > 19)) {
         header("Location: bookingFailed.php?" . http_build_query(['message' => 'Please enter a valid card number.']));
         exit;
     }
 
     // Validate the expiration date
-    if (!preg_match('/^(0[1-9]|1[0-2])\/\d{2}$/', $expirationDate)) {
+    if ($cardRequired && !preg_match('/^(0[1-9]|1[0-2])\/\d{2}$/', $expirationDate)) {
         header("Location: bookingFailed.php?" . http_build_query(['message' => 'Please enter a valid expiration date (MM/YY).']));
         exit;
     }
 
     // Validate the CVC
-    if (!preg_match('/^\d{3,4}$/', $cvc)) {
+    if ($cardRequired && !preg_match('/^\d{3,4}$/', $cvc)) {
         header("Location: bookingFailed.php?" . http_build_query(['message' => 'Please enter a valid CVC.']));
         exit;
+    }
+
+    // If paying with FFMs, make sure the user actually has enough *before*
+    // we touch the flight's seat map or create a ticket.
+    if ($userId && $ffmCharge > 0) {
+        $stmt = $pdo->prepare('SELECT ffm FROM "Users" WHERE user_id = ?');
+        $stmt->execute([$userId]);
+        $currentFfms = (int) $stmt->fetchColumn();
+
+        if ($ffmCharge > $currentFfms) {
+            header("Location: bookingFailed.php?" . http_build_query(['message' => 'You do not have enough Frequent Flier Miles for this purchase.']));
+            exit;
+        }
     }
 
     // Passenger information
@@ -143,17 +286,36 @@
         $insert->execute([$flightId, json_encode([$seat])]);
     }
 
-    // Retrieve additional flight information
-    $flightInfo = $api->getFlightById($flightId);
-    $destination = $flightInfo['departingTo'] ?? '';
-
     // Generate the confirmation code
-    $ticketPrice = floatval($_POST['price'] ?? 0);
+    // Ticket price stored is the seat's real dollar price when paid with
+    // money, or 0 when paid with FFMs — never the client-posted price.
+    $ticketPrice = ($ticketPaymentMethod === 'money') ? $seatPriceDollars : 0.0;
     $confirmationCode = strtoupper(substr(md5(uniqid()), 0, 8));
 
     // Create the ticket
-    $stmt = $pdo->prepare("INSERT INTO \"Tickets\" (user_id, flight_id, confirmation_code, seat, destination, name_first, name_middle, name_last, sex, date_birth, phone_number, email, bags_carried, bags_checked, price, status) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->execute([
+    $stmt = $pdo->prepare("
+    INSERT INTO \"Tickets\"
+    (
+        user_id,
+        flight_id,
+        confirmation_code,
+        seat,
+        destination,
+        name_first,
+        name_middle,
+        name_last,
+        sex,
+        date_birth,
+        phone_number,
+        email,
+        bags_carried,
+        bags_checked,
+        price,
+        status,
+        extras
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+");    $stmt->execute([
         $userId,
         $flightId,
         $confirmationCode,
@@ -166,10 +328,11 @@
         $_POST['dob'],
         $phone,
         $email,
-        intval($_POST['bags_carried']),
-        intval($_POST['bags_checked']),
+        $bagsCarried,
+        $bagsChecked,
         $ticketPrice,
-        "active"
+        "active",
+        $extrasJson
     ]);
 
     // Save the payment method if requested
@@ -214,19 +377,25 @@
         $stmt->execute([json_encode($flights), $userId]);
     }
 
-    /*
-    $paymentMethod = $_POST['payment_method'] ?? 'card';
-
-    if ($paymentMethod !== 'ffms') {
-        $earnedFfms = intval($flightInfo['ffms'] ?? 0);
+    // Apply FFM balance changes: subtract anything paid for with FFMs, add
+    // anything earned from paying the ticket with money. Done as a single
+    // conditional UPDATE so a concurrent purchase can't push the balance
+    // negative between our earlier balance check and this write.
+    if ($userId && ($ffmCharge > 0 || $ffmEarned > 0)) {
         $stmt = $pdo->prepare('
             UPDATE "Users"
-            SET ffms = COALESCE(ffms, 0) + ?
-            WHERE user_id = ?
+            SET ffm = COALESCE(ffm, 0) - ? + ?
+            WHERE user_id = ? AND COALESCE(ffm, 0) >= ?
         ');
-        $stmt->execute([$earnedFfms, $userId]);
+        $stmt->execute([$ffmCharge, $ffmEarned, $userId, $ffmCharge]);
+
+        if ($ffmCharge > 0 && $stmt->rowCount() === 0) {
+            // Balance changed since our earlier check (race condition) — the
+            // ticket/seat are already committed at this point, so just log it
+            // rather than leaving the user with a ticket and no confirmation.
+            error_log("FFM balance race condition for user_id={$userId}, confirmation={$confirmationCode}, ffmCharge={$ffmCharge}");
+        }
     }
-    */
 
     header("Location: ./confirmation.php?" . http_build_query(['confirmation' => $confirmationCode]));
     exit;
