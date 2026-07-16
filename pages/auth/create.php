@@ -1,236 +1,239 @@
 <?php
-session_start();
-require_once __DIR__ . '/../../database/db.php';
-require_once __DIR__ . '/../../components/config.php';
+    session_start();
+    require_once __DIR__ . '/../../database/db.php';
+    require_once __DIR__ . '/../../components/config.php';
 
-// Redirect if already logged in
-if (isset($_SESSION['user_id'])) {
-    $role = strtolower($_SESSION['role']) ?? '';
-    
-    if (in_array($role, ['customer', 'admin', 'root'])) {
-        $roleLower = strtolower($role);
+    // Redirect if already logged in
+    if (isset($_SESSION['user_id'])) {
+        $role = strtolower($_SESSION['role']) ?? '';
+        
+        if (in_array($role, ['customer', 'admin', 'root'])) {
+            $roleLower = strtolower($role);
 
-        header("Location: ../dashboard/{$roleLower}/{$roleLower}.php");
-        exit;
+            header("Location: ../dashboard/{$roleLower}/{$roleLower}.php");
+            exit;
+        }
     }
-}
 
-// Initialize or regenerate captcha
-function regenerateCaptcha() {
-    $_SESSION['captcha_num1'] = rand(1, 10);
-    $_SESSION['captcha_num2'] = rand(1, 10);
-} 
-
-if (!isset($_SESSION['captcha_num1']) || !isset($_SESSION['captcha_num2']) || $_SERVER['REQUEST_METHOD'] === 'GET') {
-    regenerateCaptcha();
-}
-
-// Collect form inputs
-$first = trim($_POST['first'] ?? '');
-$title = trim($_POST['title'] ?? '');
-$middle = trim($_POST['middle'] ?? '');
-$last = trim($_POST['last'] ?? '');
-$suffix = trim($_POST['suffix'] ?? '');
-$birth = trim($_POST['birth'] ?? '');
-$email = trim($_POST['email'] ?? '');
-$gender = strtolower(trim($_POST['gender'] ?? ''));
-$phone = trim($_POST['phone'] ?? '');
-$street = trim($_POST['street-address'] ?? '');
-$city = trim($_POST['city'] ?? '');
-$state = trim($_POST['state'] ?? '');
-$zip = trim($_POST['zip'] ?? '');
-$country = trim($_POST['country'] ?? '');
-$password = $_POST['password'] ?? '';
-$question1 = trim($_POST['question1'] ?? '');
-$question2 = trim($_POST['question2'] ?? '');
-$question3 = trim($_POST['question3'] ?? '');
-$question1_answer = trim($_POST['answer1'] ?? '');
-$question2_answer = trim($_POST['answer2'] ?? '');
-$question3_answer = trim($_POST['answer3'] ?? '');
-$captcha = trim($_POST['captcha'] ?? '');
-
-$message = '';
-$redirect = false;
-
-// Validate and process registration
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
-    $captchaValid =
-    ((int)$captcha ===
-    ($_SESSION['captcha_num1'] + $_SESSION['captcha_num2']));
-
-    // Check password length
-    if (strlen($password) <= 10) {
-        regenerateCaptcha();
-        $message = "
-            <p class='text-red-500 font-semibold text-center mb-4'>
-                Weak password. Must be longer than 10 characters.
-            </p>
-        ";
+    // Initialize or regenerate captcha
+    function regenerateCaptcha() {
+        $_SESSION['captcha_num1'] = rand(1, 10);
+        $_SESSION['captcha_num2'] = rand(1, 10);
     } 
-    // Validate captcha
-    else if (!$captchaValid) {
+
+    if (!isset($_SESSION['captcha_num1']) || !isset($_SESSION['captcha_num2']) || $_SERVER['REQUEST_METHOD'] === 'GET') {
         regenerateCaptcha();
-        $message = "
-            <p class='text-red-500 font-semibold text-center mb-4'>
-                Wrong answer for captcha!
-            </p>
-        ";
-    } 
-    // Validate email
-    else if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        regenerateCaptcha();
-        $message = "
-            <p class='text-red-500 font-semibold text-center mb-4'>
-                A valid email is required.
-            </p>
-        ";
-    } 
-    // All validations passed - create account
-    else {
-        try {
-            $pdo->beginTransaction();
+    }
 
-            // Insert user into Users table
-            $stmt = $pdo->prepare('
-                INSERT INTO public."Users"
-                    (
-                        first_name,
-                        middle_name,
-                        last_name,
-                        suffix,
-                        date_birth,
-                        title,
-                        sex,
-                        street_address,
-                        city,
-                        country,
-                        state,
-                        zip_code,
-                        phone,
-                        email,
-                        password,
-                        role
-                    )
-                VALUES
-                    (
-                        :first_name,
-                        :middle_name,
-                        :last_name,
-                        :suffix,
-                        :date_birth,
-                        :title,
-                        :sex,
-                        :street_address,
-                        :city,
-                        :country,
-                        :state,
-                        :zip_code,
-                        :phone,
-                        :email,
-                        :password,
-                        :role
-                    )
-                RETURNING user_id
-            ');
+    // Collect form inputs
+    $first = trim($_POST['first'] ?? '');
+    $title = trim($_POST['title'] ?? '');
+    $middle = trim($_POST['middle'] ?? '');
+    $last = trim($_POST['last'] ?? '');
+    $suffix = trim($_POST['suffix'] ?? '');
+    $birth = trim($_POST['birth'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $gender = strtolower(trim($_POST['gender'] ?? ''));
+    $phone = trim($_POST['phone'] ?? '');
+    $street = trim($_POST['street-address'] ?? '');
+    $city = trim($_POST['city'] ?? '');
+    $state = trim($_POST['state'] ?? '');
+    $zip = trim($_POST['zip'] ?? '');
+    $country = trim($_POST['country'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $question1 = trim($_POST['question1'] ?? '');
+    $question2 = trim($_POST['question2'] ?? '');
+    $question3 = trim($_POST['question3'] ?? '');
+    $question1_answer = trim($_POST['answer1'] ?? '');
+    $question2_answer = trim($_POST['answer2'] ?? '');
+    $question3_answer = trim($_POST['answer3'] ?? '');
+    $captcha = trim($_POST['captcha'] ?? '');
 
-            $stmt->execute([
-                ':first_name' => $first,
-                ':middle_name' => $middle,
-                ':last_name' => $last,
-                ':suffix' => $suffix,
-                ':date_birth' => $birth,
-                ':title' => $title,
-                ':sex' => $gender,
-                ':street_address' => $street,
-                ':city' => $city,
-                ':country' => $country,
-                ':state' => $state,
-                ':zip_code' => $zip,
-                ':phone' => $phone,
-                ':email' => $email,
-                ':password' => password_hash($password, PASSWORD_DEFAULT),
-                ':role' => 'Customer',
-            ]);
+    $message = '';
+    $redirect = false;
 
-            $userId = $stmt->fetchColumn();
+    // Validate and process registration
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['button'])) {
+        $captchaValid =
+        ((int)$captcha ===
+        ($_SESSION['captcha_num1'] + $_SESSION['captcha_num2']));
 
-            // Insert security questions into User Security Questions table
-            $stmt = $pdo->prepare('
-                INSERT INTO public."User Security Questions"
-                (
-                    email,
-                    question1,
-                    question1_answer,
-                    question2,
-                    question2_answer,
-                    question3,
-                    question3_answer
-                )
-                VALUES
-                (
-                    :email,
-                    :question1,
-                    :question1_answer,
-                    :question2,
-                    :question2_answer,
-                    :question3,
-                    :question3_answer
-                )
-            ');
-
-            $stmt->execute([
-                ':email' => $email,
-                ':question1' => $question1,
-                ':question1_answer' => password_hash($question1_answer, PASSWORD_DEFAULT),
-                ':question2' => $question2,
-                ':question2_answer' => password_hash($question2_answer, PASSWORD_DEFAULT),
-                ':question3' => $question3,
-                ':question3_answer' => password_hash($question3_answer, PASSWORD_DEFAULT),
-            ]);
-
-            $pdo->commit();
-
-            // Set session and redirect to dashboard
-            $_SESSION["email"] = $email;
-            $_SESSION["user"] = $title;
-            $_SESSION["name"] = $first;
-            $_SESSION["user_id"] = $userId;
-            $_SESSION["role"] = "Customer";
-            unset($_SESSION['captcha_num1']);
-            unset($_SESSION['captcha_num2']);
-
-            header("Location: " . BASE_URI . "/pages/dashboard/customer/customer.php");
-            exit();
-        } 
-        // Handle database errors
-        catch (Throwable $e) {
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
+        // Check password length
+        if (strlen($password) <= 10) {
             regenerateCaptcha();
+            $message = "
+                <p class='text-red-500 font-semibold text-center mb-4'>
+                    Weak password. Must be longer than 10 characters.
+                </p>
+            ";
+        } 
+        // Validate captcha
+        else if (!$captchaValid) {
+            regenerateCaptcha();
+            $message = "
+                <p class='text-red-500 font-semibold text-center mb-4'>
+                    Wrong answer for captcha!
+                </p>
+            ";
+        } 
+        // Validate email
+        else if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            regenerateCaptcha();
+            $message = "
+                <p class='text-red-500 font-semibold text-center mb-4'>
+                    A valid email is required.
+                </p>
+            ";
+        } 
+        // All validations passed - create account
+        else {
+            try {
+                $pdo->beginTransaction();
 
-            // Check for duplicate email error
-            if ($e->getCode() === '23505') {
-                $message = "
-                    <p class='text-red-500 font-semibold text-center mb-4'>
-                        An account with that email already exists.
-                    </p>
-                ";
-            } else {
-                $message = "
-                    <p class='text-red-500 font-semibold text-center mb-4'>
-                        Sorry, we couldn't create your account right now.
-                        DB ERROR: " . htmlspecialchars($e->getMessage()) . "
-                        CODE: " . htmlspecialchars($e->getCode()) . "
-                    </p>
-                ";
+                // Insert user into Users table
+                $stmt = $pdo->prepare('
+                    INSERT INTO public."Users"
+                        (
+                            first_name,
+                            middle_name,
+                            last_name,
+                            suffix,
+                            date_birth,
+                            title,
+                            sex,
+                            street_address,
+                            city,
+                            country,
+                            state,
+                            zip_code,
+                            phone,
+                            email,
+                            password,
+                            role,
+                            ban
+                        )
+                    VALUES
+                        (
+                            :first_name,
+                            :middle_name,
+                            :last_name,
+                            :suffix,
+                            :date_birth,
+                            :title,
+                            :sex,
+                            :street_address,
+                            :city,
+                            :country,
+                            :state,
+                            :zip_code,
+                            :phone,
+                            :email,
+                            :password,
+                            :role,
+                            :ban
+                        )
+                    RETURNING user_id
+                ');
+
+                $stmt->execute([
+                    ':first_name' => $first,
+                    ':middle_name' => $middle,
+                    ':last_name' => $last,
+                    ':suffix' => $suffix,
+                    ':date_birth' => $birth,
+                    ':title' => $title,
+                    ':sex' => $gender,
+                    ':street_address' => $street,
+                    ':city' => $city,
+                    ':country' => $country,
+                    ':state' => $state,
+                    ':zip_code' => $zip,
+                    ':phone' => $phone,
+                    ':email' => $email,
+                    ':password' => password_hash($password, PASSWORD_DEFAULT),
+                    ':role' => 'Customer',
+                    ':ban' => 'NO'
+                ]);
+
+                $userId = $stmt->fetchColumn();
+
+                // Insert security questions into User Security Questions table
+                $stmt = $pdo->prepare('
+                    INSERT INTO public."User Security Questions"
+                    (
+                        email,
+                        question1,
+                        question1_answer,
+                        question2,
+                        question2_answer,
+                        question3,
+                        question3_answer
+                    )
+                    VALUES
+                    (
+                        :email,
+                        :question1,
+                        :question1_answer,
+                        :question2,
+                        :question2_answer,
+                        :question3,
+                        :question3_answer
+                    )
+                ');
+
+                $stmt->execute([
+                    ':email' => $email,
+                    ':question1' => $question1,
+                    ':question1_answer' => password_hash($question1_answer, PASSWORD_DEFAULT),
+                    ':question2' => $question2,
+                    ':question2_answer' => password_hash($question2_answer, PASSWORD_DEFAULT),
+                    ':question3' => $question3,
+                    ':question3_answer' => password_hash($question3_answer, PASSWORD_DEFAULT),
+                ]);
+
+                $pdo->commit();
+
+                // Set session and redirect to dashboard
+                $_SESSION["email"] = $email;
+                $_SESSION["user"] = $title;
+                $_SESSION["name"] = $first;
+                $_SESSION["user_id"] = $userId;
+                $_SESSION["role"] = "Customer";
+                unset($_SESSION['captcha_num1']);
+                unset($_SESSION['captcha_num2']);
+
+                header("Location: " . BASE_URI . "/pages/dashboard/customer/customer.php");
+                exit();
+            } 
+            // Handle database errors
+            catch (Throwable $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                regenerateCaptcha();
+
+                // Check for duplicate email error
+                if ($e->getCode() === '23505') {
+                    $message = "
+                        <p class='text-red-500 font-semibold text-center mb-4'>
+                            An account with that email already exists.
+                        </p>
+                    ";
+                } else {
+                    $message = "
+                        <p class='text-red-500 font-semibold text-center mb-4'>
+                            Sorry, we couldn't create your account right now.
+                            DB ERROR: " . htmlspecialchars($e->getMessage()) . "
+                            CODE: " . htmlspecialchars($e->getCode()) . "
+                        </p>
+                    ";
+                }
             }
         }
     }
-}
 
-$num1 = $_SESSION['captcha_num1'];
-$num2 = $_SESSION['captcha_num2'];
+    $num1 = $_SESSION['captcha_num1'];
+    $num2 = $_SESSION['captcha_num2'];
 ?>
 <!DOCTYPE html>
 <html>

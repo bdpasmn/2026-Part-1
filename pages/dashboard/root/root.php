@@ -42,7 +42,7 @@ foreach ($airports as $airport) {
 }
 
 // Load all live flights from the API
-$allFlightsData = $api->getAllFlights();
+$allFlightsData = $api->getFlights();
 $allFlights     = $allFlightsData['flights'] ?? [];
 
 // Normalize the no-fly list into lowercase first/last name pairs for matching

@@ -49,7 +49,7 @@ foreach ($airports as $airport) {
     $airportLookup[strtolower($airport['shortName'])] = $airport;
 }
 
-$allFlightsData = $api->getAllFlights();
+$allFlightsData = $api->getFlights();
 $allFlights     = $allFlightsData['flights'] ?? [];
 // Retrieve no-fly list from API and normalize names
 
