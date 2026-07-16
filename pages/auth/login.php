@@ -70,7 +70,7 @@
         } else {
             // Look up user in database
             $stmt = $pdo->prepare('
-                SELECT user_id, password, title, role, email, first_name, failed_attempts, lock_until
+                SELECT user_id, password, title, role, email, first_name, failed_attempts, lock_until, ban
                 FROM "Users"
                 WHERE email = ?
             ');
@@ -83,79 +83,83 @@
                 $userId = $row['user_id'];
                 $now = time();
 
-                // Check if account is locked
-                if ($row['lock_until'] && strtotime($row['lock_until']) > $now) {
-                    $minutesLeft = ceil((strtotime($row['lock_until']) - $now) / 60);
-                    $message = "Too many failed attempts. Try again in $minutesLeft minute(s).";
+                // Check if account is banned
+                if ($row['ban'] === 'YES') {
+                    $message = "User has been banned.";
                 } else {
-                    // Unlock account if lock period has expired
-                    if ($row['lock_until'] && strtotime($row['lock_until']) <= $now) {
-                        $pdo->prepare('
-                            UPDATE "Users"
-                            SET failed_attempts = 0, lock_until = NULL
-                            WHERE user_id = ?
-                        ')->execute([$userId]);
-                        $row['failed_attempts'] = 0;
-                        $row['lock_until'] = null;
-                    }
-
-                    $attemptsLeft = max(0, 3 - $row['failed_attempts']);
-
-                    // Verify password
-                    if (!password_verify($password, $row['password'])) {
-                        $newAttempts = $row['failed_attempts'] + 1;
-                        $lockUntil = null;
-
-                        // Lock account after 3 failed attempts
-                        if ($newAttempts >= 3) {
-                            $lockUntil = date('Y-m-d H:i:s', $now + 3600);
-                            $message = "Too many failed attempts. Locked for 1 hour.";
-                        } else {
-                            $attemptsLeft = 3 - $newAttempts;
-                            $message = "Invalid credentials. $attemptsLeft attempt(s) left.";
-                        }
-
-                        // Update failed attempt count
-                        $pdo->prepare('
-                            UPDATE "Users"
-                            SET failed_attempts = ?, lock_until = ?
-                            WHERE user_id = ?
-                        ')->execute([$newAttempts, $lockUntil, $userId]);
+                    // Check if account is locked
+                    if ($row['lock_until'] && strtotime($row['lock_until']) > $now) {
+                        $minutesLeft = ceil((strtotime($row['lock_until']) - $now) / 60);
+                        $message = "Too many failed attempts. Try again in $minutesLeft minute(s).";
                     } else {
-                        // Password is correct - log user in
-                        session_regenerate_id(true);
-                        $_SESSION['email'] = $row['email'];
-                        $_SESSION['user'] = $row['title'];
-                        $_SESSION['name'] = $row['first_name'];
-                        $_SESSION['user_id'] = $row['user_id'];
-                        $_SESSION['role'] = $row['role'];
-
-                        // Reset failed attempts
-                        $pdo->prepare('
-                            UPDATE "Users"
-                            SET failed_attempts = 0, lock_until = NULL
-                            WHERE user_id = ?
-                        ')->execute([$userId]);
-
-                        // Set remember me cookie if checked
-                        if (isset($_POST['remember'])) {
-                            $_SESSION['remembered'] = true;
-                            $token = hash_hmac('sha256', $userId, SECRET_KEY);
-                            setcookie(
-                                'remember_me',
-                                $userId . '|' . $token,
-                                time() + 60 * 60 * 24 * 30,
-                                '/',
-                                '',
-                                false,
-                                true
-                            );
-                        } else {
-                            $_SESSION['remembered'] = false;
+                        // Unlock account if lock period has expired
+                        if ($row['lock_until'] && strtotime($row['lock_until']) <= $now) {
+                            $pdo->prepare('
+                                UPDATE "Users"
+                                SET failed_attempts = 0, lock_until = NULL
+                                WHERE user_id = ?
+                            ')->execute([$userId]);
+                            $row['failed_attempts'] = 0;
+                            $row['lock_until'] = null;
                         }
 
-                        header("Location: " . getDashboardUrl($row['role']));
-                        exit();
+                        $attemptsLeft = max(0, 3 - $row['failed_attempts']);
+
+                        // Verify password
+                        if (!password_verify($password, $row['password'])) {
+                            $newAttempts = $row['failed_attempts'] + 1;
+                            $lockUntil = null;
+
+                            // Lock account after 3 failed attempts
+                            if ($newAttempts >= 3) {
+                                $lockUntil = date('Y-m-d H:i:s', $now + 3600);
+                                $message = "Too many failed attempts. Locked for 1 hour.";
+                            } else {
+                                $attemptsLeft = 3 - $newAttempts;
+                                $message = "Invalid credentials. $attemptsLeft attempt(s) left.";
+                            }
+
+                            // Update failed attempt count
+                            $pdo->prepare('
+                                UPDATE "Users"
+                                SET failed_attempts = ?, lock_until = ?
+                                WHERE user_id = ?
+                            ')->execute([$newAttempts, $lockUntil, $userId]);
+                        } else {
+                            // Password is correct - log user in
+                            session_regenerate_id(true);
+                            $_SESSION['email'] = $row['email'];
+                            $_SESSION['user'] = $row['title'];
+                            $_SESSION['name'] = $row['first_name'];
+                            $_SESSION['user_id'] = $row['user_id'];
+                            $_SESSION['role'] = $row['role'];
+
+                            // Reset failed attempts
+                            $pdo->prepare('
+                                UPDATE "Users"
+                                SET failed_attempts = 0, lock_until = NULL
+                                WHERE user_id = ?
+                            ')->execute([$userId]);
+
+                            // Set remember me cookie if checked
+                            if (isset($_POST['remember'])) {
+                                $_SESSION['remembered'] = true;
+                                $token = hash_hmac('sha256', $userId, SECRET_KEY);
+                                setcookie(
+                                    'remember_me',
+                                    $userId . '|' . $token,
+                                    time() + 60 * 60 * 24 * 30,
+                                    '/',
+                                    '',
+                                    false,
+                                    true
+                                );
+                            } else {
+                                $_SESSION['remembered'] = false;
+                            }
+                            header("Location: " . getDashboardUrl($row['role']));
+                            exit();
+                        }
                     }
                 }
             }
