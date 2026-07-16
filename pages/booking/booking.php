@@ -388,6 +388,45 @@
                     });
                 });
             };
+            
+            function updateCardDetailsVisibility() {
+                const usingCard = (window.moneyDueNow ?? 0) > 0;
+
+                // Card section
+                document.getElementById("cardDetailsSection")
+                    ?.classList.toggle("hidden", !usingCard);
+
+                // Required fields
+                document.querySelectorAll(".required-payment").forEach(field => {
+                    field.required = usingCard;
+
+                    if (!usingCard) {
+                        field.value = "";
+                    }
+                });
+
+                // Saved cards
+                const savedSection = document.getElementById("savedCard")?.closest(".mt-8");
+                if (savedSection) {
+                    savedSection.classList.toggle("hidden", !usingCard);
+                }
+
+                // Save card checkbox
+                const saveCheckbox = document.getElementById("saveCardCheckbox");
+                const saveFlag = document.getElementById("purchaseSaveCardFlag");
+
+                if (saveCheckbox) {
+                    saveCheckbox.disabled = !usingCard;
+
+                    if (!usingCard) {
+                        saveCheckbox.checked = false;
+                        if (saveFlag) saveFlag.value = "0";
+                    }
+                }
+
+                // Hide card name
+                document.getElementById("cardNameContainer")?.classList.add("hidden");
+            }
 
             window.refreshPaymentTotals = function () {
                 const seatId = document.getElementById("seatInput").value;
@@ -439,6 +478,7 @@
 
                 // Track globally so validatePayment() knows whether card details are required
                 window.moneyDueNow = moneyDue;
+                updateCardDetailsVisibility();
 
                 // Update payment modal display
                 const moneyDueEl = document.getElementById("paymentMoneyDue");
@@ -700,16 +740,36 @@
                     // Reset selected seat state
                     selectedSeat = null;
                     document.getElementById("seatInput").value = "";
-                    if (document.getElementById("purchaseSeat")) document.getElementById("purchaseSeat").value = "";
-                    document.getElementById("selectedSeat").innerText = "None selected";
-                    document.getElementById("selectedPrice").innerText = "$0";
 
-                    // Reset all seat button styles
+                    if (document.getElementById("purchaseSeat")) {
+                        document.getElementById("purchaseSeat").value = "";
+                    }
+
+                    document.getElementById("selectedSeat").innerText = "None selected";
+                    document.getElementById("selectedType").innerText = "None";
+                    document.getElementById("selectedPrice").innerText = "$0";
+                    document.getElementById("selectedPriceFfms").innerText = "0 FFMs";
+
+                    // Reset every seat button
                     document.querySelectorAll(".seat-btn").forEach(btn => {
-                        btn.classList.remove("bg-blue-500");
-                        btn.classList.remove("border-blue-300");
-                        btn.classList.add("bg-slate-600");
-                        btn.classList.add("border-gray-500");
+                        const seat = seatTypes[btn.innerText];
+
+                        switch (seat.type) {
+                            case "first class":
+                                btn.className = "seat-btn h-10 w-full text-xs rounded text-white transition bg-pink-600 border border-pink-400 hover:bg-pink-500 hover:border-pink-300";
+                                break;
+
+                            case "economy plus":
+                                btn.className = "seat-btn h-10 w-full text-xs rounded text-white transition bg-orange-400 border border-orange-200 hover:bg-orange-300 hover:border-orange-100";
+                                break;
+
+                            case "exit row":
+                                btn.className = "seat-btn h-10 w-full text-xs rounded text-white transition bg-pink-400 border border-pink-200 hover:bg-pink-300 hover:border-pink-100";
+                                break;
+
+                            default:
+                                btn.className = "seat-btn h-10 w-full text-xs rounded text-white transition bg-slate-600 border border-gray-500 hover:bg-slate-500 hover:border-gray-400";
+                        }
                     });
 
                     // Reset save card
