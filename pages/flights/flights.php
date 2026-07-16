@@ -555,7 +555,7 @@ $canBook = in_array(strtolower($role), ['user', 'staff']);
 
                             <!-- Action Button -->
                             <div class="text-right justify-self-end">
-                                <?php if (in_array(strtolower($role), ['admin', 'root'])): ?>
+                                <?php if (in_array(strtolower($role), ['Admin', 'Root', 'Attendant'])): ?>
                                     <!-- Admin: Copy Flight ID -->
                                     <div class="flex flex-col items-end gap-2">
                                         <button onclick="copyFlightId(this, '<?= htmlspecialchars($f['flight_id'] ?? '', ENT_QUOTES) ?>')" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm transition duration-200">
