@@ -43,6 +43,35 @@
     // Validate the email address
     $email = trim($_POST['email'] ?? '');
 
+    // Look for restrictions 
+    $pdo->checkAirline();
+    $stmt = $pdo->prepare('
+        SELECT restrict->>'JetBlue', restrict->>'Delta', restrict->>’Southwest’, restrict->>'United', restrict->>'American', restrict->> ‘Frontier’
+        FROM ‘USERS’
+        WHERE email = ?
+    ');
+    $stmt->execute([$email]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC;)
+    if ($row["restriction->>'JetBlue'"] === ‘YES’) {
+        header("Location: bookingFailed.php?" . http_build_query(['message' => 'You cannot fly with this airline']));
+    }
+    if ($row["restriction->>'Delta'"] === ‘YES’) {
+        header("Location: bookingFailed.php?" . http_build_query(['message' => 'You cannot fly with this airline']));
+    }
+    if ($row["restriction->>'Southwest'"] === ‘YES’) {
+        header("Location: bookingFailed.php?" . http_build_query(['message' => 'You cannot fly with this airline']));
+    }
+    if ($row["restriction->>'United'"] === ‘YES’) {
+        header("Location: bookingFailed.php?" . http_build_query(['message' => 'You cannot fly with this airline']));
+    }
+    if ($row["restriction->>'American’"] === ‘YES’) {
+        header("Location: bookingFailed.php?" . http_build_query(['message' => 'You cannot fly with this airline']));
+    }
+    if ($row["restriction->>'Froniter'"] === ‘YES’) {
+        header("Location: bookingFailed.php?" . http_build_query(['message' => 'You cannot fly with this airline']));
+    }
+
+
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         header("Location: bookingFailed.php?" . http_build_query(['message' => 'Please enter a valid email address.']));
         exit;
@@ -84,8 +113,8 @@
     }
 
     $seatPriceDollars = floatval($flightInfo['seats'][$seatClass]['priceDollars'] ?? 0);
-    $flightFfmCost     = intval($flightInfo['seats'][$seatClass]['priceFfms'] ?? 0);
-    $flightFfmEarn     = intval($flightInfo['ffms'] ?? 0);
+    $flightFfmCost = intval($flightInfo['seats'][$seatClass]['priceFfms'] ?? 0);
+    $flightFfmEarn = intval($flightInfo['ffms'] ?? 0);
 
 
     // --- FFM payment method (ticket + extras) ---
