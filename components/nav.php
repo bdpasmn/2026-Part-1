@@ -349,13 +349,20 @@ document.addEventListener('click', (e) => {
     Loader.show();
 });
 
-document.addEventListener('submit', (e) => {
-    if (e.submitter?.hasAttribute('data-skip-loader')) {
+document.addEventListener('submit', function (e) {
+    const form = e.target;
+
+    console.log("SUBMIT:", form);
+
+    if (form.classList.contains('cancel-ticket-form') ||
+        form.hasAttribute('data-skip-loader')) {
+        console.log("Skipping loader");
         return;
     }
 
     Loader.show();
 });
+
 </script>
 
 <script>

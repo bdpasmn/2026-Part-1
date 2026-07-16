@@ -233,6 +233,7 @@ if ($confirmation && $lastName) {
 <body class="bg-gray-900 text-white">
     <?php include __DIR__ . "/../../components/nav.php"; ?>
 
+
 <main class="max-w-4xl mx-auto">
 
 <!-- Header section -->

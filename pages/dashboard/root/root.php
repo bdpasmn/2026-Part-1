@@ -664,16 +664,18 @@ if ($_POST['action'] === 'update_attendant_airline') {
                 $ticketsStmt = $pdo->query('SELECT * FROM "Tickets"');
                 $allTickets  = $ticketsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-                if ($isAjax) {
-                    header('Content-Type: application/json');
-                    echo json_encode([
-                        'success' => true,
-                        'message' => $updateMsg,
-                        'confirmation_code' => $code,
-                        'redirect' => '../../../booking/confirmation.php?confirmation=' . urlencode($code)
-                    ]);
-                    exit;
-                }
+                define('BASE_URI', "/bdpa");
+
+if ($isAjax) {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => true,
+        'message' => $updateMsg,
+        'confirmation_code' => $code,
+        'redirect' => BASE_URI . '/pages/booking/confirmation.php?confirmation=' . urlencode($code)
+    ]);
+    exit;
+}
             }
         }
 
@@ -1729,7 +1731,7 @@ select.field { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www
           <?php endforeach; ?>
         </div>
         <?php if (strtolower($lookupTicket['status'] ?? '') !== 'cancelled'): ?>
-        <form method="POST" class="mt-4 cancel-ticket-form" data-ticket-id="<?= htmlspecialchars($lookupTicket['ticket_id']) ?>">
+        <form method="POST" data-skip-loader class="mt-4 cancel-ticket-form" data-ticket-id="<?= htmlspecialchars($lookupTicket['ticket_id']) ?>">
           <input type="hidden" name="action"    value="cancel_ticket">
           <input type="hidden" name="ticket_id" value="<?= htmlspecialchars($lookupTicket['ticket_id']) ?>">
           <button type="submit" onclick="return confirm('Cancel this ticket? This cannot be undone.')"

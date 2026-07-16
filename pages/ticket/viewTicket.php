@@ -58,6 +58,7 @@
         <div class="w-full min-h-screen bg-gray-900">
             <!-- Navigation bar -->
             <?php include "../../components/nav.php"; ?>
+            
 
             <section class="p-6">
                 <!-- Main lookup container -->

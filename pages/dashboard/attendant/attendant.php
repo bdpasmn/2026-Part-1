@@ -871,7 +871,7 @@ if ($_POST['action'] === 'cancel_ticket') {
           <?php endforeach; ?>
         </div>
         <?php if (strtolower($lookupTicket['status'] ?? '') !== 'cancelled' && isUpcomingFlight($lf, $now)): ?>
-        <form method="POST" class="mt-4 cancel-ticket-form" data-ticket-id="<?= htmlspecialchars($lookupTicket['ticket_id']) ?>">
+        <form method="POST" data-skip-loader class="mt-4 cancel-ticket-form" data-ticket-id="<?= htmlspecialchars($lookupTicket['ticket_id']) ?>">
           <input type="hidden" name="action" value="cancel_ticket">
           <input type="hidden" name="ticket_id" value="<?= htmlspecialchars($lookupTicket['ticket_id']) ?>">
           <button type="submit" onclick="return confirm('Cancel this ticket? This cannot be undone.')" class="w-full h-9 bg-red-600/80 hover:bg-red-600 rounded-lg text-sm font-semibold transition">
